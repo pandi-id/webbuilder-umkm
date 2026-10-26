@@ -20,12 +20,13 @@ Branch `umkm` (dari `guru-only`). Fokus: toko online UMKM + produk. Fitur guru d
 - [x] CI trigger di `main`, `master`, `umkm`
 - [x] Katalog/Grid Produk/Blog/Form di dalam Container/Columns sekarang tampil di live site
 - [x] Panduan client + pengantar diperbarui (dashboard toko, blok UMKM Pro, template UMKM)
+- [x] Migration sampai `0069` + integration test dijalankan ke Postgres lokal (DB sementara, sudah dihapus)
 
 ## Belum / perlu keputusan
 
 - [ ] **QA manual di browser** — belum dibuka di browser: landing di lebar 360px, editor dengan blok UMKM, alur beli domain → pilih template UMKM → tambah produk → publish
-- [ ] **Migration 0069 + integration test** belum dijalankan ke Postgres (lokal tanpa `TEST_DATABASE_URL`; CI akan menjalankannya)
 - [ ] **Nama brand** — landing memakai "Web Builder" (konstanta `BRAND` di `apps/web/app/page.tsx`)
 - [ ] **Section harga** di landing — belum ada endpoint harga publik (pricing hanya untuk admin/reseller); perlu putuskan harga apa yang ditampilkan
 - [ ] **Artikel platform di DB lama** — seed hanya jalan kalau tabel kosong; DB yang sudah ada tetap menyimpan 6 artikel guru (hapus via `/admin/platform-articles` atau migration)
 - [ ] **Panduan pengguna** — screenshot masih tampilan lama (capture ulang via `capture-screenshots`), lalu generate ulang `web-builder-guide.html`/PDF (`./generate-pdf-chrome.sh`)
+- [ ] **3 tes integrasi lama gagal** (`analytics` TestGetSummary_EncodesDaysParam, `domain_purchase` TestRepo_ExpiryNotice_MarkPreventsResend + TestRepo_AdminList_SortPresets/expires_soon) — gagal identik di commit dasar `guru-only`, bukan regresi pivot. Lokal Postgres 14 vs CI 16; cek hasil CI
