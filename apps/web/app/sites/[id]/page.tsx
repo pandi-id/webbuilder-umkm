@@ -1,259 +1,254 @@
 "use client";
 
-// Dashboard Guru — landing setiap site. Mirror mockup dashboard-guru/index.html,
-// data live dari API (stats, tulisan terbaru, tanggapan pending, banner aktif).
+// Store overview — landing page of every site. Each widget fetches
+// independently and degrades to "—" so one failing endpoint never blanks the page.
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ArrowUpRight,
-  BookOpen,
+  ArrowRight,
+  BarChart3,
   ExternalLink,
   Eye,
-  FileText,
-  Loader2,
-  MessageSquare,
-  Megaphone,
+  Globe2,
+  ImageIcon,
+  Inbox,
   Newspaper,
+  Package,
+  Palette,
   PenLine,
   Plus,
+  SquarePen,
 } from "lucide-react";
-import {
-  api,
-  GURU_RUBRIC_LABEL,
-  type Article,
-  type Banner,
-  type ResponseItem,
-  type SiteStats,
-} from "@/lib/api";
-import type { PaginatedResult } from "@/components/Pagination";
 import { toast } from "sonner";
+import { api, errMessage } from "@/lib/api";
+import type { PaginatedResult } from "@/components/Pagination";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { StatCard } from "@/components/site-dashboard/StatCard";
+import {
+  OnboardingChecklist,
+  type ChecklistItem,
+} from "@/components/site-dashboard/OnboardingChecklist";
+import {
+  SITE_STATUS_EVENT,
+  emitSiteStatus,
+  fmtNumber,
+  fmtPrice,
+  initials,
+  themeGradient,
+  timeAgo,
+  type SiteStatusDetail,
+  type ThemeJson,
+} from "@/components/site-dashboard/utils";
 
-// Domain purchase (dari GET /api/v1/domains/purchases). Row punya site_id
-// yang di-populate saat user attach purchase ke site lewat "Buat Situs".
-// Ini sumber authoritative untuk domain-per-site di purchase flow.
-type PurchaseItem = {
-  job_id: string;
-  domain: string;
-  status: string; // pending_payment | pending_provisioning | active | failed | expired
-  kind: string; // "register" | "renew"
-  site_id?: string | null;
-};
+type Block = { type?: string; props?: Record<string, unknown>; children?: unknown };
 
-// Legacy custom domain (bring-your-own) — dari GET /api/v1/sites/:id/domains.
-// Status 'verified' = DNS sudah divalidasi + SSL provisioned.
-type CustomDomain = {
+type SiteDetail = {
   id: string;
-  hostname: string;
-  status: string;
-  verified_at: string | null;
-};
-
-type SiteMeta = {
-  id: string;
-  slug: string;
-  template_id: string | null;
-};
-
-type TemplateMini = {
-  id: string;
-  slug: string;
-  category: string;
-  variant: string;
   name: string;
-  description: string;
-  theme?: { colors?: { primary?: string; bg?: string } };
+  status: string;
+  theme: ThemeJson | null;
+  layout: { header?: Block[]; footer?: Block[] } | null;
 };
 
-// Filter template yang relevan untuk guru — konsisten dengan /tampilan.
-const GURU_TEMPLATE_CATEGORIES = new Set(["guru-pandi"]);
+type PageItem = { id: string; slug: string; is_home: boolean; tree: unknown };
 
-function gradientFromTheme(t: TemplateMini): string {
-  const p = t.theme?.colors?.primary ?? "#c9795a";
-  const b = t.theme?.colors?.bg ?? "#ffffff";
-  return `linear-gradient(135deg, ${p}33, ${b})`;
+type DomainRow = { hostname: string; is_primary: boolean; status: string };
+type PurchaseItem = { domain: string; status: string; kind: string; site_id?: string | null };
+type LegacyDomain = { hostname: string; status: string };
+
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  image_url: string;
+  status: string;
+};
+
+type Form = { id: string; name: string };
+type Submission = {
+  id: string;
+  form_id: string;
+  data: Record<string, unknown> | null;
+  submitted_at: string;
+};
+type SubmissionPage = { items: Submission[]; total: number };
+
+type AnalyticsSummary = { total_views: number; views_today: number };
+
+type Message = Submission & { formName: string };
+
+// Domain states that serve traffic (purchase "active", BYO "verified"/"drifting").
+const LIVE_DOMAIN_STATUSES = new Set(["active", "verified", "drifting"]);
+
+// Navbar brand values shipped by built-in templates — still showing one of
+// these means the owner hasn't put their store name in the header yet.
+const PLACEHOLDER_BRANDS = new Set(
+  [
+    "toko bahagia", "kopi senja", "sekar batik", "anyam lestari",
+    "nama saya", "pak budi", "sekolah abc", "blog saya", "brand", "logo",
+  ],
+);
+
+const MIN_PRODUCTS = 3;
+
+function parseTree(raw: unknown): unknown {
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  return raw;
 }
 
-type AnalyticsSummary = {
-  total_views: number;
-  total_days: number;
-  daily: Array<{ date: string; views: number }>;
-  top_pages: Array<{ page_slug: string; views: number }>;
-  views_today: number;
-  views_yesterday: number;
-};
+// Depth-first walk over a block tree; accepts either an array or {blocks: []}.
+function walkBlocks(nodes: unknown, visit: (b: Block) => boolean | void): boolean {
+  const list = Array.isArray(nodes)
+    ? nodes
+    : nodes && typeof nodes === "object" && Array.isArray((nodes as { blocks?: unknown }).blocks)
+      ? (nodes as { blocks: unknown[] }).blocks
+      : [];
+  for (const n of list) {
+    if (!n || typeof n !== "object") continue;
+    const b = n as Block;
+    if (visit(b) === true) return true;
+    if (b.children && walkBlocks(b.children, visit)) return true;
+  }
+  return false;
+}
 
-type ChartRange = "7d" | "30d" | "12w";
-
-// Konfigurasi range chart: window API + bucket size (hari) + label.
-const CHART_RANGES: Record<ChartRange, { days: number; bucketDays: number; label: string; shortLabel: string }> = {
-  "7d": { days: 7, bucketDays: 1, label: "7 hari terakhir", shortLabel: "7 hari" },
-  "30d": { days: 30, bucketDays: 1, label: "30 hari terakhir", shortLabel: "30 hari" },
-  "12w": { days: 84, bucketDays: 7, label: "12 minggu terakhir", shortLabel: "12 minggu" },
-};
-
-type ChipTone = "green" | "gray" | "amber" | "red" | "blue" | "purple";
-
-function Chip({ tone, children }: { tone: ChipTone; children: React.ReactNode }) {
-  const tones: Record<ChipTone, string> = {
-    green: "bg-emerald-100 text-emerald-800",
-    gray: "bg-slate-100 text-slate-600",
-    amber: "bg-amber-100 text-amber-800",
-    red: "bg-rose-100 text-rose-800",
-    blue: "bg-blue-100 text-blue-800",
-    purple: "bg-violet-100 text-violet-800",
+function findBrand(site: SiteDetail | null, pages: PageItem[] | null): string | null {
+  let brand: string | null = null;
+  const visit = (b: Block) => {
+    if (b.type === "Navbar") {
+      brand = String(b.props?.brand ?? "").trim();
+      return true;
+    }
   };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${tones[tone]}`}>
-      {children}
-    </span>
+  if (site?.layout?.header && walkBlocks(site.layout.header, visit)) return brand;
+  const home = pages?.find((p) => p.is_home) ?? pages?.[0];
+  if (home && walkBlocks(parseTree(home.tree), visit)) return brand;
+  return null;
+}
+
+function hasContactBlock(site: SiteDetail | null, pages: PageItem[] | null): boolean {
+  const visit = (b: Block) => /contact|kontak|whatsapp/i.test(b.type ?? "");
+  if (site?.layout && (walkBlocks(site.layout.header, visit) || walkBlocks(site.layout.footer, visit)))
+    return true;
+  return (pages ?? []).some((p) => walkBlocks(parseTree(p.tree), visit));
+}
+
+// Submission data is free-form JSON; pick the most likely sender + message fields.
+function pickField(data: Record<string, unknown> | null, keys: string[]): string {
+  if (!data) return "";
+  for (const k of Object.keys(data)) {
+    if (keys.includes(k.toLowerCase())) {
+      const v = data[k];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+  }
+  return "";
+}
+
+function messagePreview(m: Message): { sender: string; body: string } {
+  const sender =
+    pickField(m.data, ["name", "nama", "full_name", "nama_lengkap"]) ||
+    pickField(m.data, ["email", "phone", "telepon", "whatsapp", "wa", "hp"]) ||
+    "Pengunjung";
+  let body = pickField(m.data, ["message", "pesan", "body", "isi", "comment", "komentar"]);
+  if (!body && m.data) {
+    body = Object.values(m.data).filter((v) => typeof v === "string").join(" · ");
+  }
+  return { sender, body: body || "(tanpa isi pesan)" };
+}
+
+async function resolvePrimaryDomain(sid: string): Promise<string | null> {
+  const combined = await api<DomainRow[]>(`/api/v1/sites/${sid}/domains-combined`).catch(() => null);
+  if (combined) {
+    const live = combined.filter((d) => LIVE_DOMAIN_STATUSES.has(d.status));
+    return (live.find((d) => d.is_primary) ?? live[0])?.hostname ?? null;
+  }
+  // Fallback when the BYO module is disabled: purchase anchor, then legacy domains.
+  const [purchases, legacy] = await Promise.all([
+    api<PurchaseItem[]>("/api/v1/domains/purchases?limit=100").catch(() => null),
+    api<LegacyDomain[]>(`/api/v1/sites/${sid}/domains`).catch(() => null),
+  ]);
+  const anchor = (purchases ?? []).find(
+    (p) => p.site_id === sid && p.kind === "register" && p.status === "active",
   );
+  if (anchor) return anchor.domain;
+  return (legacy ?? []).find((d) => d.status === "verified")?.hostname ?? null;
 }
 
-function fmtNumber(n: number): string {
-  return new Intl.NumberFormat("id-ID").format(n);
-}
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.round(diff / 60000);
-  if (min < 1) return "baru saja";
-  if (min < 60) return `${min} menit lalu`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr} jam lalu`;
-  // >= 24 jam: tampilkan tanggal + jam konkret (konsisten dengan renderer).
-  return new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-// Fill missing daily buckets dengan 0 supaya chart tidak lompat-lompat.
-// Backend hanya return baris dengan view > 0.
-function fillDailyGaps(
-  raw: Array<{ date: string; views: number }>,
-  days: number,
-): Array<{ date: Date; views: number }> {
-  const map = new Map<string, number>();
-  for (const r of raw) {
-    // Normalize ke YYYY-MM-DD (backend kirim ISO timestamp).
-    const key = new Date(r.date).toISOString().slice(0, 10);
-    map.set(key, (map.get(key) ?? 0) + r.views);
+async function loadMessages(sid: string): Promise<{ total: number; recent: Message[] } | null> {
+  const forms = await api<Form[]>(`/api/v1/sites/${sid}/forms`).catch(() => null);
+  if (!forms) return null;
+  // Cap fan-out; stores rarely have more than a handful of forms.
+  const pages = await Promise.all(
+    forms.slice(0, 6).map((f) =>
+      api<SubmissionPage>(`/api/v1/forms/${f.id}/submissions?page_size=5`)
+        .then((r) => ({ form: f, page: r }))
+        .catch(() => null),
+    ),
+  );
+  let total = 0;
+  const recent: Message[] = [];
+  for (const p of pages) {
+    if (!p) continue;
+    total += p.page.total ?? 0;
+    for (const s of p.page.items ?? []) recent.push({ ...s, formName: p.form.name });
   }
-  const out: Array<{ date: Date; views: number }> = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    out.push({ date: d, views: map.get(key) ?? 0 });
-  }
-  return out;
+  recent.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+  return { total, recent: recent.slice(0, 4) };
 }
 
-// Group daily points ke bucket N-hari (untuk weekly view).
-function bucketize(
-  daily: Array<{ date: Date; views: number }>,
-  bucketDays: number,
-): Array<{ label: string; views: number }> {
-  if (bucketDays <= 1) {
-    return daily.map((d) => ({
-      label: d.date.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-      views: d.views,
-    }));
-  }
-  const out: Array<{ label: string; views: number }> = [];
-  for (let i = 0; i < daily.length; i += bucketDays) {
-    const slice = daily.slice(i, i + bucketDays);
-    const sum = slice.reduce((a, b) => a + b.views, 0);
-    const start = slice[0].date;
-    const end = slice[slice.length - 1].date;
-    const label = `${start.getDate()}–${end.getDate()} ${end.toLocaleDateString("id-ID", { month: "short" })}`;
-    out.push({ label, views: sum });
-  }
-  return out;
-}
-
-export default function SiteDashboardPage() {
+export default function SiteOverviewPage() {
   const params = useParams<{ id: string }>();
   const sid = params.id;
 
-  const [stats, setStats] = useState<SiteStats | null>(null);
-  const [pendingCount, setPendingCount] = useState<number>(0);
-  const [latestArticles, setLatestArticles] = useState<Article[]>([]);
-  const [pendingComments, setPendingComments] = useState<ResponseItem[]>([]);
-  const [activeBanner, setActiveBanner] = useState<Banner | null>(null);
-  const [activeBannerCount, setActiveBannerCount] = useState<number>(0);
-  const [totalBanners, setTotalBanners] = useState<number>(0);
-  const [publicURL, setPublicURL] = useState<string | null>(null);
-  const [siteMeta, setSiteMeta] = useState<SiteMeta | null>(null);
-  const [templates, setTemplates] = useState<TemplateMini[]>([]);
   const [loading, setLoading] = useState(true);
+  const [site, setSite] = useState<SiteDetail | null>(null);
+  const [pages, setPages] = useState<PageItem[] | null>(null);
+  const [domain, setDomain] = useState<string | null>(null);
+  const [products, setProducts] = useState<PaginatedResult<Product> | null>(null);
+  const [articleTotal, setArticleTotal] = useState<number | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [messages, setMessages] = useState<{ total: number; recent: Message[] } | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [
-        statsRes,
-        articlesRes,
-        pendingRes,
-        bannersRes,
-        purchasesRes,
-        customRes,
-        siteRes,
-        tplRes,
-      ] = await Promise.all([
-        api<SiteStats>(`/api/v1/sites/${sid}/site-stats`).catch(() => null),
-        api<PaginatedResult<Article>>(
-          `/api/v1/sites/${sid}/articles?sort=newest&page_size=4`,
-        ).catch(() => null),
-        api<PaginatedResult<ResponseItem>>(
-          `/api/v1/sites/${sid}/responses?status=pending&page_size=2`,
-        ).catch(() => null),
-        api<Banner[]>(`/api/v1/sites/${sid}/banners`).catch(() => null),
-        // Purchase-flow domains — primary path (1 domain = 1 site).
-        // purchase.site_id di-set saat user pilih template + create site (bukan
-        // registered_domains.site_id yang tidak pernah di-populate).
-        api<PurchaseItem[]>("/api/v1/domains/purchases").catch(() => null),
-        // Legacy BYO custom domain — fallback kalau user attach domain manual.
-        api<CustomDomain[]>(`/api/v1/sites/${sid}/domains`).catch(() => null),
-        api<SiteMeta>(`/api/v1/sites/${sid}`).catch(() => null),
-        api<TemplateMini[]>("/api/v1/templates", { auth: false }).catch(
-          () => [] as TemplateMini[],
-        ),
-      ]);
+      const [siteRes, pagesRes, domainRes, productsRes, blogRes, analyticsRes, messagesRes] =
+        await Promise.all([
+          api<SiteDetail>(`/api/v1/sites/${sid}`).catch(() => null),
+          api<PageItem[]>(`/api/v1/sites/${sid}/pages`).catch(() => null),
+          resolvePrimaryDomain(sid).catch(() => null),
+          api<PaginatedResult<Product>>(
+            `/api/v1/sites/${sid}/products?page_size=4&sort=newest`,
+          ).catch(() => null),
+          api<PaginatedResult<unknown>>(`/api/v1/sites/${sid}/blog-posts?page_size=1`).catch(
+            () => null,
+          ),
+          api<AnalyticsSummary>(`/api/v1/sites/${sid}/analytics?days=7`).catch(() => null),
+          loadMessages(sid).catch(() => null),
+        ]);
       if (cancelled) return;
-      setStats(statsRes);
-      setPendingCount(pendingRes?.total ?? 0);
-      setLatestArticles(articlesRes?.items ?? []);
-      setPendingComments(pendingRes?.items ?? []);
-      const list = bannersRes ?? [];
-      setTotalBanners(list.length);
-      const active = list.filter((b) => b.effective_status === "active");
-      setActiveBannerCount(active.length);
-      setActiveBanner(active[0] ?? list[0] ?? null);
-      // Resolve public URL. Prioritas:
-      //   1. Purchase-flow domain: purchase.site_id === current + kind=register + status=active
-      //   2. Legacy custom-domain (BYO): status='verified' di /sites/:id/domains
-      // Kalau tidak ada, tombol Preview dinonaktifkan.
-      const purchase = (purchasesRes ?? []).find(
-        (p) => p.site_id === sid && p.kind === "register" && p.status === "active",
-      );
-      const verified = purchase
-        ? null
-        : (customRes ?? []).find((d) => d.status === "verified");
-      const host = purchase?.domain ?? verified?.hostname ?? null;
-      setPublicURL(host ? `https://${host}` : null);
-      setSiteMeta(siteRes);
-      setTemplates(
-        (tplRes ?? []).filter((t) => GURU_TEMPLATE_CATEGORIES.has(t.category)),
-      );
+      setSite(siteRes);
+      setPages(pagesRes);
+      setDomain(domainRes);
+      setProducts(productsRes);
+      setArticleTotal(blogRes ? blogRes.total : null);
+      setAnalytics(analyticsRes);
+      setMessages(messagesRes);
       setLoading(false);
     })();
     return () => {
@@ -261,486 +256,418 @@ export default function SiteDashboardPage() {
     };
   }, [sid]);
 
-  const s = stats ?? { total_views: 0, total_responses: 0, total_articles: 0 };
+  // Header publish button lives in the layout; mirror its result here.
+  useEffect(() => {
+    function onStatus(e: Event) {
+      const d = (e as CustomEvent<SiteStatusDetail>).detail;
+      if (d?.siteId === sid) setSite((prev) => (prev ? { ...prev, status: d.status } : prev));
+    }
+    window.addEventListener(SITE_STATUS_EVENT, onStatus);
+    return () => window.removeEventListener(SITE_STATUS_EVENT, onStatus);
+  }, [sid]);
 
-  const dashStats = [
+  const publish = useCallback(async () => {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const updated = await api<{ status: string }>(`/api/v1/sites/${sid}/publish`, {
+        method: "POST",
+      });
+      emitSiteStatus(sid, updated?.status ?? "published");
+      toast.success("Toko berhasil dipublikasikan");
+    } catch (e) {
+      toast.error(errMessage(e));
+    } finally {
+      setPublishing(false);
+    }
+  }, [sid, publishing]);
+
+  const isPublished = site?.status === "published";
+  const liveURL = domain ? `https://${domain}` : null;
+  const productTotal = products ? products.total : null;
+  const brand = findBrand(site, pages);
+  const brandDone =
+    !!brand &&
+    (brand.toLowerCase() === site?.name.trim().toLowerCase() ||
+      !PLACEHOLDER_BRANDS.has(brand.toLowerCase()));
+
+  const checklist: ChecklistItem[] = [
     {
-      label: "Total Tulisan",
-      value: fmtNumber(s.total_articles),
-      trend: "Semua rubrik",
-      trendPositive: true,
-      icon: Newspaper,
-      tint: "bg-orange-100 text-orange-600",
+      key: "brand",
+      title: "Pasang nama toko di header",
+      description: "Ganti teks di bagian atas website dengan nama toko Anda, lalu atur warnanya.",
+      done: brandDone,
+      cta: "Buka Editor",
+      href: `/sites/${sid}/editor`,
     },
     {
-      label: "Total Views",
-      value: fmtNumber(s.total_views),
-      trend: "Akumulasi kunjungan",
-      trendPositive: true,
-      icon: Eye,
-      tint: "bg-blue-100 text-blue-600",
+      key: "products",
+      title: `Tambah minimal ${MIN_PRODUCTS} produk`,
+      description:
+        productTotal !== null && productTotal > 0
+          ? `Sudah ${productTotal} dari ${MIN_PRODUCTS} produk. Sedikit lagi!`
+          : "Lengkapi foto, nama, dan harga supaya pembeli tertarik.",
+      done: (productTotal ?? 0) >= MIN_PRODUCTS,
+      cta: "Tambah Produk",
+      href: `/sites/${sid}/products`,
     },
     {
-      label: "Tanggapan Pending",
-      value: fmtNumber(pendingCount),
-      trend: pendingCount > 0 ? "Perlu ditinjau" : "Semua sudah dimoderasi",
-      trendPositive: pendingCount === 0,
-      icon: MessageSquare,
-      tint: "bg-violet-100 text-violet-600",
+      key: "contact",
+      title: "Tambah blok kontak",
+      description: "Tambah blok kontak di editor supaya pembeli mudah menghubungi Anda.",
+      done: hasContactBlock(site, pages),
+      cta: "Tambah Kontak",
+      href: `/sites/${sid}/editor`,
     },
     {
-      label: "Banner Promosi Aktif",
-      value: fmtNumber(activeBannerCount),
-      trend: `${activeBannerCount} dari ${totalBanners} banner`,
-      trendPositive: true,
-      icon: Megaphone,
-      tint: "bg-emerald-100 text-emerald-600",
+      key: "publish",
+      title: "Publikasikan toko",
+      description: "Tayangkan toko supaya bisa dikunjungi lewat domain Anda.",
+      done: isPublished,
+      cta: "Publikasikan",
+      onAction: publish,
+      busy: publishing,
     },
   ];
 
+  const viewsHint = analytics ? `Hari ini ${fmtNumber(analytics.views_today)}` : undefined;
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            Selamat datang di Website Pribadi Guru
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Ringkasan aktivitas dan konten Website Pribadi Guru Anda.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {publicURL ? (
-            <a
-              href={publicURL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50"
-              title={publicURL}
-            >
-              Preview Website
-              <ExternalLink className="size-4" />
-            </a>
-          ) : (
-            <button
-              onClick={() =>
-                toast.info("Domain belum aktif", {
-                  description:
-                    "Tunggu sampai domain selesai proses registrasi, atau attach custom domain terverifikasi supaya bisa preview.",
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-50"
-              title="Belum ada domain aktif"
-            >
-              Preview Website
-              <ExternalLink className="size-4" />
-            </button>
-          )}
-          <Link
-            href={`/sites/${sid}/tulisan/new`}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
-          >
-            <Plus className="size-4" />
-            Tulis Baru
-          </Link>
-        </div>
-      </div>
-
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="size-4 animate-spin" /> Memuat data…
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {dashStats.map((st) => {
-          const Icon = st.icon;
-          return (
-            <div
-              key={st.label}
-              className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className={`grid h-12 w-12 place-items-center rounded-xl ${st.tint}`}>
-                <Icon className="size-5" />
-              </div>
-              <div>
-                <div className="text-[12px] text-slate-500">{st.label}</div>
-                <div className="text-2xl font-bold leading-tight text-slate-900">{st.value}</div>
-                <div className={`text-[11px] font-bold ${st.trendPositive ? "text-emerald-600" : "text-amber-600"}`}>
-                  {st.trend}
+    <div className="space-y-6">
+      {/* Welcome header */}
+      <Card className="overflow-hidden p-0">
+        <div className="h-20 sm:h-24" style={{ background: themeGradient(site?.theme) }} />
+        <div className="flex flex-col gap-4 px-4 pb-5 sm:px-6 md:flex-row md:items-end md:justify-between">
+          <div className="flex min-w-0 items-end gap-4">
+            <div className="-mt-10 grid size-20 shrink-0 place-items-center rounded-2xl border-4 border-card bg-card text-2xl font-bold shadow-sm">
+              {site ? initials(site.name) : <div className="size-full animate-pulse rounded-xl bg-muted/50" />}
+            </div>
+            <div className="min-w-0 pb-1">
+              {loading && !site ? (
+                <div className="space-y-2">
+                  <div className="h-6 w-48 animate-pulse rounded-md bg-muted/50" />
+                  <div className="h-4 w-32 animate-pulse rounded-md bg-muted/50" />
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(330px,0.8fr)]">
-        <div className="space-y-5">
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Aksi Cepat</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-              <QuickAction href={`/sites/${sid}/tulisan/new`} icon={PenLine} label="Tulis Artikel Baru" />
-              <QuickAction href={`/sites/${sid}/forum/new`} icon={MessageSquare} label="Buat Topik Forum" />
-              <QuickAction href={`/sites/${sid}/pembelajaran/new`} icon={BookOpen} label="Tambah Materi" />
-              <QuickAction href={`/sites/${sid}/promosi`} icon={Megaphone} label="Unggah Banner Promo" />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Konten Terbaru</h2>
-              <Link
-                href={`/sites/${sid}/tulisan`}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 hover:bg-blue-100"
-              >
-                Lihat Semua →
-              </Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse">
-                <thead>
-                  <tr>
-                    {["Judul", "Rubrik", "Status", "Views", "Aksi"].map((h) => (
-                      <th
-                        key={h}
-                        className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {latestArticles.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-100 last:border-0">
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="grid h-9 w-11 place-items-center rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 text-slate-500">
-                            <FileText className="size-4" />
-                          </div>
-                          <span className="text-[13px] font-semibold text-slate-900">{a.title}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-[13px] text-slate-600">
-                        {GURU_RUBRIC_LABEL[a.rubric]}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Chip tone={a.status === "published" ? "green" : "gray"}>
-                          {a.status === "published" ? "Published" : "Draft"}
-                        </Chip>
-                      </td>
-                      <td className="px-4 py-3.5 text-[13px] text-slate-700">{fmtNumber(a.view_count)}</td>
-                      <td className="px-4 py-3.5">
-                        <Link
-                          href={`/sites/${sid}/tulisan/${a.id}/edit`}
-                          className="rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 hover:bg-blue-100"
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                  {!loading && latestArticles.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
-                        Belum ada tulisan. Klik "Tulis Baru" untuk mulai.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <AnalyticsChart sid={sid} />
-        </div>
-
-        <div className="space-y-5">
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Tanggapan Menunggu</h2>
-              <Link
-                href={`/sites/${sid}/tanggapan`}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 hover:bg-blue-100"
-              >
-                Lihat Semua →
-              </Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {pendingComments.map((c) => {
-                const initials = c.author_name
-                  .split(" ")
-                  .map((s) => s[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase();
-                return (
-                  <div key={c.id} className="px-5 py-4">
-                    <div className="flex gap-3">
-                      <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-orange-200 to-orange-400 text-[12px] font-bold text-orange-900">
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <strong className="text-[13px] text-slate-900">{c.author_name}</strong>
-                          <span className="text-[11px] text-slate-500">{timeAgo(c.created_at)}</span>
-                        </div>
-                        <p className="mt-1.5 text-[12px] leading-relaxed text-slate-600">{c.body}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {!loading && pendingComments.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-slate-500">
-                  Belum ada tanggapan menunggu.
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Ruang Promosi</h2>
-              <Link
-                href={`/sites/${sid}/promosi`}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 hover:bg-blue-100"
-              >
-                Kelola Banner →
-              </Link>
-            </div>
-            <div className="p-5">
-              {activeBanner ? (
+              ) : (
                 <>
-                  <div
-                    className="relative flex aspect-[2/1] items-end overflow-hidden rounded-xl bg-gradient-to-br from-blue-800 to-blue-500 p-5 text-white"
-                    style={activeBanner.image_url ? { backgroundImage: `url(${activeBanner.image_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-                  >
-                    <span className="absolute -right-8 -top-14 h-44 w-44 rounded-full bg-white/10" />
-                    <strong className="relative z-10 text-lg">{activeBanner.internal_title}</strong>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                      {site?.name ?? "Toko Anda"}
+                    </h1>
+                    <Badge variant={isPublished ? "success" : "secondary"}>
+                      {isPublished ? "Dipublikasikan" : "Draf"}
+                    </Badge>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-[12px]">
-                    <Chip tone={activeBanner.effective_status === "active" ? "green" : "gray"}>
-                      {activeBanner.effective_status === "active" ? "Aktif" : "Nonaktif"}
-                    </Chip>
-                    <span className="text-slate-500">
-                      {activeBanner.start_at ? new Date(activeBanner.start_at).toLocaleDateString("id-ID") : "—"}
-                      {" – "}
-                      {activeBanner.end_at ? new Date(activeBanner.end_at).toLocaleDateString("id-ID") : "—"}
-                    </span>
+                  <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Globe2 className="size-4 shrink-0" />
+                    {domain ? (
+                      <span className="truncate">{domain}</span>
+                    ) : (
+                      <Link href={`/sites/${sid}/domains`} className="hover:text-foreground hover:underline">
+                        Domain belum aktif — cek status
+                      </Link>
+                    )}
                   </div>
                 </>
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-                  Belum ada banner. Buat banner pertama di menu Ruang Promosi.
-                </div>
               )}
             </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-[15px] font-bold text-slate-900">Template Website Aktif</h2>
-              <Link
-                href={`/sites/${sid}/tampilan`}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 hover:bg-blue-100"
-              >
-                Ubah Template →
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap md:justify-end">
+            {liveURL ? (
+              <Button variant="outline" asChild>
+                <a href={liveURL} target="_blank" rel="noopener noreferrer" title={liveURL}>
+                  <ExternalLink />
+                  <span className="hidden sm:inline">Lihat Situs</span>
+                  <span className="sm:hidden">Lihat</span>
+                </a>
+              </Button>
+            ) : (
+              <Button variant="outline" disabled title="Domain belum aktif">
+                <ExternalLink />
+                <span className="hidden sm:inline">Lihat Situs</span>
+                <span className="sm:hidden">Lihat</span>
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href={`/sites/${sid}/theme`}>
+                <Palette />
+                <span className="hidden sm:inline">Edit Tampilan</span>
+                <span className="sm:hidden">Tampilan</span>
               </Link>
-            </div>
-            <div className="p-4">
-              <ActiveTemplateCard
-                templates={templates}
-                activeId={siteMeta?.template_id ?? null}
-              />
-            </div>
-          </section>
+            </Button>
+            <Button asChild>
+              <Link href={`/sites/${sid}/editor`}>
+                <SquarePen />
+                <span className="hidden sm:inline">Buka Editor</span>
+                <span className="sm:hidden">Editor</span>
+              </Link>
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      </Card>
 
-// ActiveTemplateCard — kartu template yang sedang dipakai.
-// Kalau site.template_id match dengan salah satu template guru → render
-// gradient dari theme + badge "Sedang digunakan".
-// Kalau tidak match (site pakai custom theme atau template lain), render
-// kartu "Belum menggunakan template guru" + link ke Tampilan.
-function ActiveTemplateCard({
-  templates,
-  activeId,
-}: {
-  templates: TemplateMini[];
-  activeId: string | null;
-}) {
-  const applied = templates.find((t) => t.id === activeId);
-  if (applied) {
-    return (
-      <div className="relative rounded-xl border-2 border-orange-500 bg-orange-50/30 p-3 shadow-sm shadow-orange-500/10">
-        <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-          Sedang digunakan
-        </span>
-        <div
-          className="aspect-[16/10] rounded-lg border border-slate-200"
-          style={{ background: gradientFromTheme(applied) }}
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard
+          label="Jumlah produk"
+          value={productTotal}
+          hint="Di katalog toko"
+          icon={Package}
+          tint="bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-300"
+          href={`/sites/${sid}/products`}
+          loading={loading}
         />
-        <div className="mt-3">
-          <div className="text-[13px] font-bold text-slate-900">{applied.name}</div>
-          <div className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">
-            {applied.description}
-          </div>
+        <StatCard
+          label="Pengunjung 7 hari"
+          value={analytics ? analytics.total_views : null}
+          hint={viewsHint}
+          icon={Eye}
+          tint="bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300"
+          href={`/sites/${sid}/analytics`}
+          loading={loading}
+        />
+        <StatCard
+          label="Pesan masuk"
+          value={messages ? messages.total : null}
+          hint="Dari formulir kontak"
+          icon={Inbox}
+          tint="bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300"
+          href={`/sites/${sid}/forms`}
+          loading={loading}
+        />
+        <StatCard
+          label="Artikel"
+          value={articleTotal}
+          hint="Kabar & promo toko"
+          icon={Newspaper}
+          tint="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300"
+          href={`/sites/${sid}/blog`}
+          loading={loading}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <OnboardingChecklist items={checklist} loading={loading} />
+          <RecentProducts sid={sid} products={products} loading={loading} />
+        </div>
+        <div className="space-y-6">
+          <QuickActions sid={sid} />
+          <RecentMessages sid={sid} messages={messages} loading={loading} />
         </div>
       </div>
-    );
-  }
-  return (
-    <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">
-      Belum menggunakan template guru. Pilih template di menu Tampilan.
     </div>
   );
 }
 
-function QuickAction({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-}) {
+function QuickActions({ sid }: { sid: string }) {
+  const actions = [
+    { href: `/sites/${sid}/products`, icon: Plus, label: "Tambah Produk", tint: "text-orange-600 bg-orange-100 dark:bg-orange-950/50 dark:text-orange-300" },
+    { href: `/sites/${sid}/blog/new`, icon: PenLine, label: "Tulis Artikel", tint: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
+    { href: `/sites/${sid}/editor`, icon: SquarePen, label: "Buka Editor", tint: "text-primary bg-primary/10" },
+    { href: `/sites/${sid}/analytics`, icon: BarChart3, label: "Lihat Statistik", tint: "text-violet-600 bg-violet-100 dark:bg-violet-950/50 dark:text-violet-300" },
+  ];
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-[13px] font-bold text-slate-800 hover:bg-white hover:shadow-sm"
-    >
-      <span className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white">
-        <Icon className="size-4 text-slate-700" />
-      </span>
-      {label}
-      <ArrowUpRight className="ml-auto size-3.5 text-slate-400" />
-    </Link>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Aksi Cepat</CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-2">
+        {actions.map((a) => {
+          const Icon = a.icon;
+          return (
+            <Link
+              key={a.label}
+              href={a.href}
+              className="flex flex-col items-start gap-2.5 rounded-lg border p-3 text-sm font-medium transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className={`grid size-9 place-items-center rounded-lg ${a.tint}`}>
+                <Icon className="size-4" />
+              </span>
+              {a.label}
+            </Link>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
-function AnalyticsChart({ sid }: { sid: string }) {
-  const [range, setRange] = useState<ChartRange>("30d");
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const cfg = CHART_RANGES[range];
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    api<AnalyticsSummary>(`/api/v1/sites/${sid}/analytics?days=${cfg.days}`)
-      .then((r) => {
-        if (!cancelled) setSummary(r);
-      })
-      .catch(() => {
-        if (!cancelled) setSummary(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sid, cfg.days]);
-
-  const daily = summary ? fillDailyGaps(summary.daily, cfg.days) : [];
-  const bars = bucketize(daily, cfg.bucketDays);
-  const maxViews = Math.max(1, ...bars.map((b) => b.views));
-
-  const trend =
-    summary && summary.views_yesterday > 0
-      ? Math.round(((summary.views_today - summary.views_yesterday) / summary.views_yesterday) * 100)
-      : null;
-
+function SectionHeader({ title, href, linkLabel }: { title: string; href: string; linkLabel: string }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-[15px] font-bold text-slate-900">Statistik Kunjungan</h2>
-          <p className="mt-0.5 text-[12px] text-slate-500">
-            {loading
-              ? "Memuat…"
-              : summary
-                ? `Total ${fmtNumber(summary.total_views)} views · Hari ini ${fmtNumber(summary.views_today)}${
-                    trend !== null ? ` (${trend >= 0 ? "+" : ""}${trend}% dari kemarin)` : ""
-                  }`
-                : "Belum ada data"}
-          </p>
-        </div>
-        <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
-          {(Object.keys(CHART_RANGES) as ChartRange[]).map((r) => {
-            const active = r === range;
-            return (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`rounded-lg px-3 py-1.5 text-[12px] font-bold transition ${
-                  active
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {CHART_RANGES[r].shortLabel}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <div className="p-5">
+    <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+      <CardTitle className="text-base">{title}</CardTitle>
+      <Button variant="ghost" size="sm" asChild className="h-8 gap-1 text-xs text-muted-foreground">
+        <Link href={href}>
+          {linkLabel}
+          <ArrowRight className="!size-3.5" />
+        </Link>
+      </Button>
+    </CardHeader>
+  );
+}
+
+function RecentProducts({
+  sid,
+  products,
+  loading,
+}: {
+  sid: string;
+  products: PaginatedResult<Product> | null;
+  loading: boolean;
+}) {
+  const items = products?.items ?? [];
+  return (
+    <Card>
+      <SectionHeader title="Produk Terbaru" href={`/sites/${sid}/products`} linkLabel="Semua produk" />
+      <CardContent>
         {loading ? (
-          <div className="flex h-52 items-center justify-center text-sm text-slate-500">
-            <Loader2 className="mr-2 size-4 animate-spin" /> Memuat grafik…
-          </div>
-        ) : bars.every((b) => b.views === 0) ? (
-          <div className="flex h-52 flex-col items-center justify-center gap-1 text-sm text-slate-500">
-            <Eye className="size-6 text-slate-300" />
-            <div>Belum ada kunjungan dalam {cfg.label}.</div>
-            <div className="text-[12px] text-slate-400">
-              Publikasikan situs dan bagikan link untuk mulai melacak.
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex h-52 items-end gap-1.5 border-b border-slate-200 pt-4">
-              {bars.map((b, i) => (
-                <div
-                  key={i}
-                  className="group relative flex-1 rounded-t-md bg-gradient-to-t from-blue-500 to-blue-400 transition hover:from-blue-600 hover:to-blue-500"
-                  style={{
-                    height: `${Math.max(2, (b.views / maxViews) * 100)}%`,
-                    minHeight: "2px",
-                  }}
-                  title={`${b.label}: ${fmtNumber(b.views)} views`}
-                >
-                  <span className="pointer-events-none absolute -top-9 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white group-hover:block">
-                    {fmtNumber(b.views)}
-                  </span>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="size-12 animate-pulse rounded-md bg-muted/50" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-1/2 animate-pulse rounded-md bg-muted/50" />
+                  <div className="h-3 w-1/4 animate-pulse rounded-md bg-muted/50" />
                 </div>
-              ))}
-            </div>
-            {/* X-axis labels — sparse supaya tidak crowded. Tampilkan setiap ~N-th
-                bucket sesuai lebar range. */}
-            <div className="mt-2 flex gap-1.5 text-[10px] text-slate-500">
-              {bars.map((b, i) => {
-                const step = Math.max(1, Math.ceil(bars.length / 6));
-                const show = i % step === 0 || i === bars.length - 1;
-                return (
-                  <div key={i} className="flex-1 text-center">
-                    {show ? b.label : ""}
+              </div>
+            ))}
+          </div>
+        ) : !products ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Produk belum bisa dimuat. Coba muat ulang halaman.
+          </p>
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="Belum ada produk"
+            description="Tambahkan produk pertama Anda supaya pembeli bisa mulai belanja."
+            cta="Tambah Produk"
+            href={`/sites/${sid}/products`}
+          />
+        ) : (
+          <ul className="divide-y">
+            {items.map((p) => (
+              <li key={p.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md border bg-muted/40">
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image_url} alt="" className="size-full object-cover" loading="lazy" />
+                  ) : (
+                    <ImageIcon className="size-5 text-muted-foreground/60" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{p.name}</div>
+                  <div className="text-sm tabular-nums text-muted-foreground">
+                    {fmtPrice(p.price, p.currency)}
                   </div>
-                );
-              })}
-            </div>
-          </>
+                </div>
+                {p.status !== "active" && (
+                  <Badge variant="secondary" className="shrink-0">
+                    {p.status === "draft" ? "Draf" : "Diarsipkan"}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentMessages({
+  sid,
+  messages,
+  loading,
+}: {
+  sid: string;
+  messages: { total: number; recent: Message[] } | null;
+  loading: boolean;
+}) {
+  return (
+    <Card>
+      <SectionHeader title="Pesan Terbaru" href={`/sites/${sid}/forms`} linkLabel="Semua pesan" />
+      <CardContent>
+        {loading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-4 w-1/3 animate-pulse rounded-md bg-muted/50" />
+                <div className="h-3 w-full animate-pulse rounded-md bg-muted/50" />
+              </div>
+            ))}
+          </div>
+        ) : !messages ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Pesan belum bisa dimuat. Coba muat ulang halaman.
+          </p>
+        ) : messages.recent.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title="Belum ada pesan masuk"
+            description="Pesan dari formulir kontak di website akan muncul di sini."
+            cta="Tambah Kontak"
+            href={`/sites/${sid}/editor`}
+          />
+        ) : (
+          <ul className="space-y-1">
+            {messages.recent.map((m, i) => {
+              const { sender, body } = messagePreview(m);
+              return (
+                <li key={m.id}>
+                  {i > 0 && <Separator className="my-2" />}
+                  <div className="flex gap-3">
+                    <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {initials(sender)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-sm font-medium">{sender}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {timeAgo(m.submitted_at)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{body}</p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  cta,
+  href,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  cta: string;
+  href: string;
+}) {
+  return (
+    <div className="flex flex-col items-center rounded-lg border border-dashed px-4 py-8 text-center">
+      <div className="grid size-11 place-items-center rounded-full bg-muted">
+        <Icon className="size-5 text-muted-foreground" />
       </div>
-    </section>
+      <div className="mt-3 text-sm font-medium">{title}</div>
+      <p className="mt-1 max-w-xs text-sm text-muted-foreground">{description}</p>
+      <Button size="sm" variant="outline" asChild className="mt-4">
+        <Link href={href}>
+          <Plus />
+          {cta}
+        </Link>
+      </Button>
+    </div>
   );
 }

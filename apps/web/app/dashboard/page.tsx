@@ -3,70 +3,36 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Pencil,
-  BarChart3,
-  Globe2,
-  CheckCircle2,
-  Clock,
-  Archive,
   AlertCircle,
-  Loader2,
-  ArrowRight,
-  Sparkles,
-  FileText,
-  HardDrive,
-  ExternalLink,
   AlertTriangle,
+  ArrowRight,
+  Globe2,
+  Loader2,
+  Plus,
   RefreshCw,
+  Sparkles,
+  Store,
   UserCheck,
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { fmtBytes, pct } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
+import { NoticeBanner } from "@/components/site-dashboard/NoticeBanner";
+import {
+  SiteCard,
+  SiteCardSkeleton,
+  type SiteCardData,
+} from "@/components/site-dashboard/SiteCard";
 
-type Site = {
-  id: string;
-  slug: string;
-  name: string;
-  status: "draft" | "published" | "archived";
-  quota_max_pages: number;
-  quota_max_storage_bytes: number;
-  updated_at: string;
-  // Role caller di site tsb — 'owner' (milik sendiri) atau 'editor'/'viewer'
-  // (collaborator, mis. reseller/agent yang beli untuk klien).
+type Site = SiteCardData & {
+  // 'owner' = own site; 'editor'/'viewer' = collaborator (e.g. reseller buying for a client).
   role?: "owner" | "editor" | "viewer";
 };
 
-type SiteUsage = {
-  pages: { used: number; max: number };
-  storage_bytes: { used: number; max: number };
-};
-
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; class: string }> = {
-  published: {
-    label: "Published",
-    icon: CheckCircle2,
-    class: "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-400",
-  },
-  draft: {
-    label: "Draft",
-    icon: Clock,
-    class: "bg-muted text-muted-foreground border-border",
-  },
-  archived: {
-    label: "Archived",
-    icon: Archive,
-    class: "bg-muted text-muted-foreground border-border",
-  },
-};
-
 // MeProfile — subset dari /auth/me yang dipakai untuk cek kelengkapan profil.
-// Field ini wajib saat beli domain (WHOIS + EPP contact). Kalau user belum
-// isi dari awal, flow beli domain akan prompt — kita cegah dengan heads-up
-// di dashboard.
+// Field ini wajib saat beli domain (WHOIS + EPP contact).
 type MeProfile = {
   name: string;
   phone_number: string;
@@ -76,9 +42,6 @@ type MeProfile = {
   nik: string;
 };
 
-// Field label untuk pesan "yang belum: nama, HP, …". NIK opsional kalau user
-// tidak akan beli .id — tapi karena kita tidak tau niat user, tetap flagged
-// supaya lengkap dari awal.
 const PROFILE_FIELD_LABEL: Record<keyof MeProfile, string> = {
   name: "Nama lengkap",
   phone_number: "Nomor HP",
@@ -101,8 +64,7 @@ function missingProfileFields(m: MeProfile | null): Array<keyof MeProfile> {
   return keys.filter((k) => !(m[k] ?? "").trim());
 }
 
-// Purchase = shape yang di-return /api/v1/domains/purchases. Dashboard butuh
-// dua use case: kartu "sedang diproses" + banner "mau expire". Detail flow
+// Purchase = shape yang di-return /api/v1/domains/purchases. Detail flow
 // tetap di /sites/pending/[jobId] & /settings/domains/[name].
 type DomainPurchase = {
   job_id: string;
@@ -111,12 +73,10 @@ type DomainPurchase = {
   kind: string;
   payment_url?: string;
   expires_at?: string;
-  site_id?: string; // null = domain aktif tapi belum ada situs → prompt "Buat situs"
+  site_id?: string; // null = domain aktif tapi belum ada situs → prompt "Buat toko"
 };
 
-// Status yang layak ditampilkan di kartu "sedang diproses" dashboard.
-// active + failed + expired = terminal, tidak perlu dashboard prompt lagi
-// (active yang belum di-attach ditangani di /sites/pending/[jobId] template picker).
+// Non-terminal states worth surfacing on the dashboard.
 const ACTIONABLE_STATUSES = new Set([
   "pending_payment",
   "pending_document",
@@ -126,48 +86,27 @@ const ACTIONABLE_STATUSES = new Set([
 // Ambang batas peringatan expire — konsisten dengan /settings/domains (formatExpiry).
 const EXPIRY_WARN_DAYS = 30;
 
+const CREATE_HREF = "/sites/new-with-domain";
+
 export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>([]);
-  const [usageMap, setUsageMap] = useState<Record<string, SiteUsage>>({});
   const [err, setErr] = useState<string | null>(null);
   const [loadingSites, setLoadingSites] = useState(true);
-  // Me — fetch /auth/me untuk cek kelengkapan profil (phone/alamat/NIK).
-  // Field ini wajib saat beli domain — kalau user belum isi, show banner
-  // proaktif di dashboard supaya tidak kaget pas wizard beli domain.
   const [me, setMe] = useState<MeProfile | null>(null);
   const [profileDismissed, setProfileDismissed] = useState<boolean>(false);
   const [pendingPurchases, setPendingPurchases] = useState<DomainPurchase[]>([]);
-  // Domain gagal yang butuh perhatian user — retry payment / lengkapi dokumen.
-  // Dedupe agar tidak double-nag: kalau ada juga row pending/active untuk
-  // domain sama (user sudah recover), sembunyikan yang failed.
+  // Deduped: hidden when the same domain already has a pending/active row (user recovered).
   const [failedPurchases, setFailedPurchases] = useState<DomainPurchase[]>([]);
-  // Domain aktif yang expire ≤ 30 hari — banner prominent supaya user tidak
-  // ketinggalan renewal (kalau miss, site down + support ticket).
+  // Missing a renewal takes the store offline, so surface ≤ 30-day expiries.
   const [expiringPurchases, setExpiringPurchases] = useState<DomainPurchase[]>([]);
-  // Semua domain aktif (register-kind) — dipakai untuk section "Domain Anda"
-  // yang tampilkan status attached + CTA "Buat situs" kalau belum attached.
   const [activeDomains, setActiveDomains] = useState<DomainPurchase[]>([]);
 
   async function refresh() {
     setLoadingSites(true);
     try {
-      // Guard nil dari backend (reseller/agent tanpa akses site apapun bisa
-      // return null di JSON kalau Go marshaling ke nil slice — normalisasi ke []).
+      // Go can marshal a nil slice to null — normalise to [].
       const list = (await api<Site[]>("/api/v1/sites")) ?? [];
       setSites(list);
-      const entries = await Promise.all(
-        list.map(async (s) => {
-          try {
-            const u = await api<SiteUsage>(`/api/v1/sites/${s.id}/usage`);
-            return [s.id, u] as const;
-          } catch {
-            return null;
-          }
-        }),
-      );
-      const m: Record<string, SiteUsage> = {};
-      for (const e of entries) if (e) m[e[0]] = e[1];
-      setUsageMap(m);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -177,38 +116,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refresh();
-    // Fetch /auth/me untuk cek kelengkapan profil. Fire-and-forget — kalau
-    // gagal, banner profile tidak tampil (silent, non-blocking).
     api<MeProfile>("/api/v1/auth/me")
       .then((u) => setMe(u))
       .catch(() => {});
-    // Restore dismissed state dari sessionStorage (reset tiap close tab —
-    // user tetap lihat lagi di sesi berikutnya kalau belum isi).
+    // sessionStorage so the reminder returns next session if still incomplete.
     try {
       if (sessionStorage.getItem("dashboard_profile_banner_dismissed") === "1") {
         setProfileDismissed(true);
       }
     } catch {
-      /* sessionStorage disabled — biarkan default (banner tampil) */
+      /* sessionStorage disabled — keep banner */
     }
-    // Domain purchases — best effort. Kalau endpoint 404 (registrar disabled),
-    // kartu ini tidak muncul.
-    //
-    // Polling 30s untuk auto-refresh kartu "sedang diproses" — user tidak
-    // perlu manual reload saat webhook fire dari registrar. Interval berhenti
-    // diam-diam kalau tidak ada pending (no unnecessary requests).
+    // Poll every 30s so webhook-driven status changes show without reload.
     let cancelled = false;
     async function refreshPurchases() {
       try {
-        // limit 100 karena expiring banner butuh sweep semua active — 10 terlalu
-        // kecil untuk user dengan banyak domain.
+        // limit 100: the expiry sweep needs every active row.
         const list = await api<DomainPurchase[]>("/api/v1/domains/purchases?limit=100");
         if (cancelled) return;
         const items = list ?? [];
         setPendingPurchases(items.filter((p) => ACTIONABLE_STATUSES.has(p.status)));
-        // Failed jobs — dedupe supaya tidak nag domain yang sudah user recover
-        // (retry sukses → row active + row failed lama). Skip failed kalau ada
-        // row pending/active untuk domain sama.
         const inProgress = new Set<string>();
         for (const p of items) {
           if (p.status === "active" || ACTIONABLE_STATUSES.has(p.status)) {
@@ -225,16 +152,10 @@ export default function DashboardPage() {
           failed.push(p);
         }
         setFailedPurchases(failed);
-        // Expiry check per DOMAIN, bukan per-row: setelah renew, register-row
-        // punya expires_at lama tapi renew-row punya expires_at baru. Ambil
-        // yang terbaru per domain supaya user tidak salah panik.
+        // Per-domain, not per-row: after a renew the register row keeps the old expiry.
         setExpiringPurchases(latestActivePerDomain(items).filter(isExpiringSoon));
-        // Domain aktif register-kind — filter kind=register saja karena renew
-        // job aktif tidak nambah entitas domain (cuma extend expiry). site_id
-        // di-carry supaya UI bisa show "Buat situs" vs "Edit situs".
-        setActiveDomains(
-          items.filter((p) => p.status === "active" && p.kind === "register"),
-        );
+        // Register-kind only: renew rows don't add a new domain entity.
+        setActiveDomains(items.filter((p) => p.status === "active" && p.kind === "register"));
       } catch {
         /* silent — dashboard tidak block */
       }
@@ -247,362 +168,202 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const domainBySite = new Map<string, string>();
+  for (const d of activeDomains) if (d.site_id) domainBySite.set(d.site_id, d.domain);
+  const unattachedDomains = latestActivePerDomain(activeDomains).filter((d) => !d.site_id);
+  const publishedCount = sites.filter((s) => s.status === "published").length;
+  const missingProfile = missingProfileFields(me);
+
   return (
     <div className="space-y-6">
-      {/* Header — 1 domain = 1 situs; tidak ada quota. */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-              <Globe2 className="size-4 text-primary" />
+          <div className="mb-1 flex items-center gap-2">
+            <div className="grid size-7 place-items-center rounded-md bg-primary/10">
+              <Store className="size-4 text-primary" />
             </div>
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Dashboard
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Situs Saya</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Toko Saya</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {loadingSites
               ? "Memuat…"
               : sites.length === 0
-                ? "Belum ada situs — beli domain untuk mulai."
-                : `${sites.length} situs aktif · 1 domain = 1 situs`}
+                ? "Belum ada toko — beli domain untuk mulai berjualan online."
+                : `${sites.length} toko · ${publishedCount} sudah dipublikasikan`}
           </p>
         </div>
-
-        <div className="flex items-center gap-3">
-          {/* Primary + satu-satunya alur create: beli domain lalu buat situs.
-              Free subdomain flow sudah dihapus (produk decision). */}
-          <Button className="gap-2 shadow-sm" asChild>
-            <Link href="/sites/new-with-domain">
-              <Globe2 className="size-4" />
-              <span className="hidden sm:inline">Beli Domain + Buat Situs</span>
-              <span className="sm:hidden">Beli Domain</span>
-            </Link>
-          </Button>
-        </div>
+        {/* Single create flow: buy a domain, then build the store (1 domain = 1 situs). */}
+        <Button className="w-full shadow-sm sm:w-auto" asChild>
+          <Link href={CREATE_HREF}>
+            <Plus />
+            Beli Domain + Buat Toko
+          </Link>
+        </Button>
       </div>
 
       {err && (
         <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="size-4 shrink-0" />
-          <span><span className="font-medium">Gagal memuat:</span> {err}</span>
+          <span>
+            <span className="font-medium">Gagal memuat:</span> {err}
+          </span>
         </div>
       )}
 
-      {/* Profile completeness banner — proaktif ingatkan user isi profil
-          supaya alur beli domain nanti tidak terputus di tengah. Hanya
-          tampil kalau me sudah ter-fetch (hindari flicker saat loading)
-          + ada minimal 1 field kosong + user belum dismiss di sesi ini. */}
-      {me && !profileDismissed && missingProfileFields(me).length > 0 && (
-        <div className="relative rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-          <button
-            type="button"
-            onClick={() => {
-              setProfileDismissed(true);
-              try {
-                sessionStorage.setItem("dashboard_profile_banner_dismissed", "1");
-              } catch {
-                /* ignore write failure */
-              }
-            }}
-            aria-label="Tutup pemberitahuan"
-            title="Tutup pemberitahuan (akan muncul lagi di sesi berikutnya)"
-            className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-amber-900 transition-colors hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/40"
-          >
-            <X className="size-4" />
-          </button>
-          <div className="flex flex-wrap items-start gap-3 pr-8">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
-              <UserCheck className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                Lengkapi profil sebelum beli domain
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-amber-900/80 dark:text-amber-200/80">
-                Data ini wajib untuk WHOIS & invoice domain. Isi sekali di sini
-                supaya alur <strong>Beli Domain + Buat Situs</strong> nanti tidak
-                terputus di tengah.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {missingProfileFields(me).map((k) => (
-                  <span
-                    key={k}
-                    className="inline-flex items-center rounded-full border border-amber-300 bg-white/60 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200"
-                  >
-                    {PROFILE_FIELD_LABEL[k]}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  asChild
-                  className="h-8 gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
-                >
-                  <Link href="/settings/profile">
-                    Lengkapi Sekarang
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Button>
-                <span className="text-[11px] text-amber-900/70 dark:text-amber-200/70">
-                  {missingProfileFields(me).length} dari {Object.keys(PROFILE_FIELD_LABEL).length} field belum terisi
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Notices — compact so they never push the store grid off-screen. */}
+      {(expiringPurchases.length > 0 ||
+        pendingPurchases.length > 0 ||
+        failedPurchases.length > 0 ||
+        (me && !profileDismissed && missingProfile.length > 0)) && (
+        <div className="space-y-2">
+          {expiringPurchases.length > 0 && (
+            <NoticeBanner
+              tone="red"
+              icon={<AlertTriangle className="size-4 shrink-0" />}
+              title="Domain akan segera expire"
+              linkLabel="Kelola domain"
+              linkHref="/settings/domains"
+              rows={expiringPurchases.map((p) => ({
+                key: p.job_id,
+                href: `/settings/domains/${encodeURIComponent(p.domain)}`,
+                domain: p.domain,
+                badge: (
+                  <Badge variant="destructive" className="gap-1 px-1.5 py-0 text-[10px]">
+                    <RefreshCw className="size-2.5" />
+                    {expiryLabel(p)}
+                  </Badge>
+                ),
+              }))}
+            />
+          )}
 
-      {/* Expiry warning — top-of-page karena missing renewal = site down */}
-      {expiringPurchases.length > 0 && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-red-900 dark:text-red-200">
-              <AlertTriangle className="size-4" />
-              Domain akan segera expire
-            </div>
-            <Link
-              href="/settings/domains"
-              className="text-xs font-medium text-red-900 underline underline-offset-4 hover:text-red-700 dark:text-red-200"
-            >
-              Kelola domain
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {expiringPurchases.map((p) => {
-              const days = p.expires_at ? daysUntil(p.expires_at) : 0;
-              const label =
-                days < 0
-                  ? `sudah expire ${Math.abs(days)} hari lalu`
-                  : days === 0
-                    ? "expire hari ini"
-                    : `sisa ${days} hari`;
-              return (
-                <Link
-                  key={p.job_id}
-                  href={`/settings/domains/${encodeURIComponent(p.domain)}`}
-                  className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:border-red-400"
-                >
-                  <div className="flex items-center gap-2">
-                    <Globe2 className="size-4 text-muted-foreground" />
-                    <code className="font-medium">{p.domain}</code>
-                    <Badge variant="destructive" className="gap-1 text-xs">
-                      <RefreshCw className="size-3" />
-                      {label}
-                    </Badge>
-                  </div>
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Domain pending — kartu prompt supaya user tidak lupa lanjutkan alurnya */}
-      {pendingPurchases.length > 0 && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
-              <Loader2 className="size-4 animate-spin" />
-              Domain sedang diproses
-            </div>
-            <Link
-              href="/settings/domains"
-              className="text-xs font-medium text-amber-900 underline underline-offset-4 hover:text-amber-700 dark:text-amber-200"
-            >
-              Lihat semua domain
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {pendingPurchases.map((p) => (
-              <Link
-                key={p.job_id}
-                href={`/sites/pending/${p.job_id}`}
-                className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:border-primary"
-              >
-                <div className="flex items-center gap-2">
-                  <Globe2 className="size-4 text-muted-foreground" />
-                  <code className="font-medium">{p.domain}</code>
-                  <Badge variant="secondary" className="text-xs">
+          {pendingPurchases.length > 0 && (
+            <NoticeBanner
+              tone="amber"
+              icon={<Loader2 className="size-4 shrink-0 animate-spin" />}
+              title="Domain sedang diproses"
+              linkLabel="Lihat semua domain"
+              linkHref="/settings/domains"
+              rows={pendingPurchases.map((p) => ({
+                key: p.job_id,
+                href: `/sites/pending/${p.job_id}`,
+                domain: p.domain,
+                badge: (
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                     {statusCopy(p.status)}
                   </Badge>
-                </div>
-                <ArrowRight className="size-4 text-muted-foreground" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+                ),
+              }))}
+            />
+          )}
 
-      {/* Domain gagal — butuh action user (retry payment / restart flow).
-          Sudah di-dedupe: kalau ada row pending/active untuk domain sama,
-          card ini tidak muncul (user sudah recover). Deep-link ke pending
-          page yang punya tombol Retry / detail failure reason. */}
-      {failedPurchases.length > 0 && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-red-900 dark:text-red-200">
-              <AlertCircle className="size-4" />
-              Domain gagal — perlu perhatian
-            </div>
-            <Link
-              href="/settings/domains"
-              className="text-xs font-medium text-red-900 underline underline-offset-4 hover:text-red-700 dark:text-red-200"
-            >
-              Lihat semua domain
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {failedPurchases.map((p) => (
-              <Link
-                key={p.job_id}
-                href={`/sites/pending/${p.job_id}`}
-                className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:border-red-400"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <Globe2 className="size-4 shrink-0 text-muted-foreground" />
-                  <code className="truncate font-medium">{p.domain}</code>
-                  <Badge variant="destructive" className="text-xs">
-                    {p.kind === "renew" ? "Renew gagal" : "Pendaftaran gagal"}
+          {failedPurchases.length > 0 && (
+            <NoticeBanner
+              tone="red"
+              icon={<AlertCircle className="size-4 shrink-0" />}
+              title="Domain gagal — perlu perhatian"
+              linkLabel="Lihat semua domain"
+              linkHref="/settings/domains"
+              rows={failedPurchases.map((p) => ({
+                key: p.job_id,
+                href: `/sites/pending/${p.job_id}`,
+                domain: p.domain,
+                badge: (
+                  <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
+                    {p.kind === "renew" ? "Renew gagal · coba lagi" : "Gagal · coba lagi"}
                   </Badge>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5 text-red-700 dark:text-red-300">
-                  <span className="text-xs font-medium">Coba lagi</span>
-                  <ArrowRight className="size-4" />
-                </div>
-              </Link>
-            ))}
-          </div>
+                ),
+              }))}
+            />
+          )}
+
+          {me && !profileDismissed && missingProfile.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="flex items-center gap-2 font-medium">
+                <UserCheck className="size-4 shrink-0" />
+                Lengkapi profil sebelum beli domain
+              </div>
+              <span
+                className="min-w-0 flex-1 truncate text-xs opacity-80"
+                title={missingProfile.map((k) => PROFILE_FIELD_LABEL[k]).join(", ")}
+              >
+                Belum diisi: {missingProfile.map((k) => PROFILE_FIELD_LABEL[k]).join(", ")}
+              </span>
+              <div className="flex items-center gap-1">
+                <Link
+                  href="/settings/profile"
+                  className="text-xs font-medium underline underline-offset-4"
+                >
+                  Lengkapi
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileDismissed(true);
+                    try {
+                      sessionStorage.setItem("dashboard_profile_banner_dismissed", "1");
+                    } catch {
+                      /* ignore write failure */
+                    }
+                  }}
+                  aria-label="Tutup pemberitahuan"
+                  title="Tutup (muncul lagi di sesi berikutnya)"
+                  className="grid size-6 place-items-center rounded-md transition-colors hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Domain Aktif — dedupe per domain, prioritas domain yang BELUM ada
-          situs (butuh action: pilih template). Domain yang sudah attached
-          ke situs muncul juga tapi dengan CTA "Edit situs". */}
-      {activeDomains.length > 0 && (
-        <ActiveDomainsSection domains={latestActivePerDomain(activeDomains)} sites={sites} />
-      )}
+      {/* Paid domains with no store yet — the one action that unblocks them. */}
+      {unattachedDomains.length > 0 && <UnattachedDomains domains={unattachedDomains} />}
 
-      {/* Site grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loadingSites &&
           sites.length === 0 &&
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border bg-card p-5 space-y-4 animate-pulse">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="h-4 w-32 rounded bg-muted" />
-                  <div className="h-3 w-20 rounded bg-muted" />
-                </div>
-                <div className="h-5 w-16 rounded-full bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <div className="h-2 w-full rounded bg-muted" />
-                <div className="h-2 w-full rounded bg-muted" />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="h-8 rounded-md bg-muted" />
-                <div className="h-8 rounded-md bg-muted" />
-                <div className="h-8 rounded-md bg-muted" />
-              </div>
-            </div>
-          ))}
+          Array.from({ length: 3 }).map((_, i) => <SiteCardSkeleton key={i} />)}
 
-        {!loadingSites && sites.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-              <Sparkles className="size-6 text-muted-foreground" />
+        {!loadingSites && sites.length === 0 && !err && (
+          <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed bg-card px-6 py-16 text-center">
+            <div className="grid size-14 place-items-center rounded-2xl bg-primary/10">
+              <Store className="size-7 text-primary" />
             </div>
-            <h3 className="mt-4 text-sm font-semibold">Belum ada situs</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Beli domain untuk mulai — 1 domain = 1 situs.
+            <h3 className="mt-4 text-base font-semibold">Belum ada toko online</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Beli domain .id untuk toko Anda, pilih template, lalu tambahkan produk. Selesai
+              dalam beberapa menit.
             </p>
-            <Button asChild className="mt-5 gap-2 shadow-sm">
-              <Link href="/sites/new-with-domain">
-                <Globe2 className="size-4" />
-                Beli Domain + Buat Situs
+            <Button asChild className="mt-5 shadow-sm">
+              <Link href={CREATE_HREF}>
+                <Globe2 />
+                Beli Domain + Buat Toko
               </Link>
             </Button>
           </div>
         )}
 
-        {sites.map((s) => {
-          const cfg = STATUS_CONFIG[s.status] ?? STATUS_CONFIG.draft;
-          const Icon = cfg.icon;
-          const updated = new Date(s.updated_at).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          });
-          return (
-            <div
-              key={s.id}
-              className="group relative flex flex-col rounded-xl border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 overflow-hidden"
-            >
-              {s.status === "published" && (
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-              )}
-
-              <div className="p-5 flex-1 flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold leading-tight">{s.name}</p>
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                      <span className="text-muted-foreground/50">/</span>{s.slug}
-                    </p>
-                    {s.role && s.role !== "owner" && (
-                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                        Kolaborator ({s.role})
-                      </p>
-                    )}
-                  </div>
-                  <Badge className={`shrink-0 gap-1 text-xs ${cfg.class}`}>
-                    <Icon className="size-3" />
-                    {cfg.label}
-                  </Badge>
-                </div>
-
-                <SiteUsageMini usage={usageMap[s.id]} />
-
-                <p className="text-[11px] text-muted-foreground">Diperbarui {updated}</p>
-              </div>
-
-              <div className="border-t bg-muted/20 px-3 py-2.5 grid grid-cols-3 gap-1.5">
-                <Button variant="default" size="sm" className="h-8 gap-1.5 text-xs" asChild>
-                  <Link href={`/sites/${s.id}/`}>
-                    <Pencil className="size-3.5" />
-                    Edit
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
-                  <Link href={`/sites/${s.id}/usage`}>
-                    <BarChart3 className="size-3.5" />
-                    Statistik
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
-                  <Link href={`/sites/${s.id}/domains`}>
-                    <Globe2 className="size-3.5" />
-                    Domain
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+        {sites.map((s) => (
+          <SiteCard key={s.id} site={s} domain={domainBySite.get(s.id) ?? null} />
+        ))}
 
         {!loadingSites && sites.length > 0 && (
           <Link
-            href="/sites/new-with-domain"
-            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/10 p-8 text-muted-foreground transition-colors hover:bg-muted/20 hover:text-foreground hover:border-primary/50"
+            href={CREATE_HREF}
+            className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-card/50 p-8 text-center text-muted-foreground transition-colors hover:border-primary/50 hover:bg-card hover:text-foreground"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed">
-              <Globe2 className="size-5" />
+            <div className="grid size-11 place-items-center rounded-full border-2 border-dashed">
+              <Plus className="size-5" />
             </div>
-            <span className="text-sm font-medium">Beli Domain + Buat Situs</span>
+            <div>
+              <div className="text-sm font-medium">Buat toko baru</div>
+              <div className="mt-0.5 text-xs">Mulai dengan membeli domain</div>
+            </div>
           </Link>
         )}
       </div>
@@ -610,181 +371,39 @@ export default function DashboardPage() {
   );
 }
 
-function SiteUsageMini({ usage }: { usage: SiteUsage | undefined }) {
-  if (!usage) {
-    return (
-      <div className="space-y-2">
-        <div className="h-5 w-full rounded bg-muted animate-pulse" />
-        <div className="h-5 w-full rounded bg-muted animate-pulse" />
-      </div>
-    );
-  }
+function UnattachedDomains({ domains }: { domains: DomainPurchase[] }) {
   return (
-    <div className="space-y-2.5">
-      <UsageRow
-        icon={FileText}
-        label="Halaman"
-        usedText={`${usage.pages.used} / ${usage.pages.max}`}
-        percent={pct(usage.pages.used, usage.pages.max)}
-      />
-      <UsageRow
-        icon={HardDrive}
-        label="Storage"
-        usedText={`${fmtBytes(usage.storage_bytes.used)} / ${fmtBytes(usage.storage_bytes.max)}`}
-        percent={pct(usage.storage_bytes.used, usage.storage_bytes.max)}
-      />
-    </div>
-  );
-}
-
-function UsageRow({
-  icon: Icon,
-  label,
-  usedText,
-  percent,
-}: {
-  icon: React.ElementType;
-  label: string;
-  usedText: string;
-  percent: number;
-}) {
-  const barColor =
-    percent >= 90 ? "bg-red-500" : percent >= 70 ? "bg-amber-500" : "bg-emerald-500";
-  const textColor =
-    percent >= 90
-      ? "text-red-600 dark:text-red-400"
-      : percent >= 70
-      ? "text-amber-600 dark:text-amber-400"
-      : "";
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <Icon className="size-3" />
-          {label}
-        </span>
-        <span className={`tabular-nums font-medium ${textColor}`}>{usedText}</span>
+    <Card className="border-primary/30 bg-primary/5 p-3 sm:p-4">
+      <div className="mb-2.5 flex items-center gap-2 text-sm font-medium">
+        <Sparkles className="size-4 text-primary" />
+        {domains.length} domain siap dibuatkan toko
       </div>
-      <Progress value={percent} indicatorClassName={barColor} className="h-1.5 bg-muted" />
-    </div>
-  );
-}
-
-// ActiveDomainsSection — daftar domain aktif user. Prioritas visual:
-// domain yang belum di-attach ke situs muncul dulu dengan CTA prominent
-// "Buat situs" (butuh action). Domain yang sudah attached muncul di bawah
-// dengan link "Edit situs" (informational).
-//
-// Kenapa penting di dashboard: core product "1 domain = 1 situs" — user
-// harus lihat domain-nya + entry point ke bikin situs tanpa perlu ke settings.
-function ActiveDomainsSection({
-  domains,
-  sites,
-}: {
-  domains: DomainPurchase[];
-  sites: Site[];
-}) {
-  // Sort: unattached dulu, attached di bawah. Antar unattached, expire terdekat.
-  const sorted = [...domains].sort((a, b) => {
-    const aAttached = a.site_id ? 1 : 0;
-    const bAttached = b.site_id ? 1 : 0;
-    if (aAttached !== bAttached) return aAttached - bAttached;
-    const aExp = a.expires_at ? new Date(a.expires_at).getTime() : Infinity;
-    const bExp = b.expires_at ? new Date(b.expires_at).getTime() : Infinity;
-    return aExp - bExp;
-  });
-  const unattached = sorted.filter((d) => !d.site_id);
-  const bySiteID = new Map(sites.map((s) => [s.id, s]));
-
-  return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary/10">
-            <Globe2 className="size-4 text-primary" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold">Domain Anda</div>
-            <div className="text-[11px] text-muted-foreground">
-              {unattached.length > 0
-                ? `${unattached.length} domain belum ada situs`
-                : `${domains.length} domain aktif`}
-            </div>
-          </div>
-        </div>
-        <Link
-          href="/settings/domains"
-          className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Lihat semua
-        </Link>
-      </div>
-
-      <ul className="space-y-2">
-        {sorted.map((d) => (
-          <ActiveDomainRow key={d.job_id} d={d} site={d.site_id ? bySiteID.get(d.site_id) : undefined} />
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {domains.map((d) => (
+          <li
+            key={d.job_id}
+            className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"
+          >
+            <Globe2 className="size-4 shrink-0 text-muted-foreground" />
+            <code className="min-w-0 flex-1 truncate text-sm font-medium">{d.domain}</code>
+            <Button asChild size="sm" className="h-8 shrink-0">
+              <Link href={`/sites/pending/${d.job_id}`}>
+                Buat toko
+                <ArrowRight />
+              </Link>
+            </Button>
+          </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }
 
-function ActiveDomainRow({ d, site }: { d: DomainPurchase; site: Site | undefined }) {
-  const attached = !!d.site_id;
-  return (
-    <li
-      className={
-        "flex flex-wrap items-center gap-3 rounded-lg border p-3 transition-colors " +
-        (attached ? "border-border bg-background" : "border-primary/40 bg-primary/5")
-      }
-    >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Globe2 className="size-4 text-muted-foreground" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <code className="text-sm font-semibold">{d.domain}</code>
-          {attached ? (
-            <Badge variant="secondary" className="text-[10px]">
-              <CheckCircle2 className="mr-1 size-2.5" />
-              Ada situs
-            </Badge>
-          ) : (
-            <Badge variant="success" className="gap-1 text-[10px]">
-              <Sparkles className="size-2.5" />
-              Siap dibuat situs
-            </Badge>
-          )}
-        </div>
-        {attached && site && (
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            {site.name} · /{site.slug}
-          </div>
-        )}
-        {!attached && (
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            Pilih template + bikin situs sekarang — gratis, ~1 menit.
-          </div>
-        )}
-      </div>
-      {attached && site ? (
-        <Button asChild size="sm" variant="outline" className="gap-1.5">
-          <Link href={`/sites/${site.id}/editor`}>
-            <Pencil className="size-3.5" />
-            Edit situs
-          </Link>
-        </Button>
-      ) : (
-        <Button asChild size="sm" className="gap-1.5 shadow-sm">
-          <Link href={`/sites/pending/${d.job_id}`}>
-            <Sparkles className="size-3.5" />
-            Buat situs
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </Button>
-      )}
-    </li>
-  );
+function expiryLabel(p: DomainPurchase): string {
+  const days = p.expires_at ? daysUntil(p.expires_at) : 0;
+  if (days < 0) return `expire ${Math.abs(days)} hari lalu`;
+  if (days === 0) return "expire hari ini";
+  return `sisa ${days} hari`;
 }
 
 // statusCopy — mapping raw registrar status → label Indonesia untuk kartu

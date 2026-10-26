@@ -5,7 +5,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  BookOpen,
+  BarChart3,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -14,23 +14,24 @@ import {
   Globe2,
   Home,
   ImageIcon,
-  LayoutTemplate,
+  Inbox,
+  LayoutDashboard,
   Loader2,
   LogOut,
-  Megaphone,
   Menu,
-  MessagesSquare,
-  MessageSquare,
-  PenLine,
+  Newspaper,
+  Package,
+  Palette,
   Rocket,
   Settings,
   ShieldCheck,
   SquarePen,
+  Store,
   User,
-  UserCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, clearTokens, getAccessToken } from "@/lib/api";
+import { api, clearTokens, errMessage, getAccessToken } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  SITE_STATUS_EVENT,
+  emitSiteStatus,
+  type SiteStatusDetail,
+} from "@/components/site-dashboard/utils";
 import { cn } from "@/lib/utils";
 
 type Site = { id: string; name: string; slug: string; status: string };
@@ -51,51 +57,65 @@ type Me = {
 };
 
 type NavItem = {
-  href: (id: string) => string;
+  // Path segment after /sites/:id ("" = overview).
+  segment: string;
   label: string;
   icon: React.ElementType;
-  exact?: boolean;
 };
 
-// Menu guru per mockup dashboard-guru. Menu di luar list ini di-hide sementara
-// (route lama tetap accessible via URL langsung, tidak dihapus).
-const NAV_ITEMS: NavItem[] = [
-  { href: (id) => `/sites/${id}`, label: "Dashboard", icon: Home, exact: true },
-  { href: (id) => `/sites/${id}/editor`, label: "Editor", icon: SquarePen },
-  { href: (id) => `/sites/${id}/pages`, label: "Halaman", icon: Files },
-  { href: (id) => `/sites/${id}/tulisan`, label: "Tulisan", icon: PenLine },
-  { href: (id) => `/sites/${id}/forum`, label: "Forum Diskusi", icon: MessagesSquare },
-  { href: (id) => `/sites/${id}/pembelajaran`, label: "Pembelajaran", icon: BookOpen },
-  { href: (id) => `/sites/${id}/tanggapan`, label: "Tanggapan", icon: MessageSquare },
-  { href: (id) => `/sites/${id}/promosi`, label: "Ruang Promosi", icon: Megaphone },
-  { href: (id) => `/sites/${id}/assets`, label: "Aset", icon: ImageIcon },
-  { href: (id) => `/sites/${id}/profil`, label: "Profil", icon: UserCircle },
-  { href: (id) => `/sites/${id}/tampilan`, label: "Tampilan Website", icon: LayoutTemplate },
-  { href: (id) => `/sites/${id}/domains`, label: "Domain", icon: Globe2 },
+type NavSection = { label: string; items: NavItem[] };
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Toko",
+    items: [
+      { segment: "", label: "Ringkasan", icon: LayoutDashboard },
+      { segment: "products", label: "Produk", icon: Package },
+      { segment: "forms", label: "Pesan Masuk", icon: Inbox },
+      { segment: "analytics", label: "Statistik", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Konten",
+    items: [
+      { segment: "editor", label: "Editor", icon: SquarePen },
+      { segment: "pages", label: "Halaman", icon: Files },
+      { segment: "blog", label: "Artikel", icon: Newspaper },
+      { segment: "assets", label: "Aset", icon: ImageIcon },
+    ],
+  },
+  {
+    label: "Pengaturan",
+    items: [
+      { segment: "theme", label: "Tampilan", icon: Palette },
+      { segment: "domains", label: "Domain", icon: Globe2 },
+    ],
+  },
 ];
 
 const TITLES: Record<string, { title: string; subtitle: string }> = {
-  "": { title: "Dashboard", subtitle: "Kelola website pribadi Anda" },
-  editor: { title: "Editor", subtitle: "Susun blok halaman dengan drag-and-drop" },
-  pages: { title: "Halaman", subtitle: "Kelola daftar halaman website" },
-  tulisan: { title: "Tulisan", subtitle: "Kelola artikel dan rubrik" },
-  forum: { title: "Forum Diskusi", subtitle: "Kelola topik dan percakapan" },
-  pembelajaran: { title: "Pembelajaran", subtitle: "Kelola materi pembelajaran" },
-  tanggapan: { title: "Tanggapan", subtitle: "Moderasi komentar pembaca" },
-  promosi: { title: "Ruang Promosi", subtitle: "Kelola banner 2:1" },
-  assets: { title: "Aset", subtitle: "Kelola gambar & berkas untuk website" },
-  profil: { title: "Profil", subtitle: "Kelola identitas profesional" },
-  tampilan: { title: "Tampilan Website", subtitle: "Pilih template dan personalisasi" },
-  domains: { title: "Domain", subtitle: "Kelola alamat situs dan hubungkan domain .id Anda" },
+  "": { title: "Ringkasan", subtitle: "Pantau toko online Anda dalam sekilas" },
+  products: { title: "Produk", subtitle: "Kelola katalog, harga, dan stok produk" },
+  forms: { title: "Pesan Masuk", subtitle: "Pesan dan pertanyaan dari calon pembeli" },
+  analytics: { title: "Statistik", subtitle: "Lihat jumlah pengunjung dan halaman terpopuler" },
+  editor: { title: "Editor", subtitle: "Susun halaman toko dengan drag-and-drop" },
+  pages: { title: "Halaman", subtitle: "Kelola daftar halaman website toko" },
+  blog: { title: "Artikel", subtitle: "Tulis kabar, promo, dan tips untuk pelanggan" },
+  assets: { title: "Aset", subtitle: "Kelola foto produk dan berkas toko" },
+  theme: { title: "Tampilan", subtitle: "Atur warna, font, dan template toko" },
+  domains: { title: "Domain", subtitle: "Kelola alamat toko dan hubungkan domain .id Anda" },
+  usage: { title: "Pemakaian", subtitle: "Kuota halaman dan penyimpanan toko" },
+  members: { title: "Anggota", subtitle: "Atur siapa saja yang ikut mengelola toko" },
+  export: { title: "Ekspor", subtitle: "Unduh website toko sebagai HTML statis" },
+  code: { title: "Kode Kustom", subtitle: "Sisipkan kode tambahan ke website toko" },
 };
 
-function pageMeta(pathname: string, sid: string) {
-  const rest = pathname.replace(`/sites/${sid}`, "").replace(/^\//, "").split("/")[0] ?? "";
-  return TITLES[rest] ?? TITLES[""];
+function currentSegment(pathname: string, sid: string): string {
+  return pathname.replace(`/sites/${sid}`, "").replace(/^\//, "").split("/")[0] ?? "";
 }
 
-// Key untuk persist state collapse sidebar antar reload.
-const SIDEBAR_COLLAPSED_KEY = "guru_sidebar_collapsed";
+// Persist sidebar collapse across reloads.
+const SIDEBAR_COLLAPSED_KEY = "site_sidebar_collapsed";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -121,15 +141,24 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     api<Me>("/api/v1/auth/me").then(setMe).catch(() => {});
   }, [params.id, router]);
 
-  // Restore collapse state dari localStorage. Client-only, jadi tidak ada
-  // hydration mismatch — default expand kalau nilai tidak valid.
+  // Client-only read avoids hydration mismatch; default is expanded.
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-      if (raw === "1") setCollapsed(true);
+      if (window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setCollapsed(true);
     } catch {
-      // localStorage disabled / private mode — biarkan default.
+      // localStorage disabled / private mode — keep default.
     }
+  }, []);
+
+  // Overview page can publish too; keep the header button in sync.
+  useEffect(() => {
+    function onStatus(e: Event) {
+      const d = (e as CustomEvent<SiteStatusDetail>).detail;
+      if (!d) return;
+      setSite((prev) => (prev && prev.id === d.siteId ? { ...prev, status: d.status } : prev));
+    }
+    window.addEventListener(SITE_STATUS_EVENT, onStatus);
+    return () => window.removeEventListener(SITE_STATUS_EVENT, onStatus);
   }, []);
 
   function toggleCollapsed() {
@@ -144,13 +173,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     });
   }
 
-  // Close drawer on route change.
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
 
   const sid = params.id;
-  const meta = pageMeta(pathname, sid);
+  const segment = currentSegment(pathname, sid);
+  const meta = TITLES[segment] ?? TITLES[""];
   const isPublished = site?.status === "published";
 
   async function publish() {
@@ -159,9 +188,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     try {
       const updated = await api<Site>(`/api/v1/sites/${site.id}/publish`, { method: "POST" });
       setSite(updated);
-      toast.success("Situs berhasil dipublikasikan");
+      emitSiteStatus(site.id, updated?.status ?? "published");
+      toast.success("Toko berhasil dipublikasikan");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMessage(e));
     } finally {
       setPublishing(false);
     }
@@ -172,158 +202,150 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     router.replace("/login");
   }
 
-  // Width sidebar diatur di sini supaya main margin + aside width sync.
-  // Kalau lagi di mobile drawer, tetap render lebar penuh (drawer mode)
-  // supaya isi tidak terpotong; collapse hanya berlaku di lg+.
-  const sidebarWidth = collapsed ? 72 : 250;
+  // Kept in JS so the floating toggle and main margin stay aligned.
+  const sidebarWidth = collapsed ? 72 : 256;
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb]">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-muted/30">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col overflow-y-auto bg-gradient-to-b from-[#13243d] to-[#0d1b2e] text-slate-300 transition-[transform,width] duration-200 lg:translate-x-0",
-          collapsed ? "lg:w-[72px] lg:px-2" : "lg:w-[250px] lg:px-4",
-          // Mobile drawer: selalu render lebar penuh (250px) supaya UX drawer
-          // tetap enak — collapse mode adalah desktop concern.
-          "w-[250px] px-4 py-6",
-          drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto border-r bg-card px-3 py-5 transition-[transform,width] duration-200 lg:translate-x-0",
+          collapsed ? "lg:w-[72px] lg:px-2" : "lg:w-64",
+          drawerOpen ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0",
         )}
       >
         <Link
-          href="/dashboard"
+          href={`/sites/${sid}`}
           className={cn(
-            "flex items-center gap-3 pb-6",
-            collapsed ? "lg:justify-center lg:px-0 px-2" : "px-2",
+            "flex items-center gap-3 px-2 pb-5",
+            collapsed && "lg:justify-center lg:px-0",
           )}
-          title={collapsed ? "Dashboard Guru" : undefined}
+          title={collapsed ? site?.name ?? "Dashboard Toko" : undefined}
         >
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#ffbc85] to-[#e98555] shadow-lg shadow-orange-500/20">
-            <BookOpen className="size-5 text-white" />
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <Store className="size-5" />
           </div>
-          <div className={cn(collapsed && "lg:hidden")}>
-            <div className="text-[15px] font-bold text-white">Dashboard Guru</div>
-            <div className="text-[11px] text-slate-400">Website Pribadi Guru</div>
+          <div className={cn("min-w-0", collapsed && "lg:hidden")}>
+            <div className="truncate text-sm font-semibold">{site?.name ?? "Dashboard Toko"}</div>
+            <div className="text-xs text-muted-foreground">Website UMKM</div>
           </div>
         </Link>
 
-        <nav className="grid gap-1.5">
-          {NAV_ITEMS.map((item) => {
-            const href = item.href(sid);
-            const active = item.exact ? pathname === href : pathname.startsWith(href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={collapsed ? item.label : undefined}
+        <nav className="space-y-5" aria-label="Menu toko">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label}>
+              <div
                 className={cn(
-                  "flex items-center gap-3 rounded-xl text-sm transition",
-                  collapsed
-                    ? "lg:justify-center lg:px-0 lg:py-3 px-3 py-2.5"
-                    : "px-3 py-2.5",
-                  active
-                    ? "border border-white/10 bg-gradient-to-r from-orange-500/30 to-orange-500/10 text-white"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white",
+                  "px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80",
+                  collapsed && "lg:hidden",
                 )}
               >
-                <Icon className="size-4 shrink-0" />
-                <span className={cn(collapsed && "lg:hidden")}>{item.label}</span>
-              </Link>
-            );
-          })}
+                {section.label}
+              </div>
+              {collapsed && <div className="mx-3 mb-2 hidden border-t lg:block" />}
+              <div className="grid gap-0.5">
+                {section.items.map((item) => {
+                  const href = item.segment ? `/sites/${sid}/${item.segment}` : `/sites/${sid}`;
+                  const active = segment === item.segment;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.segment || "overview"}
+                      href={href}
+                      title={collapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                        collapsed && "lg:justify-center lg:px-0 lg:py-2.5",
+                        active
+                          ? "bg-primary/10 font-medium text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      <span className={cn(collapsed && "lg:hidden")}>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="mt-auto space-y-2 border-t border-white/5 pt-5 text-[12px] leading-relaxed text-slate-400">
-          <div className={cn("px-2", collapsed && "lg:hidden")}>
-            <div className="font-semibold text-white">{site?.name ?? "Website Anda"}</div>
-            <div className="text-slate-500">Kelola konten website pribadi Anda dari satu tempat.</div>
-          </div>
+        <div className="mt-auto pt-5">
           <Link
             href="/dashboard"
-            title={collapsed ? "Kembali ke Dashboard" : undefined}
+            title={collapsed ? "Semua Toko" : undefined}
             className={cn(
-              "flex w-full items-center gap-2 rounded-xl border border-white/10 text-[13px] font-bold text-slate-200 transition hover:bg-white/5 hover:text-white",
-              collapsed ? "lg:justify-center lg:px-0 lg:py-3 px-3 py-2.5" : "px-3 py-2.5",
+              "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              collapsed && "lg:justify-center lg:px-0",
             )}
           >
             <ArrowLeft className="size-4 shrink-0" />
-            <span className={cn(collapsed && "lg:hidden")}>Kembali ke Dashboard</span>
+            <span className={cn(collapsed && "lg:hidden")}>Semua Toko</span>
           </Link>
         </div>
       </aside>
 
-      {/* Collapse toggle — floating button di edge kanan sidebar. Hidden di
-          mobile karena mobile pakai drawer full-width. */}
+      {/* Desktop-only collapse toggle; mobile uses the drawer. */}
       <button
         type="button"
         onClick={toggleCollapsed}
         aria-label={collapsed ? "Buka sidebar" : "Ciutkan sidebar"}
         title={collapsed ? "Buka sidebar" : "Ciutkan sidebar"}
-        className="fixed top-[68px] z-50 hidden h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition-[left] hover:bg-slate-50 hover:text-slate-900 lg:grid"
+        className="fixed top-[60px] z-50 hidden size-7 place-items-center rounded-full border bg-background text-muted-foreground shadow-sm transition-[left] hover:text-foreground lg:grid"
         style={{ left: `${sidebarWidth - 14}px` }}
       >
         {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
       </button>
 
-      {/* Drawer backdrop */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-foreground/30 lg:hidden"
           onClick={() => setDrawerOpen(false)}
         />
       )}
 
-      {/* Main */}
       <div
-        className={cn(
-          "transition-[margin] duration-200",
-          collapsed ? "lg:ml-[72px]" : "lg:ml-[250px]",
-        )}
+        className={cn("transition-[margin] duration-200", collapsed ? "lg:ml-[72px]" : "lg:ml-64")}
       >
-        <header className="sticky top-0 z-20 flex h-[76px] items-center gap-4 border-b border-slate-200 bg-white/90 px-6 backdrop-blur-md">
-          <button
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur-md sm:px-6">
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setDrawerOpen((v) => !v)}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700 lg:hidden"
+            className="size-9 shrink-0 lg:hidden"
             aria-label="Buka menu"
           >
             <Menu className="size-5" />
-          </button>
-          <div className="mr-auto">
-            <div className="text-[17px] font-bold text-slate-900">{meta.title}</div>
-            <div className="text-[12px] text-slate-500">{meta.subtitle}</div>
+          </Button>
+          <div className="mr-auto min-w-0">
+            <div className="truncate text-base font-semibold">{meta.title}</div>
+            <div className="hidden truncate text-xs text-muted-foreground sm:block">
+              {meta.subtitle}
+            </div>
           </div>
-          <button
-            onClick={publish}
-            disabled={!site || publishing || isPublished}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition",
-              isPublished
-                ? "cursor-default bg-emerald-50 text-emerald-700"
-                : "bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60",
-            )}
-            title={isPublished ? "Situs sudah dipublikasikan" : undefined}
-          >
-            {publishing ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Mempublikasikan…
-              </>
-            ) : isPublished ? (
-              <>
-                <CheckCircle2 className="size-4" />
-                Dipublikasikan
-              </>
-            ) : (
-              <>
-                <Rocket className="size-4" />
-                Publikasikan
-              </>
-            )}
-          </button>
+          {isPublished ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <CheckCircle2 className="size-4" />
+              <span className="hidden sm:inline">Dipublikasikan</span>
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              onClick={publish}
+              disabled={!site || publishing}
+              className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {publishing ? <Loader2 className="animate-spin" /> : <Rocket />}
+              <span className="hidden sm:inline">
+                {publishing ? "Mempublikasikan…" : "Publikasikan"}
+              </span>
+            </Button>
+          )}
           {me && <UserMenu me={me} onLogout={logout} />}
         </header>
-        <main className="mx-auto max-w-[1600px] px-6 py-7">{children}</main>
+        <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
     </div>
   );
@@ -337,14 +359,14 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white pr-2 pl-1 py-1 text-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          className="flex items-center gap-2 rounded-full border bg-background py-1 pl-1 pr-2 text-sm transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Menu akun"
         >
           <Avatar name={me.name} email={me.email} />
-          <span className="hidden max-w-[180px] truncate text-xs font-medium text-slate-600 sm:inline">
+          <span className="hidden max-w-[180px] truncate text-xs font-medium text-muted-foreground md:inline">
             {me.email}
           </span>
-          <ChevronDown className="size-3.5 text-slate-500" />
+          <ChevronDown className="size-3.5 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
 
@@ -381,7 +403,7 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
         <DropdownMenuItem asChild>
           <Link href="/dashboard">
             <Home className="size-4 text-muted-foreground" />
-            Semua Situs
+            Semua Toko
           </Link>
         </DropdownMenuItem>
 
@@ -425,7 +447,7 @@ function Avatar({
   return (
     <div
       className={
-        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 font-bold text-white " +
+        "flex shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground " +
         cls
       }
     >
