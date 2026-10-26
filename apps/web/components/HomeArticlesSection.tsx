@@ -1,6 +1,6 @@
 "use client";
 
-// HomeArticlesSection — section artikel platform di landing page utama.
+// HomeArticlesSection — platform articles (tips for UMKM) on the landing page.
 // Fetch 4 artikel published terbaru (featured di-prioritas). Kalau kosong,
 // section tidak render (hide).
 
@@ -48,22 +48,20 @@ export function HomeArticlesSection() {
   const [featured, ...rest] = items;
 
   return (
-    <section id="artikel-platform" className="border-t border-[#e6e9ef] bg-white">
+    <section id="artikel" className="border-t border-[#ebe3d8] bg-white">
       <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
         <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div className="max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[.13em] text-[#285f9e]">
+            <div className="mb-3 inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[.13em] text-[#d73f45]">
               <span className="h-0.5 w-6 rounded-full bg-current" />
-              Blog Platform
+              Artikel
             </div>
-            <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-extrabold leading-tight tracking-tight text-[#172033]"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
-              Bacaan singkat, gagasan panjang
+            <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-extrabold leading-tight tracking-tight text-[#172033]">
+              Tips &amp; Panduan untuk UMKM
             </h2>
             <p className="mt-3 text-sm text-[#637083] sm:text-base">
-              Tutorial, cerita, dan tips dari tim Web Builder untuk membantu
-              perjalanan digital Anda.
+              Cara memotret produk, menulis deskripsi yang menjual, sampai
+              membuat toko mudah ditemukan di Google.
             </p>
           </div>
           <Link
@@ -79,7 +77,7 @@ export function HomeArticlesSection() {
           {/* Featured artikel — dark navy card */}
           <Link
             href={`/artikel/${featured.slug}`}
-            className="group flex min-h-[320px] flex-col justify-end overflow-hidden rounded-[22px] bg-gradient-to-br from-[#172033] to-[#233b60] p-8 text-white transition hover:shadow-2xl"
+            className="group flex min-h-[320px] flex-col justify-end overflow-hidden rounded-[22px] bg-gradient-to-br from-[#172033] to-[#2b3d5e] p-8 text-white transition hover:shadow-2xl"
           >
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${categoryColor(featured.category)}`}>
@@ -91,10 +89,7 @@ export function HomeArticlesSection() {
                 </span>
               )}
             </div>
-            <h3
-              className="mb-2 text-2xl font-bold leading-tight text-white sm:text-[1.7rem]"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
+            <h3 className="mb-2 text-2xl font-bold leading-tight text-white sm:text-[1.7rem]">
               {featured.title}
             </h3>
             <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-white/75">
@@ -116,9 +111,9 @@ export function HomeArticlesSection() {
               <Link
                 key={a.id}
                 href={`/artikel/${a.slug}`}
-                className="group flex items-start gap-4 rounded-[18px] border border-[#e6e9ef] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#d4dce8] hover:shadow-md"
+                className="group flex items-start gap-4 rounded-[18px] border border-[#ebe3d8] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#d4dce8] hover:shadow-md"
               >
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-br from-[#eaf2fb] to-[#fce9ea] text-[#285f9e]">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-br from-[#fdf0dc] to-[#fce9ea] text-[#d73f45]">
                   <BookOpen className="size-5" />
                 </div>
                 <div className="min-w-0">
@@ -127,10 +122,7 @@ export function HomeArticlesSection() {
                       {a.category}
                     </span>
                   </div>
-                  <h3
-                    className="line-clamp-2 text-[15px] font-bold leading-tight text-[#172033]"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
+                  <h3 className="line-clamp-2 text-[15px] font-bold leading-tight text-[#172033]">
                     {a.title}
                   </h3>
                   <p className="mt-1 line-clamp-1 text-xs text-[#637083]">

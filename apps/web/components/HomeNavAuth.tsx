@@ -36,7 +36,7 @@ export function HomeNavAuth() {
 
   if (target) {
     return (
-      <Button asChild className="gap-1.5 shadow-sm">
+      <Button asChild className="h-10 gap-1.5 rounded-xl bg-[#172033] px-4 font-bold text-white shadow-sm hover:bg-[#24314a]">
         <Link href={target}>
           <LayoutDashboard className="size-3.5" />
           Ke Portal
@@ -48,10 +48,14 @@ export function HomeNavAuth() {
 
   return (
     <>
-      <Button variant="outline" asChild>
-        <Link href="/register">Daftar Gratis</Link>
+      <Button
+        variant="ghost"
+        asChild
+        className="hidden h-10 rounded-xl px-4 font-bold text-[#172033] hover:bg-[#172033]/5 sm:inline-flex"
+      >
+        <Link href="/register">Daftar</Link>
       </Button>
-      <Button asChild className="gap-1.5 shadow-sm">
+      <Button asChild className="h-10 gap-1.5 rounded-xl bg-[#172033] px-4 font-bold text-white shadow-sm hover:bg-[#24314a]">
         <Link href="/login">
           Masuk
           <ArrowRight className="size-3.5" />

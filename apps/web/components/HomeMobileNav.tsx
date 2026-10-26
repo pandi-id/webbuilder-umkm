@@ -17,12 +17,12 @@ import { Menu, X } from "lucide-react";
 type NavLink = { href: string; label: string };
 
 const LINKS: NavLink[] = [
-  { href: "#tentang", label: "Tentang" },
-  { href: "#manfaat", label: "Manfaat" },
-  { href: "#isi-website", label: "Isi Website" },
-  { href: "#mulai", label: "Cara Memulai" },
-  { href: "/artikel", label: "Indonesia Hebat!" },
-  { href: "/panduan-guru", label: "Dokumentasi" },
+  { href: "#fitur", label: "Fitur" },
+  { href: "#cara-kerja", label: "Cara Kerja" },
+  { href: "#contoh", label: "Contoh Toko" },
+  { href: "#faq", label: "FAQ" },
+  { href: "/artikel", label: "Artikel" },
+  { href: "/register", label: "Daftar" },
 ];
 
 export function HomeMobileNav() {
@@ -50,7 +50,7 @@ export function HomeMobileNav() {
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Tutup menu" : "Buka menu"}
         aria-expanded={open}
-        className="grid h-10 w-10 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/15 lg:hidden"
+        className="grid h-10 w-10 place-items-center rounded-xl border border-[#ebe3d8] bg-white text-[#172033] transition hover:bg-[#faf5ee] lg:hidden"
       >
         {open ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>
@@ -65,12 +65,11 @@ export function HomeMobileNav() {
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-[60] cursor-default"
             />
-            {/* Dropdown card — solid dark navy, mengambang di kanan atas */}
+            {/* Dropdown card — solid white, floating top-right */}
             <div
               role="menu"
               aria-orientation="vertical"
-              className="fixed right-4 top-[72px] z-[70] w-56 overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(2,8,23,0.55)]"
-              style={{ backgroundColor: "#081124" }}
+              className="fixed right-4 top-[72px] z-[70] w-56 overflow-hidden rounded-2xl border border-[#ebe3d8] bg-white shadow-[0_20px_60px_-12px_rgba(23,32,51,0.35)]"
             >
               <nav className="grid gap-0.5 p-2">
                 {LINKS.map((l) => (
@@ -79,7 +78,7 @@ export function HomeMobileNav() {
                     href={l.href}
                     role="menuitem"
                     onClick={() => setOpen(false)}
-                    className="rounded-lg px-3.5 py-2.5 text-[14px] font-bold text-white/85 transition hover:bg-white/10 hover:text-white"
+                    className="rounded-lg px-3.5 py-2.5 text-[14px] font-bold text-[#3a4558] transition hover:bg-[#faf5ee] hover:text-[#172033]"
                   >
                     {l.label}
                   </Link>
