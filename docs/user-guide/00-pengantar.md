@@ -2,8 +2,10 @@
 
 ## Tentang Web Builder
 
-Web Builder adalah platform SaaS untuk membuat situs web tanpa perlu coding.
-Fitur utama:
+Web Builder adalah platform SaaS untuk UMKM membuat toko online sendiri di
+domain `.id` tanpa perlu coding. Fitur utama:
+
+- **Toko online siap pakai** — template toko + blok UMKM (etalase produk, promo & voucher, ulasan, info toko) dengan tombol pesan via WhatsApp
 
 - **Editor drag-and-drop** — susun halaman dari block siap pakai (hero, feature grid, produk, blog, form kontak, dsb.)
 - **Beli domain terintegrasi** — daftar domain `.id`, `.co.id`, `.com`, dsb. langsung dari wizard

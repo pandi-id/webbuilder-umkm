@@ -16,15 +16,16 @@ Branch `umkm` (dari `guru-only`). Fokus: toko online UMKM + produk. Fitur guru d
 - [x] 3 template UMKM bawaan memakai blok baru (Kopi Senja, Sekar Batik, Anyam Lestari)
 - [x] Hapus snippet CSP Litera di `infra/caddy/Caddyfile` (dev)
 - [x] Verifikasi: `go vet/build/test -race`, typecheck + build web dan renderer — semua lolos
+- [x] Commit di branch `umkm` (belum di-push)
+- [x] CI trigger di `main`, `master`, `umkm`
+- [x] Katalog/Grid Produk/Blog/Form di dalam Container/Columns sekarang tampil di live site
+- [x] Panduan client + pengantar diperbarui (dashboard toko, blok UMKM Pro, template UMKM)
 
 ## Belum / perlu keputusan
 
-- [ ] **Commit** — semua perubahan masih di working tree
 - [ ] **QA manual di browser** — belum dibuka di browser: landing di lebar 360px, editor dengan blok UMKM, alur beli domain → pilih template UMKM → tambah produk → publish
 - [ ] **Migration 0069 + integration test** belum dijalankan ke Postgres (lokal tanpa `TEST_DATABASE_URL`; CI akan menjalankannya)
 - [ ] **Nama brand** — landing memakai "Web Builder" (konstanta `BRAND` di `apps/web/app/page.tsx`)
-- [ ] **Section harga** di landing — belum ada karena belum ada harga nyata
+- [ ] **Section harga** di landing — belum ada endpoint harga publik (pricing hanya untuk admin/reseller); perlu putuskan harga apa yang ditampilkan
 - [ ] **Artikel platform di DB lama** — seed hanya jalan kalau tabel kosong; DB yang sudah ada tetap menyimpan 6 artikel guru (hapus via `/admin/platform-articles` atau migration)
-- [ ] **Panduan pengguna** — bab guru sudah dihapus, tapi isi `00-pengantar.md` / `10-panduan-client.md` belum ditulis ulang untuk UMKM; `web-builder-guide.html` perlu di-generate ulang (`./generate-pdf-chrome.sh`)
-- [ ] **CI** — `.github/workflows/*.yml` hanya trigger di `main`; tambahkan `umkm` / `master`
-- [ ] Katalog dinamis (UmkmCatalogDynamic / ProductGridDynamic) di dalam Container/Columns tidak tampil di live site — keterbatasan lama, render nested tidak menerima site ID
+- [ ] **Panduan pengguna** — screenshot masih tampilan lama (capture ulang via `capture-screenshots`), lalu generate ulang `web-builder-guide.html`/PDF (`./generate-pdf-chrome.sh`)

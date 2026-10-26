@@ -215,7 +215,7 @@ npm run test:client                      # per role: client|agent|reseller|admin
 npx playwright test tests/10-client.spec.mjs -g "nama test"   # single test
 ```
 
-Catatan: kedua workflow CI trigger di branch `main`, sementara default branch repo adalah `master`.
+CI trigger di branch `main`, `master`, dan `umkm`.
 
 Tidak perlu start dev server otomatis kecuali user minta. Kalau perlu dev:
 `go run ./cmd/server` (API :8080, atau `air` untuk hot-reload, config [apps/api/.air.toml](../apps/api/.air.toml)), `go run ./cmd/server` di `apps/api-registry` (:5000), `npm run dev` di web (:4000) dan renderer (:4001 — port sudah di script, jangan tambah `-p`).

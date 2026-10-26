@@ -1,7 +1,7 @@
 # Bab 1 — Panduan Client (Pengguna Umum)
 
-Untuk user yang mau bikin situs pribadi/bisnis sendiri. Semua flow di sini
-bisa dilakukan sendiri tanpa bantuan Agent/Reseller.
+Untuk pemilik usaha (UMKM) yang mau punya toko online sendiri di domain `.id`.
+Semua flow di sini bisa dilakukan sendiri tanpa bantuan Agent/Reseller.
 
 ## Overview Flow
 
@@ -126,12 +126,43 @@ Status yang mungkin muncul:
 
 Setelah status **aktif**:
 
-1. Muncul list template dikelompokkan per kategori (UMKM)
-2. Setiap template punya 3 variant: Modern, Clean, Professional
+1. Muncul list template toko UMKM, masing-masing dengan contoh usaha berbeda:
+   - **Modern** — kedai kopi (contoh: Kopi Senja)
+   - **Clean** — fashion/batik (contoh: Sekar Batik)
+   - **Professional** — kerajinan (contoh: Anyam Lestari)
+2. Semua template sudah berisi blok UMKM Pro (hero toko, etalase produk, promo,
+   ulasan, info toko, tombol WhatsApp) — tinggal ganti isinya
 3. Klik **Preview** untuk lihat live di iframe modal
 4. Klik card template → panel bawah muncul:
    - **Nama situs** (default dari nama domain, bisa diedit)
 5. Klik **Buat Situs** → sistem create site + attach ke domain → redirect ke editor
+
+### Dashboard Toko
+
+Setiap situs punya dashboard sendiri dengan menu di sidebar:
+
+| Grup | Menu | Fungsi |
+|---|---|---|
+| Toko | **Ringkasan** | Statistik singkat + checklist persiapan toko |
+| Toko | **Produk** | Kelola katalog produk (§1.7) |
+| Toko | **Pesan Masuk** | Kiriman formulir dari pengunjung (§1.9) |
+| Toko | **Statistik** | Jumlah pengunjung per hari |
+| Konten | **Editor** | Susun blok halaman (§1.4) |
+| Konten | **Halaman** | Daftar halaman situs (§1.5) |
+| Konten | **Artikel** | Blog toko — kabar, promo, tips (§1.8) |
+| Konten | **Aset** | Gambar & berkas (§1.10) |
+| Pengaturan | **Tampilan** | Warna, font, ganti template (§1.6) |
+| Pengaturan | **Domain** | Kelola domain (§1.13) |
+
+Halaman **Ringkasan** menampilkan jumlah produk, pengunjung 7 hari terakhir,
+pesan masuk, dan artikel, plus **checklist persiapan toko**:
+
+1. Pasang nama toko di header (ganti nama contoh dari template)
+2. Tambah minimal 3 produk
+3. Tambah blok kontak / WhatsApp
+4. Publikasikan toko
+
+Setiap item checklist bisa diklik untuk langsung ke halaman terkait.
 
 ## 1.4 Editor — Susun Halaman
 
@@ -164,12 +195,33 @@ Tampilan editor terbagi 3 kolom (desktop):
 
 1. Klik tombol **+** di canvas (muncul saat hover antar block)
 2. Pilih block dari galeri:
+   - **UMKM Pro**: blok khusus toko (lihat di bawah)
    - **Layout**: Container, Columns, Divider, Spacer
    - **Content**: Heading, Text, Image, Button
    - **Hero**: AuroraHero, HighlightHero, LampHero, SpotlightHero
    - **Feature**: HoverGlowGrid, IconGrid, MovingBorderCTA
    - **Data-driven**: ProductGrid, BlogList, FormBlock
 3. Block baru ditambahkan ke posisi
+
+### Blok UMKM Pro
+
+Blok siap pakai untuk toko online. Semua otomatis mengikuti warna & font tema.
+
+| Blok | Kegunaan |
+|---|---|
+| **Hero Toko UMKM** | Bagian pembuka: judul, jam buka, tombol "Pesan via WhatsApp", foto produk, rating |
+| **Etalase Produk** | Produk unggulan dengan harga coret + diskon otomatis, badge Terlaris/Baru/Promo, tombol pesan per produk |
+| **Katalog Produk (DB)** | Sama seperti Etalase, tapi produk diambil otomatis dari menu **Produk** |
+| **Banner Promo & Voucher** | Promo dengan kode voucher (pengunjung bisa salin kode) + masa berlaku |
+| **Info Toko & Lokasi** | Alamat, jam buka per hari, kontak, area antar, peta Google Maps |
+| **Link Marketplace** | Tombol ke toko Anda di Shopee, Tokopedia, TikTok Shop, GoFood, dsb. |
+| **Badge Kepercayaan** | Halal, PIRT, BPOM, QRIS, COD, garansi, dsb. |
+| **Ulasan Pelanggan** | Ulasan dengan bintang 1–5 + rata-rata rating |
+| **Tombol WhatsApp Melayang** | Tombol WhatsApp yang selalu terlihat di pojok layar |
+
+**Nomor WhatsApp**: isi dengan format biasa (mis. `0812-3456-7890`) — sistem
+otomatis mengubahnya ke format `wa.me` internasional. Template memakai nomor
+contoh `081234567890`, **ganti dengan nomor toko Anda** sebelum publish.
 
 ### Edit Block Content
 
@@ -233,7 +285,7 @@ Setiap edit page dicatat sebagai version. Bisa restore ke version lama:
 
 ![Halaman Tema](screenshots/client-theme-page.png)
 
-Menu tab **Tema** — atur warna + font global untuk seluruh situs.
+Menu **Tampilan** — atur warna + font global untuk seluruh situs, atau ganti template.
 
 ### Hierarki Warna
 
@@ -293,27 +345,28 @@ Klik **Ganti Template** untuk switch ke template lain:
 
 Kalau situs Anda toko:
 
-1. Tab **Produk** → **+ Produk Baru**
+1. Menu **Produk** → **+ Produk Baru**
 2. Isi:
    - Nama, slug, deskripsi (Rich Text)
    - Harga (Rp)
    - SKU, stok
    - Kategori
    - Gambar utama + gambar tambahan
-3. Simpan → produk otomatis muncul di block **ProductGrid** (kalau ada di page)
+3. Simpan → produk otomatis muncul di blok **Katalog Produk (DB)** atau
+   **ProductGrid** (kalau ada di halaman), lengkap dengan tombol pesan WhatsApp
 
 ### Kelola Produk
 
-- **List** — tab Produk menampilkan semua
+- **List** — menu Produk menampilkan semua
 - **Edit** — klik row → panel edit
 - **Publikasikan / Tarik** — kontrol visibility di renderer
 - **Hapus** — permanent
 
-## 1.8 Blog
+## 1.8 Artikel (Blog)
 
-Fitur mirip produk tapi untuk artikel:
+Untuk kabar toko, promo, atau tips seputar produk Anda:
 
-1. Tab **Blog** → **+ Post Baru**
+1. Menu **Artikel** → **+ Post Baru**
 2. Isi:
    - Judul, slug, ringkasan
    - Konten (Rich Text — heading, paragraph, image, list, dsb.)
@@ -323,7 +376,7 @@ Fitur mirip produk tapi untuk artikel:
 
 ## 1.9 Formulir (Contact Form)
 
-1. Tab **Formulir** → **+ Buat form**
+1. Menu **Pesan Masuk** → **+ Buat form**
 2. Pilih jenis:
    - **Kontak** — nama + email + pesan (default)
    - **Newsletter** — email saja
@@ -341,7 +394,7 @@ Fitur mirip produk tapi untuk artikel:
 
 Upload gambar + file untuk dipakai di block:
 
-1. Tab **Aset** → **Upload**
+1. Menu **Aset** → **Upload**
 2. Multi-file drag-drop atau click browse
 3. Format: JPG, PNG, WebP, PDF (max 25 MB per file)
 4. Aset yang di-upload muncul di **Image Picker** saat pilih gambar di block
