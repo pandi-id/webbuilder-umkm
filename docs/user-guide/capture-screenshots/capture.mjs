@@ -33,12 +33,12 @@ const HEADED = process.env.HEADED === "1";
 // ---------- Main ----------
 async function main() {
   const args = process.argv.slice(2);
-  const rolesToCapture = args.length > 0 ? args : ["client", "agent", "reseller", "admin", "guru"];
+  const rolesToCapture = args.length > 0 ? args : ["client", "agent", "reseller", "admin"];
 
   // Validate roles
   for (const role of rolesToCapture) {
     if (!captures[role]) {
-      console.error(`❌ Unknown role: ${role}. Valid: client, agent, reseller, admin, guru`);
+      console.error(`❌ Unknown role: ${role}. Valid: client, agent, reseller, admin`);
       process.exit(1);
     }
   }

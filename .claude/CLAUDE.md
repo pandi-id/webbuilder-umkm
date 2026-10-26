@@ -19,11 +19,11 @@ Bahasa user-facing copy: **Indonesia**. Komentar code: English ringkas yang menj
 
 | Layer | Tools |
 |-------|-------|
-| Backend | Go 1.24 (toolchain 1.24.3), Fiber v2, jackc/pgx v5, golang-jwt v5, argon2id, minio-go v7, Goose v3 |
+| Backend | Go 1.26 (`go.mod` di `apps/api` dan `apps/api-registry`), Fiber v2, jackc/pgx v5, golang-jwt v5, argon2id, minio-go v7, Goose v3 |
 | Frontend | Next.js 16 (App Router) + React 19 di `apps/web` dan `apps/renderer`, TypeScript 5.5, Tailwind 3.4, @dnd-kit (editor DnD), TipTap 3 (rich text) |
 | DB | PostgreSQL 16. Migrations embedded di `apps/api/internal/db/migrations/`, auto-applied via `goose_db_version` table |
 | Storage | Pluggable: `local` (disk + static serve) atau `s3` (MinIO/AWS S3) — interface `assets.Storage` |
-| Renderer | App Next.js terpisah, multi-tenant by `Host` header, ISR via `revalidate: 30` |
+| Renderer | App Next.js terpisah, multi-tenant by `Host` header, `force-dynamic` (cache di Cloudflare, di-purge saat publish via `internal/cachepurge`) |
 | Proxy | Caddy 2 dengan on-demand TLS → `/internal/caddy/ask?domain=` |
 
 ## Arsitektur
@@ -38,13 +38,24 @@ apps/api/        Go Fiber API
     public/      Read-only API untuk renderer
     caddy/       on_demand_tls.ask hook
     httpx/       Response envelope + Paginated[T]
-    db/          Connect + Migrate
-  migrations/    NNNN_*.sql (idempotent)
+    db/          Connect + Migrate (migrations/ embedded di sini)
+    reseller/    Portal reseller/agent — semua query scope by manager_id
+    dnsprovider/ Interface DNS backend; adapter di cloudflare/ + dnscloud/, config di dns_providers/
+    site_byo_domains/  BYO domain .id via delegasi NS Cloudflare
+    settings/    Key-value config yang admin ubah tanpa redeploy (PPN, brand)
+    audit/ email_log/ errortrack/  Observability (fire-and-forget, tidak block request)
 
-apps/web/        Dashboard + visual editor (private, JWT)
+apps/api-registry/  Go service internal: EPP execution (check/register/renew/NS/WHOIS), port 5000, HMAC-auth dari api
+apps/web/        Dashboard + visual editor (private, JWT) — portal per role
 apps/renderer/   Public multi-tenant SSR
 infra/caddy/     Caddyfile
+docs/qa-playwright/  E2E suite Playwright (smoke/regression/visual)
+ecosystem.config.js  PM2 — cara prod jalan (bukan Docker)
 ```
+
+**Role user**: `admin` → `/admin`, `reseller` → `/reseller/dashboard`, `agent` → `/agent/dashboard`, `client` (default) → `/dashboard`. Mapping di [lib/roles.ts](../apps/web/lib/roles.ts); middleware `auth.RequireAdmin/RequireReseller/RequireAgent`. Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`).
+
+**Next 16 `proxy.ts`**: `middleware.ts` sudah di-rename ke `proxy.ts` di kedua app Next. Isinya generate CSP nonce per request (tanpa `unsafe-inline`/`unsafe-eval` di `script-src`). Embed pihak ketiga baru (iframe/script) wajib ditambah ke CSP di sana. `Vary: Host` ditegakkan di Caddy, bukan di proxy.ts (Next 16 menimpanya).
 
 ## Konvensi API
 
@@ -125,7 +136,7 @@ Next.js auto-load `.env.local` (jangan commit). API perlu `.env` di dir tempat `
 
 - Package `apps/api/internal/seed/` (idempotent, dipanggil dari `main.go` setelah migrate).
 - `seed.Run(ctx, Deps, Options)` mengeksekusi:
-  - **`Templates`** — selalu jalan, upsert 15 built-in template dari `templates.BuiltinTemplates()`.
+  - **`Templates`** — selalu jalan, upsert built-in template dari `templates.BuiltinTemplates()`.
   - **`Admin`** — jalan kalau `ADMIN_EMAIL` + `ADMIN_PASSWORD` set. Idempotent: kalau user sudah ada, hanya force role=admin, password tidak diubah.
   - **`Demo`** — opt-in via `SEED_DEMO=true`. Buat 1 user demo + 1 situs UMKM + 5 produk + 3 artikel blog Markdown. Skip total kalau user demo sudah ada.
 - Tambah seeder baru = tambah function di `seed.go` + panggil dari `Run`.
@@ -185,11 +196,31 @@ npm run build        # next build (butuh NEXT_PUBLIC_API_BASE)
 ```bash
 cd apps/renderer
 npm run typecheck
-npm run build        # butuh API_URL
+npm run build        # baca API_INTERNAL_URL (fallback http://localhost:8080)
 ```
 
+**api-registry (Go)** — tidak ada di CI, jalankan manual kalau menyentuhnya:
+
+```bash
+cd apps/api-registry && go vet ./... && go test -race ./...
+```
+
+**E2E Playwright** (`docs/qa-playwright/`, butuh stack jalan + `.env` dengan `BASE_URL`, `API_BASE`, kredensial per role):
+
+```bash
+cd docs/qa-playwright
+npm run test:smoke                       # @smoke, dipakai di PR
+npm run test:regression                  # semua
+npm run test:client                      # per role: client|agent|reseller|admin|auth|security
+npx playwright test tests/10-client.spec.mjs -g "nama test"   # single test
+```
+
+Catatan: kedua workflow CI trigger di branch `main`, sementara default branch repo adalah `master`.
+
 Tidak perlu start dev server otomatis kecuali user minta. Kalau perlu dev:
-`go run ./cmd/server` (API) atau `air` (hot-reload — install `go install github.com/air-verse/air@latest`, config di [apps/api/.air.toml](../apps/api/.air.toml)), `npm run dev` (web), `npm run dev -- -p 3001` (renderer).
+`go run ./cmd/server` (API :8080, atau `air` untuk hot-reload, config [apps/api/.air.toml](../apps/api/.air.toml)), `go run ./cmd/server` di `apps/api-registry` (:5000), `npm run dev` di web (:4000) dan renderer (:4001 — port sudah di script, jangan tambah `-p`).
+
+**Prod** jalan via PM2 ([ecosystem.config.js](../ecosystem.config.js)), bukan Docker: build Go binary ke `tmp/` + `npm run build`, lalu `pm2 restart`. Perubahan `NEXT_PUBLIC_*` butuh rebuild, bukan cuma restart.
 
 ## Editor Internals (apps/web/app/sites/[id]/editor/)
 
@@ -201,19 +232,20 @@ Block tree adalah `BlockData[]` (JSON) dengan bentuk `{ type, props, children?, 
 - **[SortableBlockList.tsx](../apps/web/app/sites/[id]/editor/SortableBlockList.tsx)** — @dnd-kit sortable, panggil `reorderSiblings`/`movePath`.
 - **[useBlocksHistory.ts](../apps/web/app/sites/[id]/editor/useBlocksHistory.ts)** — undo/redo stack, kapasitas fixed.
 
-Ketika menambah tipe blok baru, sentuh berurutan: (1) schema di `PropEditor`, (2) renderer di `apps/renderer/app/[...slug]/page.tsx` block dispatch, (3) exporter di `apps/api/internal/exports/`, (4) `styles.go` (CSS) kalau butuh class `.wb-*` baru.
+Ketika menambah tipe blok baru, sentuh 4 tempat: (1) schema di `apps/web/lib/blocks.ts` (PropEditor membaca schema ini), (2) preview editor di `editor/page.tsx`, (3) renderer di `apps/renderer/components/Blocks.tsx` (`switch (block.type)`), (4) exporter di `apps/api/internal/exports/` (`render*.go` + CSS `.wb-*` di `styles*.go`). Tipe blok yang tidak dikenal (mis. blok `Guru*` di situs lama) wajib dirender kosong di ketiga sisi, jangan error.
 
 ## Renderer (apps/renderer)
 
-- **Route tunggal**: `app/[...slug]/page.tsx` — catch-all yang lookup `Host` header → `GET /public/site-by-host?host=...` → `GET /public/sites/:id/pages/:slug` (slug kosong = `_home`).
-- **ISR**: `export const revalidate = 30` di page — cache 30 detik per Host+path.
-- **Preview**: `_preview/*` route untuk draft (bypass publish, dari dashboard iframe).
+- **Catch-all**: `app/[...slug]/page.tsx` lookup `Host` header → `GET /public/site-by-host?host=...` → `GET /public/sites/:id/pages/:slug` (slug kosong = `_home`).
+- **Route spesifik** menang atas catch-all: `blog/[slug]`, `produk/`, plus `sitemap.xml` / `robots.txt`.
+- **Caching**: semua page `force-dynamic`; cache edge di Cloudflare, di-purge saat publish (`internal/cachepurge`, fire-and-forget).
+- **Preview**: `_preview/[token]` untuk draft (dari dashboard iframe); `template-preview/*` + `template-preview-by-id/*` untuk template picker.
 - **Dynamic blocks**: `ProductGridDynamic`, `BlogListDynamic` fetch dari `/public/sites/:id/products` & `/blog` — jangan hard-code data.
 - **Theme tokens** dari site JSON diinject sebagai CSS variables di `<style>` inline di layout (`--color-primary`, `--font-heading`, `--radius`). Blok pakai `var(--color-primary)`, bukan `bg-primary` Tailwind class.
 
 ## Domain Purchase Flow (self-sufficient)
 
-**Konsep produk**: **1 domain = 1 situs**. User HARUS beli domain dulu sebelum bisa create situs — tidak ada free subdomain flow. `POST /sites/from-template/:slug` wajib `job_id` di body; atomic create + attach.
+**Konsep produk**: **1 domain = 1 situs**. User HARUS beli domain dulu sebelum bisa create situs — tidak ada free subdomain flow. `POST /sites/from-template/:slug` wajib `job_id` di body; atomic create + attach. Pengecualian: BYO domain `.id` yang sudah dimiliki user di-attach lewat tab Domain (`internal/site_byo_domains`, delegasi NS ke Cloudflare via `dnsprovider`).
 
 **Arsitektur** (Phase 3 self-sufficient):
 - Web builder = authoritative source untuk **invoice + payment + wallet + document + promo**.
@@ -269,41 +301,26 @@ Ketika menambah tipe blok baru, sentuh berurutan: (1) schema di `PropEditor`, (2
 - **Dedupe expires_at per domain di frontend**: setelah renew, register-row punya expires_at lama, renew-row punya yang baru. Pakai `latestActivePerDomain(items)` helper (di dashboard + settings/domains).
 - `lib/api.ts` throw `ApiError` (subclass Error dengan `.status` + `.code`) — pattern-match status 404/403 untuk friendly screen.
 
-## Rumah Digital Guru (template `guru-pandi-upi`)
+## Fokus Produk: UMKM
 
-Modul khusus guru: 1 situs guru = 1 domain + konten profil, artikel per rubrik,
-materi ajar (silabus/RPP), respon dari murid/ortu, dan banner carousel.
+Branch `umkm` adalah pivot dari "Website Pribadi Guru" (PANDI × UPI) ke toko online UMKM.
+Fitur guru (Tulisan per rubrik, Forum, Pembelajaran, Tanggapan, Ruang Promosi/banner,
+Profil Guru, portal `/guru`, integrasi Litera, template `guru-pandi*`/`teacher`) sudah
+dihapus dari kode. Tabel `guru_*`, `litera_*` dan kolom profil guru di `users` sengaja
+dibiarkan di DB (migration lama tidak diedit; `0069` hanya menghapus baris template guru).
 
-**Backend tables** (migrations 0049–0052):
-- `guru_profiles` (1:1 per site) — nama, mata pelajaran, sekolah, bio, foto, social links
-- `guru_articles` — rubrik enum (`umum|cerita|opini|tips|lainnya`), publish status, cover
-- `guru_learning_materials` — jenis + file attachment
-- `guru_responses` — form kiriman murid/ortu (nama, pesan, sumber), moderation
-- `guru_banners` — carousel homepage (image + href + sort_order)
-
-**Seed otomatis**: pilih template `guru-pandi-upi` di wizard → sites handler panggil
-`guruseed.SeedDefaultData(ctx, siteID, userName)` → profil default + 3 artikel +
-2 materi + 2 banner — supaya editor preview tidak kosong.
-
-**Template preview sentinel**: renderer dynamic blocks (`GuruBlocksDynamic.tsx`)
-cek `siteId === "_template"` → render dari konstanta `SAMPLE_BANNERS`, `SAMPLE_STATS`,
-`SAMPLE_LATEST`, `SAMPLE_ARTICLES_BY_RUBRIC`, `SAMPLE_MATERIALS`. Dipakai editor
-preview card + template picker preview.
-
-**Portal publik `/guru`** — direktori guru paginated, sort `popular|newest`, search,
-konsumsi `GET /public/guru`. Public route (no auth). Admin moderation di
-`/admin/guru/*` untuk approve profil + respon + banner.
-
-**Profil Guru**: UI pindah dari `/settings` ke `/sites/[id]/profil` (per-site, bukan
-per-user). Alasan: 1 user bisa punya multiple situs guru.
+- **Artikel** = blog per situs (`internal/blog`, dashboard `sites/[id]/blog`, renderer `blog/[slug]`) + artikel platform `/artikel`.
+- **Template picker** (wizard `sites/pending/[jobId]`) hanya menampilkan kategori `umkm`.
+- **Landing** (`apps/web/app/page.tsx`) satu-satunya tempat yang memakai `motion` (`motion/react`), di client island `components/landing/*`. Jangan pakai motion di dashboard/renderer.
+- **Dashboard situs** komponennya di `components/site-dashboard/`; checklist onboarding memakai `PLACEHOLDER_BRANDS` di `app/sites/[id]/page.tsx` — tambah brand Navbar default template baru ke situ.
+- **Blok UMKM** (`Umkm*`, kategori "UmkmPro") dipakai bersama editor + renderer + export. File berikut **harus byte-identik**: `components/umkm/{UmkmBlocks.tsx,UmkmCopyCode.tsx,umkm.css}` dan `lib/umkm.ts` di `apps/web` dan `apps/renderer`, plus `apps/api/internal/exports/umkm.css` (di-`go:embed`). Ubah satu → salin ke semua, cek dengan `diff`. Markup Go ada di `exports/render_umkm.go`; CSS hanya class `.wb-umkm-*` + theme vars (tanpa Tailwind) supaya port ke Go mekanis.
 
 ## Platform Articles (migration 0053)
 
-Blog platform-level (bukan per-site) untuk SEO + onboarding guru. Terpisah dari
-`guru_articles` yang per-situs.
+Blog platform-level (bukan per-site) untuk SEO + edukasi UMKM. Terpisah dari blog per situs.
 
 - Table `platform_articles` — slug unik, status (`draft|published`), category enum
-  (`panduan|tips|cerita|pengumuman|lainnya`), `featured` boolean, cover, body Markdown,
+  (`umum|tutorial|cerita|tips|panduan|pengumuman`), `featured` boolean, cover, body Markdown,
   SEO meta (title/description/keywords).
 - Admin CRUD: `/admin/platform-articles` (list + filter) → `/new` + `/[id]/edit`
   pakai `<RichEditor>` TipTap full-page (bukan dialog) dengan autosave + dirty tracking.
@@ -313,9 +330,8 @@ Blog platform-level (bukan per-site) untuk SEO + onboarding guru. Terpisah dari
 - **Markdown rendering CSS**: pakai class custom `.article-prose` (public, palette
   landing #172033/#d73f45) atau `.wb-prose` (editor, dark). JANGAN pakai `prose`
   Tailwind — `@tailwindcss/typography` tidak terinstall.
-- Seed idempotent `platform_articles.SeedIfEmpty` — 6 artikel contoh (Kenapa Guru
-  Perlu Website, Cara Memulai 15 Menit, Tips Menulis, Memilih Domain .id, Peluncuran
-  PANDI × UPI, Cerita Guru Desa). Dipanggil goroutine di `main.go` dengan 30s timeout.
+- Seed `platform_articles.SeedIfEmpty` — 6 artikel UMKM, hanya jalan kalau belum ada
+  artikel published (DB lama tetap menyimpan artikel guru). Dipanggil goroutine di `main.go` dengan 30s timeout.
 
 ## Admin Impersonation Pattern (`GetOwnedOrAdmin`)
 
@@ -323,8 +339,8 @@ Admin role boleh masuk editor + manage konten situs user manapun untuk support/d
 Jangan pakai `GetOwned(id, userID)` di handler yang perlu admin bypass — pakai
 `GetOwnedOrAdmin(id, userID, isAdmin)` + `UpdateOrAdmin` (ada di `sites/repo.go`).
 
-Helper: `auth.IsAdminFrom(c)` baca `role` claim JWT. Dipakai di 11+ handler:
-`sites`, `pages`, `articles`, `learning`, `responses`, `banners`, `blog`, `products`,
+Helper: `auth.IsAdminFrom(c)` baca `role` claim JWT. Dipakai di handler:
+`sites`, `pages`, `blog`, `products`,
 `forms`, `analytics`, `usage`, `assets`.
 
 **Bug yang pernah terjadi**: admin klik "Buka Editor" → redirect ke login. Root

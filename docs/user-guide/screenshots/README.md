@@ -2,8 +2,8 @@
 
 > ⚠️ **PENTING: Screenshot Q1 2026 belum di-capture** untuk fitur editor
 > baru (Layout Bersama, micro-editing, Rich Editor delete UX, autosave
-> badge, drag-drop image). Screenshot editor lama (`client-editor-*.png`,
-> `guru-*.png` dated Aug/Sep 2025) **sudah tidak sesuai** dengan UI
+> badge, drag-drop image). Screenshot editor lama (`client-editor-*.png`
+> dated Aug/Sep 2025) **sudah tidak sesuai** dengan UI
 > sekarang — banyak perubahan visual di sidebar, canvas, dan toolbar.
 >
 > **Cara regenerate**:
@@ -11,8 +11,7 @@
 > cd docs/user-guide/capture-screenshots
 > node capture.mjs client   # capture semua client + editor screenshots
 > ```
-> Butuh sample data guru (site dengan template `guru-pandi-upi` yang punya
-> beberapa artikel + materi). Isi `SAMPLE_SITE_ID` di `.env` untuk pin ke
+> Butuh minimal 1 site dengan beberapa produk + artikel. Isi `SAMPLE_SITE_ID` di `.env` untuk pin ke
 > site tertentu, atau biarkan auto-discover dari list.
 
 Drop file gambar di sini dengan nama sesuai referensi di markdown:
@@ -62,39 +61,6 @@ Drop file gambar di sini dengan nama sesuai referensi di markdown:
 - `admin-cf-configs.png` — Cloudflare config CRUD
 - `admin-domain-detail.png` — Detail domain admin (dengan CF status)
 - `admin-audit-log.png` — Audit log viewer
-- `admin-banners.png` — Admin Moderasi Banner Guru cross-site (§27)
-
-### Guru (Rumah Digital Guru — spec §20-§25)
-
-Screenshot ini butuh sample data: minimal 1 site published pakai template
-`guru-pandi-upi` (auto-seed 8 articles + 4 materials + 3 banners) di akun
-client test.
-
-- `guru-dashboard-ringkasan.png` — Halaman `/sites/[id]` (6 stat card + list terbaru)
-- `guru-sidebar-dropdown.png` — Sidebar dashboard situs dengan dropdown "Guru ▾" terbuka (5 menu)
-- `guru-tulisan-list.png` — `/sites/[id]/tulisan` (tabs 6 rubrik + tabel + tombol Tulisan Baru)
-- `guru-tulisan-form.png` — `/sites/[id]/tulisan/new` (rubric selector + RichEditor + toggle comments)
-- `guru-forum-list.png` — `/sites/[id]/forum` (tabel topik + CTA Topik Baru + info banner forum)
-- `guru-tanggapan-moderasi.png` — `/sites/[id]/tanggapan` (tabs filter + card feed + Setujui/Tolak)
-- `guru-pembelajaran-list.png` — `/sites/[id]/pembelajaran` (tabel materi tanpa kolom views)
-- `guru-promosi-list.png` — `/sites/[id]/promosi` (grid banner 2:1 + status badge)
-- `guru-profile-settings.png` — `/settings/profile-guru` (4 section: Identitas/Hero/Bio/Sosial)
-- `guru-portal-directory.png` — `/guru` (portal publik direktori guru dengan kartu 3-kolom)
-
-## Auto-Capture
-
-Jangan capture manual — jalankan script otomatis. Lihat `../capture-screenshots/README.md`:
-
-```bash
-cd docs/user-guide/capture-screenshots
-node capture.mjs                # capture semua role (client + agent + reseller + admin + guru)
-node capture.mjs guru           # capture cuma role guru
-node capture.mjs guru admin     # capture guru + admin
-```
-
-Output langsung masuk ke folder ini, otomatis dipakai HTML/PDF generator.
-
-## Cara Capture Screenshot (Manual)
 
 ### macOS
 - **Full window**: `Cmd + Shift + 4`, lalu tekan `Space`, klik window

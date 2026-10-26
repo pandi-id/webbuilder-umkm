@@ -126,7 +126,7 @@ Status yang mungkin muncul:
 
 Setelah status **aktif**:
 
-1. Muncul list template dikelompokkan per kategori (UMKM, Sekolah, Portfolio, Blog, Guru)
+1. Muncul list template dikelompokkan per kategori (UMKM)
 2. Setiap template punya 3 variant: Modern, Clean, Professional
 3. Klik **Preview** untuk lihat live di iframe modal
 4. Klik card template → panel bawah muncul:

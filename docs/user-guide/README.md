@@ -5,29 +5,11 @@ Agent, Client.
 
 ## Output Files (siap pakai)
 
-**Bundle untuk Guru (guru sebagai klien)** — 🎯 target user utama:
-- **[panduan-rumah-digital-guru.pdf](panduan-rumah-digital-guru.pdf)** — 1.4 MB. Bundle khusus guru: pengantar guru + bab 60 (daftar → login → beli domain → editor + Rich Editor). **Tanpa** bab admin/reseller/agent — siap kirim ke guru sebagai onboarding.
-- **[panduan-rumah-digital-guru.html](panduan-rumah-digital-guru.html)** — HTML source
-
-**Bundle internal (5 role — untuk tim)**:
-- **[web-builder-guide.pdf](web-builder-guide.pdf)** — PDF gabungan semua bab (client + agent + reseller + admin + guru)
+**Bundle internal (4 role — untuk tim)**:
+- **[web-builder-guide.pdf](web-builder-guide.pdf)** — PDF gabungan semua bab (client + agent + reseller + admin)
 - **[web-builder-guide.html](web-builder-guide.html)** — HTML self-contained
 
-## Workflow Update untuk Bundle Guru
-
-1. **Edit markdown source** — biasanya cukup `60-panduan-client-guru.md` (fitur baru) atau `00-pengantar-guru.md` (intro)
-2. **Regenerate screenshot** kalau UI berubah:
-   ```bash
-   ./regen-guru-screenshots.sh
-   ```
-   Butuh sample site guru + `.env` di `capture-screenshots/` sudah ter-set.
-3. **Regenerate PDF** guru bundle:
-   ```bash
-   ./generate-pdf-guru.sh
-   ```
-   Output: `panduan-rumah-digital-guru.pdf` (siap kirim).
-
-Untuk bundle internal 5-role: `./generate-pdf-chrome.sh` (regenerate `web-builder-guide.pdf`).
+Untuk bundle internal 4-role: `./generate-pdf-chrome.sh` (regenerate `web-builder-guide.pdf`).
 
 ## Struktur Markdown Source
 
@@ -36,8 +18,6 @@ Untuk bundle internal 5-role: `./generate-pdf-chrome.sh` (regenerate `web-builde
 - **[20-panduan-agent.md](20-panduan-agent.md)** — Freelancer/staff reseller
 - **[30-panduan-reseller.md](30-panduan-reseller.md)** — Mitra bisnis (invite agent, set harga)
 - **[40-panduan-admin.md](40-panduan-admin.md)** — Operator platform
-- **[50-panduan-guru.md](50-panduan-guru.md)** — Rumah Digital Guru (Tulisan 6-rubrik, Forum, Tanggapan, Pembelajaran, Ruang Promosi, Profil Guru)
-- **[60-panduan-client-guru.md](60-panduan-client-guru.md)** — **Panduan lengkap klien+guru** end-to-end: daftar, login, beli domain, editor blok (Layout Bersama · Micro-editing), Rich Editor terbaru (drag-drop image · autosave · delete media UX). Fokus fitur Q1 2026.
 
 ## Screenshot
 
@@ -210,13 +190,6 @@ pandoc 00-pengantar.md 10-panduan-client.md \
   --toc --toc-depth=2 --pdf-engine=xelatex \
   --metadata title="Panduan Pengguna — Client" \
   -o pdf-client.pdf
-
-# PDF untuk Guru (klien+guru fitur baru — bundle utama untuk guru)
-# Pakai bab 60 (baru) yang sudah include alur klien + fitur guru terbaru.
-pandoc 00-pengantar.md 60-panduan-client-guru.md \
-  --toc --toc-depth=2 --pdf-engine=xelatex \
-  --metadata title="Panduan Klien Rumah Digital Guru" \
-  -o pdf-guru.pdf
 
 # PDF untuk Agent
 pandoc 00-pengantar.md 20-panduan-agent.md \

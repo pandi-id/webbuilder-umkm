@@ -48,9 +48,7 @@ if [ ! -f web-builder-guide.html ] || \
    [ 10-panduan-client.md -nt web-builder-guide.html ] || \
    [ 20-panduan-agent.md -nt web-builder-guide.html ] || \
    [ 30-panduan-reseller.md -nt web-builder-guide.html ] || \
-   [ 40-panduan-admin.md -nt web-builder-guide.html ] || \
-   [ 50-panduan-guru.md -nt web-builder-guide.html ] || \
-   [ 60-panduan-client-guru.md -nt web-builder-guide.html ]; then
+   [ 40-panduan-admin.md -nt web-builder-guide.html ]; then
   echo "→ Regenerate HTML dari markdown..."
   ./generate-html.sh 2>&1 | grep -v "WARNING" | head -10
 fi

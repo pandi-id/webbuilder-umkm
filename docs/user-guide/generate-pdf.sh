@@ -23,7 +23,6 @@ MERGED_ORDER=(
   "20-panduan-agent.md"
   "30-panduan-reseller.md"
   "40-panduan-admin.md"
-  "50-panduan-guru.md"
 )
 
 # ---------- Detect PDF engine ----------
@@ -133,14 +132,6 @@ generate_split() {
     --metadata title="Panduan Pengguna — Admin" \
     -o pdf-admin.pdf
   echo "  ✓ pdf-admin.pdf"
-
-  # Guru (Rumah Digital Guru — fitur khusus)
-  pandoc 00-pengantar.md 50-panduan-guru.md \
-    --toc --toc-depth=2 --pdf-engine="$ENGINE" \
-    --variable=geometry:margin=2cm \
-    --metadata title="Panduan Pengguna — Guru (Rumah Digital Guru)" \
-    -o pdf-guru.pdf
-  echo "  ✓ pdf-guru.pdf"
 
   echo ""
   echo "Semua PDF di: $(pwd)/"

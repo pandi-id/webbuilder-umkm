@@ -127,7 +127,6 @@ peran Anda:
 - **Bab 2**: Panduan Agent
 - **Bab 3**: Panduan Reseller
 - **Bab 4**: Panduan Admin
-- **Bab 5**: Panduan Guru — Rumah Digital Guru (khusus template guru-pandi-upi)
 
 ---
 

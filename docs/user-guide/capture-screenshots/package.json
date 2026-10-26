@@ -11,7 +11,6 @@
     "capture:agent": "node --env-file-if-exists=.env capture.mjs agent",
     "capture:reseller": "node --env-file-if-exists=.env capture.mjs reseller",
     "capture:admin": "node --env-file-if-exists=.env capture.mjs admin",
-    "capture:guru": "node --env-file-if-exists=.env capture.mjs guru",
     "capture:headed": "HEADED=1 node --env-file-if-exists=.env capture.mjs"
   },
   "devDependencies": {

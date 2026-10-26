@@ -279,7 +279,7 @@ cat > "$OUT" <<'HEAD_EOF'
 <div class="cover">
   <div class="badge">DOKUMENTASI PENGGUNA</div>
   <h1>Panduan Web Builder</h1>
-  <p class="subtitle">Untuk Admin · Reseller · Agent · Client · Guru</p>
+  <p class="subtitle">Untuk Admin · Reseller · Agent · Client</p>
   <div class="meta">
     Web Builder Platform · Versi 1.0
   </div>
@@ -295,8 +295,6 @@ FILES=(
   "20-panduan-agent.md"
   "30-panduan-reseller.md"
   "40-panduan-admin.md"
-  "50-panduan-guru.md"
-  "60-panduan-client-guru.md"
 )
 
 for f in "${FILES[@]}"; do
