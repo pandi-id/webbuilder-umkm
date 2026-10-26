@@ -4,7 +4,7 @@ name: QA Playwright
 # Regression suite jalan nightly + tag push — semua 134+ test.
 on:
   pull_request:
-    branches: [main]
+    branches: [main, master, umkm]
     paths:
       - "apps/**"
       - "docs/qa-playwright/**"
