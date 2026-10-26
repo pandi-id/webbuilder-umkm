@@ -163,24 +163,7 @@ export async function RenderBlocks({
     .filter(Boolean)
     .join("");
 
-  // Render each block; dynamic blocks resolve async server components.
-  const nodes = await Promise.all(
-    blocks.map(async (b, i) => {
-      if (b.type === "ProductGridDynamic") {
-        return withLayout(b, i, <ProductGridDynamic block={b} siteId={siteId} />);
-      }
-      if (b.type === "BlogListDynamic") {
-        return withLayout(b, i, <BlogListDynamicAsync block={b} siteId={siteId} />);
-      }
-      if (b.type === "Form") {
-        return withLayout(b, i, <FormBlockAsync block={b} />);
-      }
-      if (b.type === "UmkmCatalogDynamic") {
-        return withLayout(b, i, <UmkmCatalogDynamic block={b} siteId={siteId} />);
-      }
-      return withLayout(b, i, <BlockView block={b} />);
-    }),
-  );
+  const nodes = blocks.map((b, i) => withLayout(b, i, <BlockNode block={b} siteId={siteId} />));
 
   return (
     <>
@@ -192,7 +175,25 @@ export async function RenderBlocks({
   );
 }
 
-function BlockView({ block }: { block: Block }) {
+// BlockNode routes data-backed blocks to their async server components. Used
+// for top-level and nested (Container/Columns) children alike, so a catalog
+// inside a container still receives the site ID.
+function BlockNode({ block, siteId }: { block: Block; siteId: string }) {
+  switch (block.type) {
+    case "ProductGridDynamic":
+      return <ProductGridDynamic block={block} siteId={siteId} />;
+    case "BlogListDynamic":
+      return <BlogListDynamicAsync block={block} siteId={siteId} />;
+    case "Form":
+      return <FormBlockAsync block={block} />;
+    case "UmkmCatalogDynamic":
+      return <UmkmCatalogDynamic block={block} siteId={siteId} />;
+    default:
+      return <BlockView block={block} siteId={siteId} />;
+  }
+}
+
+function BlockView({ block, siteId }: { block: Block; siteId: string }) {
   const p = block.props ?? {};
   switch (block.type) {
     case "Navbar":
@@ -805,7 +806,7 @@ function BlockView({ block }: { block: Block }) {
         <section className="px-6 py-6">
           <div className="mx-auto flex max-w-5xl flex-col" style={{ gap }}>
             {children.map((c, i) => (
-              <BlockView key={i} block={c} />
+              <BlockNode key={i} block={c} siteId={siteId} />
             ))}
           </div>
         </section>
@@ -832,7 +833,7 @@ function BlockView({ block }: { block: Block }) {
             {cells.map((col, ci) => (
               <div key={ci} className="flex flex-col gap-4">
                 {col.map((c, k) => (
-                  <BlockView key={k} block={c} />
+                  <BlockNode key={k} block={c} siteId={siteId} />
                 ))}
               </div>
             ))}
@@ -1747,7 +1748,7 @@ function BlockView({ block }: { block: Block }) {
       );
     }
 
-    // Nested catalogs have no siteId here (same as ProductGridDynamic) — skip.
+    // Data-backed blocks are dispatched by BlockNode and never reach here.
     case "UmkmCatalogDynamic":
       return null;
 
