@@ -356,7 +356,7 @@ func validateTemplateMeta(slug, category, variant, name, status string) error {
 		return errors.New("slug format invalid (huruf kecil, digit, hyphen, 2-40 char)")
 	}
 	if !templates.IsValidCategory(category) {
-		return errors.New("category tidak valid — pakai: school, umkm, portfolio, teacher, blog, landing, other")
+		return errors.New("category tidak valid — pakai: school, umkm, portfolio, blog, landing, other")
 	}
 	if !templates.IsValidVariant(variant) {
 		return errors.New("variant tidak valid — pakai: modern, clean, professional")

@@ -58,47 +58,6 @@ import { cn } from "@/lib/utils";
 import { hexToHslComponents, readableForeground } from "@/lib/color";
 import { buildCatalogFontsUrl } from "@/lib/fonts";
 import { PropEditor, type BlockData } from "./PropEditor";
-import {
-  GuruArticleGridEditorPreview,
-  GuruFooterEditor,
-  GuruForumThreadListEditorPreview,
-  GuruHeroEditor,
-  GuruLatestGridEditorPreview,
-  GuruLearningGridEditorPreview,
-  GuruNavbarEditor,
-  GuruProfileCardEditor,
-  GuruPromoCarouselEditorPreview,
-  GuruQuoteEditor,
-  GuruRubricGridEditor,
-  GuruRubricHeroEditor,
-  GuruStatsBarEditorPreview,
-  GuruStylesEditor,
-  GuruTagListEditor,
-  GuruTimelineEditor,
-} from "@/components/GuruEditorBlocks";
-import {
-  GuruPlusAudioEpisodeEditor,
-  GuruPlusAwardShowcaseEditor,
-  GuruPlusBeforeAfterEditor,
-  GuruPlusBookingSlotEditor,
-  GuruPlusBookshelfEditor,
-  GuruPlusCertificateGridEditor,
-  GuruPlusContactCTAEditor,
-  GuruPlusFAQEditor,
-  GuruPlusLessonCardEditor,
-  GuruPlusMapLocationEditor,
-  GuruPlusMarqueeEditor,
-  GuruPlusNewsletterEditor,
-  GuruPlusPhotoEssayEditor,
-  GuruPlusSkillBarsEditor,
-  GuruPlusStatsEditor,
-  GuruPlusStoryBlockEditor,
-  GuruPlusStudentWallEditor,
-  GuruPlusStylesEditor,
-  GuruPlusTestimonialsEditor,
-  GuruPlusTimelineEditor,
-  GuruPlusVideoEmbedEditor,
-} from "@/components/GuruPlusEditorBlocks";
 import { LayoutPanel } from "./LayoutPanel";
 import { ThemeDrawer, type ThemeJson } from "./ThemeDrawer";
 import { buildLayoutStyle, buildMaxWidthStyle, layoutForBreakpoint } from "@/lib/blockLayout";
@@ -110,6 +69,8 @@ import { PageSettingsDialog } from "./PageSettingsDialog";
 import { PreviewShareDialog } from "./PreviewShareDialog";
 import { MiniMap } from "./MiniMap";
 import { ChildrenEditor } from "./ChildrenEditor";
+import { UMKM_BLOCK_TYPES, renderUmkmBlock, type UmkmCtx } from "@/components/umkm/UmkmBlocks";
+import { UMKM_SAMPLE_PRODUCTS } from "@/lib/umkm";
 import {
   duplicateAtPath,
   getAt,
@@ -177,7 +138,7 @@ type Site = {
   name: string;
   theme: ThemeJson | null;
   // layout — shared header/footer across all pages. Kalau `{}` (default seed
-  // migration), guru belum pernah edit — canvas mulai kosong dan save akan
+  // migration), user belum pernah edit — canvas mulai kosong dan save akan
   // populate untuk pertama kalinya.
   //
   // Flag header_enabled/footer_enabled: kalau false → renderer skip section
@@ -236,11 +197,11 @@ export default function EditorPage() {
   // yang di-populate saat target = layout.
   const [layoutHeader, setLayoutHeader] = useState<BlockData[]>([]);
   const [layoutFooter, setLayoutFooter] = useState<BlockData[]>([]);
-  // Enabled flags — default true (undefined = enabled). Guru bisa toggle
+  // Enabled flags — default true (undefined = enabled). User bisa toggle
   // off supaya renderer skip section walaupun blocks-nya ada.
   const [headerEnabled, setHeaderEnabled] = useState(true);
   const [footerEnabled, setFooterEnabled] = useState(true);
-  // Guard supaya guru tidak masuk mode layout sebelum site fetch selesai —
+  // Guard supaya user tidak masuk mode layout sebelum site fetch selesai —
   // kalau masuk terlalu awal, kita bisa save empty untuk section yang belum
   // di-load (menghapus data existing).
   const [siteLoaded, setSiteLoaded] = useState(false);
@@ -322,7 +283,7 @@ export default function EditorPage() {
     // Mobile: single column (canvas only). Palette + prop editor via dialog.
     if (isMobile) return "1fr";
     // 280px (vs 240 sebelumnya) — tambah ruang untuk nama block + action
-    // buttons supaya tidak truncate "Guru St..." / salah klik hapus block.
+    // buttons supaya tidak truncate "Section Te..." / salah klik hapus block.
     const L = leftCollapsed ? "0" : "280px";
     const R = rightCollapsed ? "0" : "320px";
     return `${L} 1fr ${R}`;
@@ -387,10 +348,10 @@ export default function EditorPage() {
   // Convenience — apakah lagi di mode layout (header/footer bersama)?
   const isLayoutMode = target?.kind === "layout";
 
-  // Hidden indices — blok Navbar/GuruNavbar / Footer/GuruFooter di page tree
+  // Hidden indices — blok Navbar / Footer di page tree
   // yang duplikat dengan shared layout aktif. Kita hide dari canvas + sidebar
-  // supaya guru tidak lihat 2 header/footer. Blok tetap di state (blocks
-  // array) — guru bisa munculkan lagi dengan toggle off shared layout.
+  // supaya user tidak lihat 2 header/footer. Blok tetap di state (blocks
+  // array) — user bisa munculkan lagi dengan toggle off shared layout.
   // Hanya berlaku di mode page — mode layout render blocks apa adanya.
   const hiddenIndices = useMemo(() => {
     if (isLayoutMode) return new Set<number>();
@@ -596,25 +557,6 @@ export default function EditorPage() {
       "--color-secondary": secondary,
       "--color-bg": bg,
       "--color-fg": fg,
-      // --- Guru template vars DIRECT INJECTION ---
-      // Sebelumnya GuruStylesEditor declare --guru-navy = var(--color-primary)
-      // di :root (= <html>). Chromium kadang cache resolved value di :root
-      // sebagai fallback (karena :root sendiri nggak punya --color-primary).
-      // Dengan inject --guru-* langsung di .wb-canvas wrapper ini, descendant
-      // GUARANTEED pakai turunan dari user theme (specificity: inline > :root).
-      // Pola color-mix sama dengan GuruStylesEditor.
-      "--guru-navy": primary,
-      "--guru-ink": fg,
-      "--guru-cream": bg,
-      "--guru-red": secondary,
-      "--guru-navy-2": `color-mix(in srgb, ${primary} 70%, #ffffff)`,
-      "--guru-muted": `color-mix(in srgb, ${fg} 55%, ${bg})`,
-      "--guru-paper": `color-mix(in srgb, ${bg} 30%, #ffffff)`,
-      "--guru-line": `color-mix(in srgb, ${fg} 10%, ${bg})`,
-      "--guru-red-soft": `color-mix(in srgb, ${secondary} 15%, ${bg})`,
-      "--guru-blue-soft": `color-mix(in srgb, ${primary} 10%, ${bg})`,
-      "--guru-sage": `color-mix(in srgb, ${primary} 6%, ${bg})`,
-      "--guru-gold": `color-mix(in srgb, ${secondary} 60%, #d6a84d)`,
       // Font vars — read by .wb-canvas typography rules in globals.css.
       "--wb-font-heading": theme.font?.heading
         ? `"${theme.font.heading}", system-ui, sans-serif`
@@ -910,14 +852,14 @@ export default function EditorPage() {
       } else {
         // Layout mode — PATCH site dengan payload penuh header+footer supaya
         // section yang tidak lagi di-edit tidak ke-reset. Enabled flags ikut
-        // dikirim eksplisit supaya guru bisa toggle off tanpa hapus blocks.
+        // dikirim eksplisit supaya user bisa toggle off tanpa hapus blocks.
         const nextHeader = target.section === "header" ? blocks : layoutHeader;
         const nextFooter = target.section === "footer" ? blocks : layoutFooter;
         // Auto-sync flag: kalau section yang di-save sekarang berubah dari
-        // kosong → punya blok (guru baru pertama kali isi header/footer),
+        // kosong → punya blok (user baru pertama kali isi header/footer),
         // paksa enabled=true supaya konten yang baru di-add otomatis
         // ter-render. Extraction migrasi sebelumnya bisa set enabled=false
-        // karena section kosong; tanpa auto-sync ini, guru harus manual klik
+        // karena section kosong; tanpa auto-sync ini, user harus manual klik
         // toggle → membingungkan.
         let nextHeaderEnabled = headerEnabled;
         let nextFooterEnabled = footerEnabled;
@@ -1773,7 +1715,7 @@ export default function EditorPage() {
                 onToggle={(next) => toggleSectionEnabled(target.section, next)}
               />
             )}
-            {/* Shared header preview (page mode) — render read-only supaya guru
+            {/* Shared header preview (page mode) — render read-only supaya user
                 lihat tampilan halaman lengkap dengan shared layout. Klik → jump
                 ke mode Header. Kalau flag nonaktif / blocks kosong, di-skip. */}
             {!isLayoutMode && layoutHeader.length > 0 && headerEnabled && (
@@ -2032,8 +1974,8 @@ export default function EditorPage() {
 // Block types yang di-manage oleh shared layout — kalau muncul di page tree
 // saat shared section aktif, harus di-hide supaya tidak double render.
 // Konsisten dengan `headerBlockTypes` di layout_extract.go (Go side).
-const LAYOUT_HEADER_TYPES = new Set(["Navbar", "GuruNavbar"]);
-const LAYOUT_FOOTER_TYPES = new Set(["Footer", "GuruFooter"]);
+const LAYOUT_HEADER_TYPES = new Set(["Navbar"]);
+const LAYOUT_FOOTER_TYPES = new Set(["Footer"]);
 
 // hiddenLayoutIndices — kumpulkan indeks blok top-level yang harus di-hide
 // dari canvas + sidebar karena duplikat dengan shared layout aktif. Return
@@ -2090,7 +2032,7 @@ function LayoutModeNotice({
 }
 
 // LayoutReadonlyStrip = render actual shared header/footer blocks read-only
-// di canvas mode page, supaya guru lihat tampilan halaman lengkap. Konten
+// di canvas mode page, supaya user lihat tampilan halaman lengkap. Konten
 // pakai pointer-events:none supaya klik pass-through ke overlay wrapper yang
 // jump ke layout mode. Badge "Layout Bersama · Edit →" muncul di corner
 // on-hover sebagai affordance.
@@ -2121,7 +2063,7 @@ function LayoutReadonlyStrip({
       title={`${label} bersama — berlaku di semua halaman. Klik untuk edit.`}
     >
       {/*
-        Konten render read-only. Tiga guard supaya guru tidak "keluar" editor:
+        Konten render read-only. Tiga guard supaya user tidak "keluar" editor:
         1. pointer-events:none → mouse click pass-through ke onEdit
         2. `inert` attribute → browser skip Tab focus + block synthetic click
            via keyboard (Enter di link → no navigate)
@@ -2793,7 +2735,7 @@ function Preview({
 
   // Compute visible blocks (setelah filter hiddenIndices). Kalau setelah
   // filter kosong tapi raw blocks non-empty → tampilkan pesan "hanya berisi
-  // header/footer bersama" instead of empty-state biar guru tahu ada shared
+  // header/footer bersama" instead of empty-state biar user tahu ada shared
   // layout yang menghandle konten.
   const hidden = hiddenIndices ?? new Set<number>();
   const visibleBlocks = blocks
@@ -2830,11 +2772,6 @@ function Preview({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      {/* Inject CSS `.guru-*` sekali — supaya semua block Guru render dengan
-          styling identik dengan template preview beneran. Aman untuk site
-          non-guru: CSS scoped ke class .guru-* + :root var yang read theme. */}
-      <GuruStylesEditor />
-      <GuruPlusStylesEditor />
       <SortableContext
         items={visibleBlocks.map((v) => pathKey([v.index]))}
         strategy={verticalListSortingStrategy}
@@ -2870,7 +2807,7 @@ function Preview({
 }
 
 // DragGhostBadge — pill ringan yang jadi cursor follower selama drag block
-// di canvas. Ambil emoji + label dari schema supaya guru langsung tau block
+// di canvas. Ambil emoji + label dari schema supaya user langsung tau block
 // apa yang lagi di-pindah.
 function DragGhostBadge({ block }: { block: BlockData }) {
   const schema = schemaFor(block.type);
@@ -3106,7 +3043,7 @@ function BlockView({
   //
   // Kalau field kosong DAN not editable → return null (existing conditional
   // render behavior). Kalau editable → tetap render supaya EditableText
-  // placeholder muncul (guru bisa klik untuk isi).
+  // placeholder muncul (user bisa klik untuk isi).
   function Field({
     as,
     field,
@@ -3138,24 +3075,6 @@ function BlockView({
       />
     );
   }
-  // guruEdit — konteks yang dilempar ke setiap Guru editor supaya inline
-  // edit di micro-komponen (link, tag, panel, dst) commit balik ke block
-  // state. Sentinel `field === "__string__"` handle legacy string[] tags —
-  // replace item as raw string alih-alih spread ke object.
-  const guruEdit = {
-    editable,
-    onFieldChange: setProp,
-    onItemChange: (arrName: string, idx: number, field: string, value: unknown) => {
-      if (field === "__string__") {
-        const cur = Array.isArray(p[arrName]) ? (p[arrName] as unknown[]) : [];
-        const next = [...cur];
-        next[idx] = value;
-        onUpdate?.({ ...block, props: { ...p, [arrName]: next } });
-        return;
-      }
-      setItemProp(arrName, idx, field, value);
-    },
-  };
   // ItemField — sama seperti Field tapi untuk items[] arrays. Update lewat
   // setItemProp supaya array integrity terjaga.
   function ItemField({
@@ -3187,6 +3106,46 @@ function BlockView({
         placeholder={placeholder}
         multiline={multiline}
       />
+    );
+  }
+  // Umkm* blocks reuse the renderer's markup; only text nodes become editable.
+  if (UMKM_BLOCK_TYPES.has(block.type)) {
+    const setUmkmPath = (path: Array<string | number>, v: string) => {
+      const [key, idx, field] = path;
+      if (path.length === 1) return setProp(String(key), v);
+      if (path.length === 3) return setItemProp(String(key), Number(idx), String(field), v);
+      const arr = Array.isArray(p[key]) ? [...(p[key] as unknown[])] : [];
+      arr[Number(idx)] = v;
+      setProp(String(key), arr);
+    };
+    const umkmCtx: UmkmCtx = {
+      live: false,
+      editable: !!editable,
+      text: ({ as, value, path, className, placeholder, multiline }) =>
+        editable ? (
+          <EditableText
+            as={as}
+            className={className}
+            value={value}
+            onChange={(v) => setUmkmPath(path, v)}
+            placeholder={placeholder}
+            multiline={multiline}
+          />
+        ) : value ? (
+          createElement(as, { className }, value)
+        ) : null,
+    };
+    const limit = Math.min(48, Math.max(1, Number(p.limit ?? 8) || 8));
+    return renderUmkmBlock(
+      block.type,
+      p,
+      umkmCtx,
+      block.type === "UmkmCatalogDynamic"
+        ? {
+            cards: UMKM_SAMPLE_PRODUCTS.slice(0, limit),
+            note: `Contoh tampilan — situs live menampilkan maks. ${limit} produk aktif dari tab Produk.`,
+          }
+        : undefined,
     );
   }
   switch (block.type) {
@@ -4496,470 +4455,12 @@ function BlockView({
       );
     }
 
-    // -------- Guru (Rumah Digital Guru) — high-fidelity preview --------
-    // Pakai komponen shared di `@/components/GuruEditorBlocks` yang mirror
-    // struktur JSX + CSS `.guru-*` renderer. Visual match ~95% dengan
-    // template preview beneran. Dynamic blocks (Latest/ArticleGrid/dst.)
-    // render dengan sample data karena editor tidak fetch DB.
-    case "GuruStyles":
-      // CSS di-inject sekali di root Preview — di sini cukup marker kecil
-      // supaya user tahu block ini "wajib ada" tapi tidak render visual.
-      return (
-        <div className="mx-6 my-2 rounded-md border border-dashed border-violet-300 bg-violet-50 px-3 py-1.5 text-[11px] text-violet-700">
-          🎨 <strong>GuruStyles</strong> · CSS scoped `.guru-*` (tidak render visual — sudah aktif)
-        </div>
-      );
-    case "GuruNavbar":
-      return (
-        <GuruNavbarEditor
-          brandName={p.brandName as string | undefined}
-          brandRole={p.brandRole as string | undefined}
-          brandMark={p.brandMark as string | undefined}
-          links={p.links as Array<{ label: string; href: string; active?: boolean }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruHero":
-      return (
-        <GuruHeroEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          titleEm={p.titleEm as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          ctaLabel={p.ctaLabel as string | undefined}
-          ctaHref={p.ctaHref as string | undefined}
-          ctaSecondaryLabel={p.ctaSecondaryLabel as string | undefined}
-          ctaSecondaryHref={p.ctaSecondaryHref as string | undefined}
-          image={p.image as string | undefined}
-          imageAlt={p.imageAlt as string | undefined}
-          stats={p.stats as Array<{ value: string; label: string }> | undefined}
-          noteAText={p.noteAText as string | undefined}
-          noteASub={p.noteASub as string | undefined}
-          noteAShow={p.noteAShow as "show" | "hide" | undefined}
-          noteAX={p.noteAX as number | string | undefined}
-          noteAY={p.noteAY as number | string | undefined}
-          noteBText={p.noteBText as string | undefined}
-          noteBSub={p.noteBSub as string | undefined}
-          noteBShow={p.noteBShow as "show" | "hide" | undefined}
-          noteBX={p.noteBX as number | string | undefined}
-          noteBY={p.noteBY as number | string | undefined}
-          onNoteMove={(which, x, y) => {
-            if (which === "A") {
-              onUpdate?.({
-                ...block,
-                props: { ...p, noteAX: x, noteAY: y },
-              });
-            } else {
-              onUpdate?.({
-                ...block,
-                props: { ...p, noteBX: x, noteBY: y },
-              });
-            }
-          }}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPromoCarousel":
-      return (
-        <GuruPromoCarouselEditorPreview
-          items={p.items as Array<{ image?: string; alt?: string; href?: string; caption?: string }> | undefined}
-        />
-      );
-    case "GuruPromoCarouselDynamic":
-      return <GuruPromoCarouselEditorPreview isDynamic />;
-    case "GuruStatsBar":
-    case "GuruStatsBarDynamic":
-      return (
-        <GuruStatsBarEditorPreview
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          sample={block.type === "GuruStatsBar"}
-          edit={guruEdit}
-        />
-      );
-    case "GuruLatestGrid":
-    case "GuruLatestGridDynamic":
-      return (
-        <GuruLatestGridEditorPreview
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruRubricGrid":
-      return (
-        <GuruRubricGridEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          items={p.items as Array<{ title: string; desc?: string; href?: string; icon?: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruArticleGrid":
-    case "GuruArticleGridDynamic":
-      return (
-        <GuruArticleGridEditorPreview
-          rubric={p.rubric as string | undefined}
-          sidebarTitle={p.sidebarTitle as string | undefined}
-          sidebarBody={p.sidebarBody as string | undefined}
-          sidebarTags={p.sidebarTags as string[] | undefined}
-          sidebarLinks={p.sidebarLinks as Array<{ label: string; href: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruForumThreadList":
-    case "GuruForumThreadListDynamic":
-      return <GuruForumThreadListEditorPreview />;
-    case "GuruLearningGridDynamic":
-      return (
-        <GuruLearningGridEditorPreview
-          sidebarTitle={p.sidebarTitle as string | undefined}
-          sidebarBody={p.sidebarBody as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruRubricHero":
-      return (
-        <GuruRubricHeroEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          iconKey={p.iconKey as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruQuote":
-      return (
-        <GuruQuoteEditor
-          text={p.text as string | undefined}
-          author={p.author as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruProfileCard":
-      return (
-        <GuruProfileCardEditor
-          image={p.image as string | undefined}
-          name={p.name as string | undefined}
-          role={p.role as string | undefined}
-          contacts={p.contacts as Array<{ icon?: string; label: string }> | undefined}
-          panels={p.panels as Array<{ eyebrow?: string; title?: string; body?: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruTimeline":
-      return (
-        <GuruTimelineEditor
-          title={p.title as string | undefined}
-          items={p.items as Array<{ date: string; title: string; desc?: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruTagList":
-      return (
-        <GuruTagListEditor
-          title={p.title as string | undefined}
-          tags={p.tags as string[] | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruFooter":
-      return (
-        <GuruFooterEditor
-          brandName={p.brandName as string | undefined}
-          brandRole={p.brandRole as string | undefined}
-          brandMark={p.brandMark as string | undefined}
-          copyText={p.copyText as string | undefined}
-          builderTitle={p.builderTitle as string | undefined}
-          builderBrand={p.builderBrand as string | undefined}
-          builderNote={p.builderNote as string | undefined}
-          links={p.links as Array<{ label: string; href: string }> | undefined}
-          bottomLeft={p.bottomLeft as string | undefined}
-          bottomRight={p.bottomRight as string | undefined}
-          edit={guruEdit}
-        />
-      );
-
-    // -------- Guru Plus — modern animated block set --------
-    case "GuruPlusStyles":
-      return (
-        <div className="mx-6 my-2 rounded-md border border-dashed border-fuchsia-300 bg-fuchsia-50 px-3 py-1.5 text-[11px] text-fuchsia-700">
-          ✨ <strong>GuruPlusStyles</strong> · CSS Guru Plus (tidak render visual — sudah aktif)
-        </div>
-      );
-    case "GuruPlusFAQ":
-      return (
-        <GuruPlusFAQEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={p.items as Array<{ q: string; a: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusStats":
-      return (
-        <GuruPlusStatsEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={p.items as Array<{ value: number; suffix?: string; label: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusTimeline":
-      return (
-        <GuruPlusTimelineEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={p.items as Array<{ year: string; title: string; desc?: string }> | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusTestimonials":
-      return (
-        <GuruPlusTestimonialsEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ quote: string; author: string; role?: string; avatar?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusMarquee":
-      return (
-        <GuruPlusMarqueeEditor
-          items={p.items as string[] | undefined}
-          speed={p.speed as "slow" | "normal" | "fast" | undefined}
-        />
-      );
-    case "GuruPlusBookshelf":
-      return (
-        <GuruPlusBookshelfEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ title: string; author?: string; cover?: string; year?: string; note?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusVideoEmbed":
-      return (
-        <GuruPlusVideoEmbedEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ url: string; title: string; description?: string; thumbnail?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusPhotoEssay":
-      return (
-        <GuruPlusPhotoEssayEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as Array<{ image: string; caption?: string; meta?: string }> | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusAudioEpisode":
-      return (
-        <GuruPlusAudioEpisodeEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{
-                  title: string;
-                  src: string;
-                  duration?: string;
-                  description?: string;
-                  cover?: string;
-                }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusCertificateGrid":
-      return (
-        <GuruPlusCertificateGridEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ title: string; issuer?: string; date?: string; image?: string; href?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusBeforeAfter":
-      return (
-        <GuruPlusBeforeAfterEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          beforeImage={p.beforeImage as string | undefined}
-          afterImage={p.afterImage as string | undefined}
-          beforeLabel={p.beforeLabel as string | undefined}
-          afterLabel={p.afterLabel as string | undefined}
-          caption={p.caption as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusLessonCard":
-      return (
-        <GuruPlusLessonCardEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{
-                  title: string;
-                  level?: string;
-                  duration?: string;
-                  description?: string;
-                  icon?: string;
-                  href?: string;
-                  ctaLabel?: string;
-                }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusMapLocation":
-      return (
-        <GuruPlusMapLocationEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          address={p.address as string | undefined}
-          lat={p.lat as number | string | undefined}
-          lon={p.lon as number | string | undefined}
-          zoom={p.zoom as number | string | undefined}
-          directionsHref={p.directionsHref as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusSkillBars":
-      return (
-        <GuruPlusSkillBarsEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ label: string; value: number | string; note?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusAwardShowcase":
-      return (
-        <GuruPlusAwardShowcaseEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{ rank?: string; title: string; subtitle?: string; year?: string; icon?: string }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusContactCTA":
-      return (
-        <GuruPlusContactCTAEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          ctaLabel={p.ctaLabel as string | undefined}
-          ctaHref={p.ctaHref as string | undefined}
-          ctaSecondaryLabel={p.ctaSecondaryLabel as string | undefined}
-          ctaSecondaryHref={p.ctaSecondaryHref as string | undefined}
-          contacts={
-            p.contacts as
-              | Array<{ icon?: string; label: string; value: string; href?: string }>
-              | undefined
-          }
-          variant={p.variant as "navy" | "cream" | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusBookingSlot":
-      return (
-        <GuruPlusBookingSlotEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          slots={
-            p.slots as
-              | Array<{ day?: string; time: string; status?: "available" | "booked" | "full"; href?: string }>
-              | undefined
-          }
-          footerNote={p.footerNote as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusNewsletter":
-      return (
-        <GuruPlusNewsletterEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          subtitle={p.subtitle as string | undefined}
-          placeholder={p.placeholder as string | undefined}
-          buttonLabel={p.buttonLabel as string | undefined}
-          disclaimer={p.disclaimer as string | undefined}
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusStudentWall":
-      return (
-        <GuruPlusStudentWallEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          items={
-            p.items as
-              | Array<{
-                  message: string;
-                  author: string;
-                  grade?: string;
-                  color?: "amber" | "pink" | "blue" | "green";
-                }>
-              | undefined
-          }
-          edit={guruEdit}
-        />
-      );
-    case "GuruPlusStoryBlock":
-      return (
-        <GuruPlusStoryBlockEditor
-          eyebrow={p.eyebrow as string | undefined}
-          title={p.title as string | undefined}
-          byline={p.byline as string | undefined}
-          body={p.body as string | undefined}
-          pullquote={p.pullquote as string | undefined}
-          image={p.image as string | undefined}
-          imageCaption={p.imageCaption as string | undefined}
-          edit={guruEdit}
-        />
-      );
-
     default:
+      // Legacy types (blocks dropped from the catalog) still load; user can delete them.
       return (
-        <div className="px-6 py-2 text-xs text-muted-foreground">[block: {block.type}]</div>
+        <div className="mx-6 my-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Blok <strong>{block.type}</strong> tidak didukung lagi. Hapus blok ini dari halaman.
+        </div>
       );
   }
 }

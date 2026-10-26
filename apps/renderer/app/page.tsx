@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { RenderBlocks } from "@/components/Blocks";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
-import { GuruStyles } from "@/components/GuruBlocks";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
 import { composePageWithLayout } from "@/components/SiteLayout";
 import { getPage, lookupSiteByHost, type SiteLookup } from "@/lib/api";
@@ -27,7 +26,6 @@ export default async function HomeRender() {
     <>
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
-      <GuruStyles />
       {/* Slug "" = homepage, sama dengan yang dipakai [...slug] saat page.is_home.
           Route ini tidak pernah lewat [...slug], jadi tanpa beacon di sini
           kunjungan halaman utama — trafik terbesar — tidak pernah tercatat. */}

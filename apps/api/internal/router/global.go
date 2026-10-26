@@ -144,57 +144,12 @@ func MountGlobal(app *fiber.App, deps Deps) {
 	pubBase.Get("/sites/:id/blog-posts", hostGuard, longCache, deps.Public.ListBlogPosts)
 	pubBase.Get("/sites/:id/blog-posts/:slug", hostGuard, longCache, deps.Public.BlogPostBySlug)
 
-	// Guru — public reads untuk website guru (articles/materials/banners/stats).
-	// Cache pendek: article detail bump view_count, jadi cache-nya di sisi
-	// renderer ISR (revalidate 30) — di sini short cache 5s untuk peak burst.
-	if deps.PublicGuru != nil {
-		pubBase.Get("/sites/:id/articles", hostGuard, shortCache, deps.PublicGuru.ListArticles)
-		pubBase.Get("/sites/:id/articles/:rubric/:slug", hostGuard, deps.PublicGuru.ArticleByRubricSlug)
-		// TANPA shortCache — moderation-triggered content, harus fresh setiap
-		// request. Kalau cache 5s, guru approve → refresh → masih lihat empty
-		// (mismatch dengan response_count di article detail yang always fresh).
-		pubBase.Get("/sites/:id/articles/:article_id/responses", hostGuard, deps.PublicGuru.ListArticleResponses)
-		pubBase.Get("/sites/:id/latest-articles", hostGuard, shortCache, deps.PublicGuru.LatestArticles)
-		pubBase.Get("/sites/:id/site-stats", hostGuard, shortCache, deps.PublicGuru.SiteStats)
-		pubBase.Get("/sites/:id/learning-materials", hostGuard, longCache, deps.PublicGuru.ListLearningMaterials)
-		// Tree di-register SEBELUM :slug supaya static match menang dari dynamic.
-		pubBase.Get("/sites/:id/learning-materials/tree", hostGuard, longCache, deps.PublicGuru.LearningTree)
-		// LearningMaterialBySlug sekarang kembalikan responses inline (mirror article
-		// detail). Jangan longCache: moderation-triggered content perlu fresh.
-		pubBase.Get("/sites/:id/learning-materials/:slug", hostGuard, deps.PublicGuru.LearningMaterialBySlug)
-		pubBase.Get("/sites/:id/learning-materials/:material_id/responses", hostGuard, deps.PublicGuru.ListMaterialResponses)
-		// Portal directory (§5) — daftar guru + search + sort. Tidak pakai
-		// hostGuard (no :id param, portal aggregate cross-site by design).
-		pubBase.Get("/guru", shortCache, deps.PublicGuru.TeacherDirectory)
-	}
-
 	// Platform Articles — public read (list + detail by slug) untuk homepage
 	// blog / knowledge base. Cache pendek supaya admin publish langsung visible.
 	// Bukan per-site — jadi tidak butuh hostGuard.
 	if deps.PlatformArticles != nil {
 		pubBase.Get("/platform-articles", shortCache, deps.PlatformArticles.PublicList)
 		pubBase.Get("/platform-articles/:slug", shortCache, deps.PlatformArticles.PublicGetBySlug)
-	}
-
-	// Guru — public promotion banners (site + portal aggregate).
-	if deps.Banners != nil {
-		pubBase.Get("/sites/:id/promotion-banners", hostGuard, shortCache, deps.Banners.PublicListBySite)
-		// Portal aggregate — cross-site by design, no host guard.
-		pubBase.Get("/portal/promotion-banners", shortCache, deps.Banners.PublicListForPortal)
-	}
-
-	// Guru — public submit tanggapan. Rate-limit per IP defence anti-spam.
-	if deps.Responses != nil {
-		app.Post("/public/sites/:id/articles/:article_id/responses",
-			pubCORS,
-			RateLimitIP(formSubmitPerWindow, formSubmitWindow),
-			deps.Responses.PublicSubmit,
-		)
-		app.Post("/public/sites/:id/learning-materials/:material_id/responses",
-			pubCORS,
-			RateLimitIP(formSubmitPerWindow, formSubmitWindow),
-			deps.Responses.PublicSubmitMaterial,
-		)
 	}
 
 	// Template live preview — dipakai renderer route /template-preview/:slug

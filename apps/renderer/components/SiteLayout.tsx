@@ -1,5 +1,5 @@
 // SiteLayout — shared header/footer render helper. Dipakai detail pages
-// (article/pembelajaran/blog) yang tidak render via RenderBlocks langsung.
+// (blog) yang tidak render via RenderBlocks langsung.
 // Layout kosong `{}` → tidak render apa-apa (backward compat sites lama).
 //
 // Untuk full-page render (catch-all + home), pakai `composePageWithLayout`
@@ -12,8 +12,8 @@ import type { Block, Site } from "@/lib/api";
 // Block type yang di-manage oleh shared layout. Kalau muncul di top-level
 // page tree saat layout section aktif, harus di-strip supaya tidak double
 // render (mirror editor `hiddenLayoutIndices` di apps/web).
-const LAYOUT_HEADER_TYPES = new Set(["Navbar", "GuruNavbar"]);
-const LAYOUT_FOOTER_TYPES = new Set(["Footer", "GuruFooter"]);
+const LAYOUT_HEADER_TYPES = new Set(["Navbar"]);
+const LAYOUT_FOOTER_TYPES = new Set(["Footer"]);
 
 // isEnabled: default true kalau field tidak ada (backward compat site lama).
 // Konsumer opt out dengan set eksplisit `false`.
@@ -36,15 +36,15 @@ export function SiteFooterBlocks({ site }: { site: Site }) {
 // composePageWithLayout — bangun final blocks array untuk full-page render.
 // Tiga langkah:
 //   1. Cek flag enabled untuk header + footer
-//   2. Defensive strip: hilangkan Navbar/GuruNavbar dari page.tree kalau
+//   2. Defensive strip: hilangkan Navbar dari page.tree kalau
 //      header active + populated. Sama untuk Footer. Cegah render dobel
 //      walaupun page.tree.blocks masih punya residual dari edit lama,
 //      template yang bocor, atau migration yang skip page tertentu.
 //   3. Concat header + stripped page + footer
 //
-// Dipakai catch-all + homepage. Detail routes (article/pembelajaran/blog)
+// Dipakai catch-all + homepage. Detail routes (blog)
 // pakai SiteHeaderBlocks/SiteFooterBlocks helper yang tidak strip (karena
-// halaman detail tidak render page.tree.blocks — konten dari artikel).
+// halaman detail tidak render page.tree.blocks — konten dari post).
 export function composePageWithLayout(site: Site, pageBlocks: Block[]): Block[] {
   const headerEnabled = isEnabled(site.layout?.header_enabled);
   const footerEnabled = isEnabled(site.layout?.footer_enabled);

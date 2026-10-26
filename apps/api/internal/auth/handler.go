@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"strings"
@@ -103,16 +102,6 @@ type meResp struct {
 	ResellerDisplayName string  `json:"reseller_display_name"`
 	ResellerStatus      string  `json:"reseller_status"`
 	ResellerTier        string  `json:"reseller_tier"`
-
-	// Guru profile — spec §13, §25. Selalu returned (default "" / []) supaya
-	// frontend tidak perlu cek undefined.
-	SubjectOrField string       `json:"subject_or_field"`
-	ProfileImage   string       `json:"profile_image"`
-	BioShort       string       `json:"bio_short"`
-	BioLong        string       `json:"bio_long"`
-	HeroStatement  string       `json:"hero_statement"`
-	Quote          string       `json:"quote"`
-	SocialLinks    []socialLink `json:"social_links"`
 }
 
 func toMeResp(u *User) meResp {
@@ -130,20 +119,6 @@ func toMeResp(u *User) meResp {
 		ResellerDisplayName: u.ResellerDisplayName,
 		ResellerStatus:      u.ResellerStatus,
 		ResellerTier:        u.ResellerTier,
-		SubjectOrField:      u.SubjectOrField,
-		ProfileImage:        u.ProfileImage,
-		BioShort:            u.BioShort,
-		BioLong:             u.BioLong,
-		HeroStatement:       u.HeroStatement,
-		Quote:               u.Quote,
-		SocialLinks:         []socialLink{},
-	}
-	// Deserialize JSONB. Corrupt data → return empty slice, jangan crash.
-	if len(u.SocialLinksJSON) > 0 {
-		var links []socialLink
-		if err := json.Unmarshal(u.SocialLinksJSON, &links); err == nil {
-			out.SocialLinks = links
-		}
 	}
 	if u.EmailVerifiedAt != nil {
 		s := u.EmailVerifiedAt.UTC().Format(time.RFC3339)
@@ -299,13 +274,6 @@ func (h *Handler) Me(c *fiber.Ctx) error {
 	return httpx.OK(c, toMeResp(u))
 }
 
-// socialLink — 1 entry di array social_links. Platform bebas string
-// (mis. "twitter", "instagram", "youtube") supaya renderer bisa pilih icon.
-type socialLink struct {
-	Platform string `json:"platform"`
-	URL      string `json:"url"`
-}
-
 // updateMeReq mirrors ProfileUpdate — pointer fields so JSON absence means
 // "don't touch", empty string means "clear this column".
 type updateMeReq struct {
@@ -316,16 +284,6 @@ type updateMeReq struct {
 	State       *string `json:"state,omitempty"`
 	PostalCode  *string `json:"postal_code,omitempty"`
 	Nik         *string `json:"nik,omitempty"`
-	// Guru profile — spec §13, §25. Semua opsional.
-	SubjectOrField *string       `json:"subject_or_field,omitempty"`
-	ProfileImage   *string       `json:"profile_image,omitempty"`
-	BioShort       *string       `json:"bio_short,omitempty"`
-	BioLong        *string       `json:"bio_long,omitempty"`
-	HeroStatement  *string       `json:"hero_statement,omitempty"`
-	Quote          *string       `json:"quote,omitempty"`
-	// SocialLinks — nil = don't touch, [] = clear, [...] = replace.
-	// Untuk deteksi "field dikirim atau tidak", pakai pointer.
-	SocialLinks *[]socialLink `json:"social_links,omitempty"`
 }
 
 // UpdateMe patches the current user's profile. Fields not present in the JSON
@@ -358,12 +316,6 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 	req.State = trim(req.State)
 	req.PostalCode = trim(req.PostalCode)
 	req.Nik = trim(req.Nik)
-	req.SubjectOrField = trim(req.SubjectOrField)
-	req.ProfileImage = trim(req.ProfileImage)
-	req.BioShort = trim(req.BioShort)
-	req.BioLong = trim(req.BioLong)
-	req.HeroStatement = trim(req.HeroStatement)
-	req.Quote = trim(req.Quote)
 
 	// Basic length caps — DB has TEXT so no hard limit, but reject obvious
 	// abuse before writing. Matches the migration comments (255/128/32/16).
@@ -432,70 +384,14 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 		}
 	}
 
-	// Cap length untuk field guru — bio_long relatif panjang, sisanya
-	// judul/statement. Reject obvious abuse.
-	if req.SubjectOrField != nil && len(*req.SubjectOrField) > 128 {
-		return httpx.BadRequest(c, "bidang/mata pelajaran terlalu panjang (max 128)")
-	}
-	if req.ProfileImage != nil && len(*req.ProfileImage) > 2048 {
-		return httpx.BadRequest(c, "URL foto profil terlalu panjang")
-	}
-	if req.BioShort != nil && len(*req.BioShort) > 280 {
-		return httpx.BadRequest(c, "bio singkat terlalu panjang (max 280)")
-	}
-	if req.BioLong != nil && len(*req.BioLong) > 4000 {
-		return httpx.BadRequest(c, "bio panjang terlalu panjang (max 4000)")
-	}
-	if req.HeroStatement != nil && len(*req.HeroStatement) > 500 {
-		return httpx.BadRequest(c, "hero statement terlalu panjang (max 500)")
-	}
-	if req.Quote != nil && len(*req.Quote) > 500 {
-		return httpx.BadRequest(c, "quote terlalu panjang (max 500)")
-	}
-	// Serialize social_links ke JSONB. Sanitize URL biar renderer tidak
-	// tampilkan javascript: / data: (basic XSS guard).
-	var socialJSON []byte
-	if req.SocialLinks != nil {
-		links := *req.SocialLinks
-		if len(links) > 10 {
-			return httpx.BadRequest(c, "maksimal 10 tautan sosial")
-		}
-		for i, l := range links {
-			p := strings.ToLower(strings.TrimSpace(l.Platform))
-			u := strings.TrimSpace(l.URL)
-			if p == "" || len(p) > 40 {
-				return httpx.BadRequest(c, "platform tautan sosial invalid")
-			}
-			if u != "" && !strings.HasPrefix(u, "https://") && !strings.HasPrefix(u, "http://") {
-				return httpx.BadRequest(c, "URL tautan sosial harus http/https")
-			}
-			if len(u) > 500 {
-				return httpx.BadRequest(c, "URL tautan sosial terlalu panjang")
-			}
-			links[i] = socialLink{Platform: p, URL: u}
-		}
-		b, err := json.Marshal(links)
-		if err != nil {
-			return httpx.BadRequest(c, "social_links invalid")
-		}
-		socialJSON = b
-	}
-
 	u, err := h.repo.UpdateProfile(c.Context(), cl.UserID, ProfileUpdate{
-		Name:           req.Name,
-		PhoneNumber:    req.PhoneNumber,
-		Address:        req.Address,
-		City:           req.City,
-		State:          req.State,
-		PostalCode:     req.PostalCode,
-		Nik:            req.Nik,
-		SubjectOrField: req.SubjectOrField,
-		ProfileImage:   req.ProfileImage,
-		BioShort:       req.BioShort,
-		BioLong:        req.BioLong,
-		HeroStatement:  req.HeroStatement,
-		Quote:          req.Quote,
-		SocialLinks:    socialJSON,
+		Name:        req.Name,
+		PhoneNumber: req.PhoneNumber,
+		Address:     req.Address,
+		City:        req.City,
+		State:       req.State,
+		PostalCode:  req.PostalCode,
+		Nik:         req.Nik,
 	})
 	if errors.Is(err, ErrNotFound) {
 		return httpx.NotFound(c, "user not found")

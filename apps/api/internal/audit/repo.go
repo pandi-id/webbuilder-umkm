@@ -25,7 +25,7 @@ const (
 	EventAgentInvited        = "agent.invited"
 	EventClientInvited       = "client.invited"
 	EventInvitationAccepted  = "invitation.accepted"
-	EventDomainPurchased     = "purchase.created"     // own-purchase
+	EventDomainPurchased     = "purchase.created"      // own-purchase
 	EventDomainPurchasedOBO  = "purchase.on_behalf_of" // reseller/agent for client
 	EventDomainRetried       = "purchase.retried"
 	EventDomainRenewed       = "purchase.renewed"
@@ -40,9 +40,6 @@ const (
 	EventAdminUserDeleted    = "admin.user_deleted"
 	EventAdminUserUpdated    = "admin.user_updated"
 	EventAdminSiteDeleted    = "admin.site_deleted"
-	// Banner moderation (spec §27) — admin override guru promotion banner.
-	EventAdminBannerEnabled  = "admin.banner_enabled"
-	EventAdminBannerDisabled = "admin.banner_disabled"
 )
 
 // Entry = 1 row audit_log — mirror shape SQL. IP + UserAgent optional.

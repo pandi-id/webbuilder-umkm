@@ -81,29 +81,6 @@ export function buildProduct(product: Product, baseURL: string): Thing {
   return item;
 }
 
-// buildBreadcrumb = BreadcrumbList schema untuk nav trail. Google Search
-// Results akan show "Pembelajaran > Parent > Current" di SERP, bikin CTR
-// lebih tinggi dibanding plain URL.
-//
-// items: urutkan dari root (0) ke current (last). name wajib, url wajib
-// kecuali current page (last item boleh skip url).
-export function buildBreadcrumb(
-  items: Array<{ name: string; url?: string }>,
-): Thing {
-  return {
-    "@type": "BreadcrumbList",
-    itemListElement: items.map((it, i) => {
-      const entry: Thing = {
-        "@type": "ListItem",
-        position: i + 1,
-        name: it.name,
-      };
-      if (it.url) entry.item = it.url;
-      return entry;
-    }),
-  };
-}
-
 // wrap = envelope JSON-LD dengan @context. Kalau multi-entity, pakai @graph.
 export function wrap(things: Thing[]): string {
   const doc =

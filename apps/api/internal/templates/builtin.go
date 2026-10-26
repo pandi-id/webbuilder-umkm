@@ -31,12 +31,7 @@ var Categories = []CategoryInfo{
 	{Key: "school", Label: "Sekolah", Description: "PAUD, SD, SMP, SMA, atau kampus.", Emoji: "🎓"},
 	{Key: "umkm", Label: "UMKM / Jualan", Description: "Toko online sederhana untuk UMKM.", Emoji: "🛍️"},
 	{Key: "portfolio", Label: "Portofolio", Description: "Profil personal, project, dan kontak.", Emoji: "💼"},
-	{Key: "teacher", Label: "Guru", Description: "Profil guru, jadwal, materi belajar.", Emoji: "👨‍🏫"},
 	{Key: "blog", Label: "Blog", Description: "Blog personal atau magazine.", Emoji: "📝"},
-	// Kategori khusus co-branding PANDI × UPI — 1 template spesial untuk guru
-	// yang ingin website pribadi bergaya editorial. Standalone, tidak ikut
-	// matrix category × variant (buildPages skip cat=="guru-pandi").
-	{Key: "guru-pandi", Label: "Guru PANDI × UPI", Description: "Template co-branding PANDI × UPI untuk website pribadi guru — 9 halaman editorial.", Emoji: "✨"},
 }
 
 var Variants = []VariantInfo{
@@ -83,11 +78,6 @@ func palette(cat, v string) map[string]string {
 			"modern":       {"#6366f1", "#4f46e5", "#0f172a", "#f8fafc"}, // indigo analogous (was purple+pink)
 			"clean":        {"#0f172a", "#475569", "#ffffff", "#0f172a"}, // grayscale
 			"professional": {"#1e3a8a", "#1e40af", "#ffffff", "#0f172a"}, // deep blue analogous
-		},
-		"teacher": {
-			"modern":       {"#7c3aed", "#6d28d9", "#ffffff", "#111827"}, // violet analogous (was purple+green clash)
-			"clean":        {"#059669", "#047857", "#ffffff", "#064e3b"}, // deep green analogous (was green+lime)
-			"professional": {"#9f1239", "#881337", "#fffbeb", "#1f1209"}, // rose analogous (was red+amber)
 		},
 		"blog": {
 			"modern":       {"#b91c1c", "#991b1b", "#ffffff", "#111827"}, // deep editorial red analogous
@@ -137,19 +127,10 @@ func copyFor(v string) variantCopy {
 	return variantCopy{CTA: "Mulai", Tone: ""}
 }
 
-// BuiltinTemplates returns 15 matrix templates (5 categories × 3 variants) plus
-// standalone co-branded templates (guru-pandi-upi). Total = 16.
-//
-// The matrix loop skips category "guru-pandi" — it's a standalone template
-// with 1 variant only (pandi-upi), appended manually below with dedicated
-// editorial styling from the PANDI × UPI mockup.
+// BuiltinTemplates returns the category × variant matrix (4 × 3 = 12).
 func BuiltinTemplates() []BuiltinTemplate {
-	out := make([]BuiltinTemplate, 0, len(Categories)*len(Variants)+1)
+	out := make([]BuiltinTemplate, 0, len(Categories)*len(Variants))
 	for _, c := range Categories {
-		// Standalone categories tidak ikut matrix — di-append manual di bawah.
-		if c.Key == "guru-pandi" {
-			continue
-		}
 		for _, v := range Variants {
 			out = append(out, BuiltinTemplate{
 				Slug:        c.Key + "-" + v.Key,
@@ -162,8 +143,6 @@ func BuiltinTemplates() []BuiltinTemplate {
 			})
 		}
 	}
-	// Standalone co-branded template — PANDI × UPI teacher editorial.
-	out = append(out, guruPandiUPITemplate())
 	return out
 }
 
@@ -179,8 +158,6 @@ func buildPages(cat, variant string) []map[string]any {
 		return umkmPages(cv, variant)
 	case "portfolio":
 		return portfolioPages(cv, variant)
-	case "teacher":
-		return teacherPages(cv, variant)
 	case "blog":
 		return blogPages(cv, variant)
 	}
@@ -679,7 +656,353 @@ func schoolPages(cv variantCopy, variant string) []map[string]any {
 
 // ---------------- UMKM ----------------
 
+// umkmWA is the placeholder WhatsApp number shipped in every UMKM template.
+const umkmWA = "081234567890"
+
+// umkmBiz holds one sample business. Each variant gets a different business
+// and a different home arrangement so the three templates don't look cloned.
+type umkmBiz struct {
+	Brand, SEOTitle, SEODesc string
+	Hero, Showcase, Trust    map[string]any
+	Promo, Reviews, Market   map[string]any
+	Store, Float             map[string]any
+	ProdukHero, TentangHero  [2]string
+	CaraHero, KontakHero     [2]string
+	Story                    string
+	Stats, Steps, FAQ        []map[string]any
+	Payments                 []map[string]any
+}
+
+func umkmBizFor(variant string) umkmBiz {
+	switch variant {
+	case "clean":
+		return umkmBatik()
+	case "professional":
+		return umkmRotan()
+	}
+	return umkmKopi()
+}
+
+// umkmKopi — modern: coffee shop + delivery in Bandung.
+func umkmKopi() umkmBiz {
+	return umkmBiz{
+		Brand:    "Kopi Senja",
+		SEOTitle: "Kopi Senja — Kopi Susu Gula Aren & Kopi Literan Bandung",
+		SEODesc:  "Kopi susu gula aren diseduh segar setiap hari. Pesan lewat WhatsApp, diantar hangat ke seluruh Bandung.",
+		Hero: map[string]any{
+			"eyebrow":           "Buka setiap hari · 08.00–22.00",
+			"title":             "Kopi susu gula aren, diseduh segar setiap hari",
+			"subtitle":          "Biji kopi pilihan dari petani Garut, disangrai sendiri dan diantar hangat ke rumahmu. Pesan lewat WhatsApp, kami balas kurang dari 5 menit.",
+			"ctaLabel":          "Pesan via WhatsApp",
+			"waNumber":          umkmWA,
+			"waMessage":         "Halo Kopi Senja, saya mau pesan kopi.",
+			"ctaSecondaryLabel": "Lihat Menu",
+			"ctaSecondaryHref":  "#menu",
+			"image":             "",
+			"chips":             []string{"100% Halal", "Gratis ongkir Bandung", "Bisa bayar di tempat"},
+			"rating":            "4.9 dari 1.200+ pembeli",
+		},
+		Showcase: map[string]any{
+			"title": "Menu Favorit", "subtitle": "Paling sering dipesan pelanggan minggu ini.",
+			"waNumber": umkmWA, "buttonLabel": "Pesan", "columns": "4", "anchorId": "menu",
+			"items": []map[string]any{
+				{"name": "Kopi Susu Gula Aren", "image": "", "price": "Rp 22.000", "originalPrice": "Rp 28.000", "badge": "terlaris", "desc": "Espresso, susu segar, dan gula aren asli Garut. 250 ml."},
+				{"name": "Es Kopi Pandan", "image": "", "price": "Rp 25.000", "originalPrice": "", "badge": "baru", "desc": "Kopi susu dengan sirup pandan wangi buatan sendiri."},
+				{"name": "Paket Hemat Berdua", "image": "", "price": "Rp 45.000", "originalPrice": "Rp 56.000", "badge": "promo", "desc": "2 kopi susu + 2 roti bakar cokelat keju."},
+				{"name": "Kopi Literan 1 Liter", "image": "", "price": "Rp 85.000", "originalPrice": "", "badge": "none", "desc": "Cukup untuk 6–8 gelas, tahan 3 hari di kulkas."},
+			},
+		},
+		Trust: map[string]any{
+			"title": "Kenapa ngopi di Kopi Senja?", "subtitle": "",
+			"items": []map[string]any{
+				{"icon": "halal", "title": "Bersertifikat Halal", "desc": "Nomor sertifikat BPJPH tercantum di setiap kemasan."},
+				{"icon": "pirt", "title": "Izin P-IRT", "desc": "Diproduksi di dapur yang terdaftar dan diawasi Dinkes."},
+				{"icon": "qris", "title": "Bayar pakai QRIS", "desc": "Semua e-wallet dan m-banking bisa."},
+				{"icon": "delivery", "title": "Diantar hari ini", "desc": "Pesan sebelum 15.00, sampai di hari yang sama."},
+			},
+		},
+		Promo: map[string]any{
+			"discountLabel": "Diskon 20%", "headline": "Promo Gajian: semua kopi literan",
+			"description": "Berlaku untuk pembelian langsung maupun lewat WhatsApp. Minimal belanja Rp 50.000.",
+			"voucherCode": "GAJIAN20", "validUntil": "Berlaku sampai 31 Desember 2026",
+			"ctaLabel": "Pakai Sekarang", "ctaHref": "", "waNumber": umkmWA,
+		},
+		Reviews: map[string]any{
+			"title": "Kata pelanggan kami", "subtitle": "", "average": "4.9",
+			"countText": "dari 1.248 ulasan di Google & GoFood",
+			"items": []map[string]any{
+				{"name": "Rina Marlina", "location": "Bandung · Kopi Susu Gula Aren", "rating": "5", "text": "Manisnya pas, kopinya tetap kerasa. Sudah langganan tiap pagi sebelum ngantor, adminnya juga ramah banget.", "photo": ""},
+				{"name": "Dimas Prasetyo", "location": "Cimahi · Kopi Literan 1 Liter", "rating": "5", "text": "Beli literan buat stok seminggu, rasanya konsisten dan pengirimannya cepat. Botolnya rapi, nggak ada yang bocor.", "photo": ""},
+				{"name": "Sari Wulandari", "location": "Lembang · Paket Hemat Berdua", "rating": "4", "text": "Roti bakarnya enak, kopinya mantap. Semoga nanti ada pilihan less sugar juga.", "photo": ""},
+			},
+		},
+		Market: map[string]any{
+			"title": "Juga tersedia di", "subtitle": "Pesan lewat aplikasi favoritmu — promo berbeda di tiap platform.",
+			"items": []map[string]any{
+				{"platform": "gofood", "url": "https://gofood.co.id/", "label": "Kopi Senja Braga"},
+				{"platform": "grabfood", "url": "https://food.grab.com/id/", "label": "Kopi Senja Braga"},
+				{"platform": "shopeefood", "url": "https://shopee.co.id/", "label": "Kopi Senja"},
+				{"platform": "instagram", "url": "https://instagram.com/", "label": "@kopisenja.bdg"},
+			},
+		},
+		Store: map[string]any{
+			"title": "Mampir ke kedai kami", "subtitle": "Ngopi di tempat atau ambil pesanan langsung.",
+			"address": "Jl. Braga No. 21, Sumur Bandung, Kota Bandung, Jawa Barat 40111",
+			"mapSrc":  "", "showMap": "yes",
+			"hours": []map[string]any{
+				{"day": "Senin – Jumat", "hours": "08.00 – 22.00"},
+				{"day": "Sabtu – Minggu", "hours": "07.00 – 23.00"},
+				{"day": "Libur nasional", "hours": "10.00 – 20.00"},
+			},
+			"phone": "0812-3456-7890", "waNumber": umkmWA, "waMessage": "Halo Kopi Senja, saya mau tanya soal pesanan.",
+			"email": "halo@kopisenja.id", "areas": []string{"Bandung Kota", "Cimahi", "Dago & Lembang", "Antapani"},
+			"anchorId": "lokasi",
+		},
+		Float:       map[string]any{"waNumber": umkmWA, "waMessage": "Halo admin Kopi Senja, saya mau tanya menu.", "label": "Tanya menu", "position": "right", "color": "whatsapp"},
+		ProdukHero:  [2]string{"Semua menu Kopi Senja", "Kopi, non-kopi, dan camilan — semua bisa dipesan lewat WhatsApp atau GoFood."},
+		TentangHero: [2]string{"Cerita di balik secangkir Kopi Senja", "Berawal dari gerobak kecil di Braga tahun 2019, kini menyeduh 400+ gelas setiap hari."},
+		CaraHero:    [2]string{"Pesan semudah chat teman", "Tanpa aplikasi, tanpa daftar akun. Cukup WhatsApp, kopi datang."},
+		KontakHero:  [2]string{"Hubungi & kunjungi kami", "Admin aktif setiap hari 08.00–22.00, rata-rata membalas kurang dari 5 menit."},
+		Story:       "Kopi Senja lahir dari **gerobak kopi di trotoar Braga** tahun 2019. Kami membeli biji langsung dari petani Garut dengan harga adil, lalu menyangrainya sendiri setiap minggu supaya rasanya selalu segar.\n\nSekarang kami punya kedai kecil, 9 barista, dan ribuan pelanggan setia — tapi resepnya tetap sama: **gula aren asli, susu segar, tanpa perisa buatan**.",
+		Stats: []map[string]any{
+			{"value": "400+", "label": "Gelas per hari"},
+			{"value": "12", "label": "Petani mitra"},
+			{"value": "4.9/5", "label": "Rating pelanggan"},
+			{"value": "2019", "label": "Mulai menyeduh"},
+		},
+		Steps: []map[string]any{
+			{"title": "Pilih menu", "desc": "Lihat Menu Favorit atau katalog lengkap, catat menu dan jumlahnya."},
+			{"title": "Chat WhatsApp", "desc": "Kirim pesanan + alamat. Admin konfirmasi total dan ongkir."},
+			{"title": "Bayar & tunggu", "desc": "Bayar QRIS, transfer, atau tunai di tempat. Kopi diantar hangat."},
+		},
+		Payments: []map[string]any{
+			{"icon": "qris", "title": "QRIS", "desc": "GoPay, OVO, DANA, ShopeePay, m-banking."},
+			{"icon": "transfer", "title": "Transfer bank", "desc": "BCA, Mandiri, BRI, BNI."},
+			{"icon": "cod", "title": "Bayar di tempat", "desc": "Tunai saat kopi sampai (area Bandung)."},
+			{"icon": "delivery", "title": "Kurir sendiri", "desc": "Ongkir mulai Rp 5.000, gratis di atas Rp 75.000."},
+		},
+		FAQ: []map[string]any{
+			{"question": "Berapa lama kopi literan tahan?", "answer": "Simpan di kulkas, tahan 3 hari. Kocok dulu sebelum dituang."},
+			{"question": "Bisa pesan untuk acara kantor?", "answer": "Bisa, minimal 20 cup. Chat admin H-1 supaya kami siapkan."},
+			{"question": "Ada pilihan tanpa gula?", "answer": "Ada. Tulis \"less sugar\" atau \"tanpa gula\" saat memesan."},
+		},
+	}
+}
+
+// umkmBatik — clean: modern batik fashion label from Solo.
+func umkmBatik() umkmBiz {
+	return umkmBiz{
+		Brand:    "Sekar Batik",
+		SEOTitle: "Sekar Batik — Kemeja & Dress Batik Cap Asli Solo",
+		SEODesc:  "Batik cap dan tulis asli Laweyan, Solo, dengan potongan modern. Pesan lewat WhatsApp atau marketplace favoritmu.",
+		Hero: map[string]any{
+			"eyebrow":           "Koleksi baru · Sekar Parang 2026",
+			"title":             "Batik asli Solo, potongan modern untuk dipakai setiap hari",
+			"subtitle":          "Dicap dan diwarnai tangan oleh pengrajin Laweyan, dijahit rapi dengan bahan katun primisima yang adem. Ukuran S sampai XXL.",
+			"ctaLabel":          "Tanya Ukuran via WhatsApp",
+			"waNumber":          umkmWA,
+			"waMessage":         "Halo Sekar Batik, saya mau tanya ukuran dan stok.",
+			"ctaSecondaryLabel": "Lihat Koleksi",
+			"ctaSecondaryHref":  "#koleksi",
+			"image":             "",
+			"chips":             []string{"Batik cap & tulis asli", "Gratis tukar ukuran", "Kirim ke seluruh Indonesia"},
+			"rating":            "4.8 dari 3.400+ ulasan marketplace",
+		},
+		Showcase: map[string]any{
+			"title": "Koleksi Pilihan", "subtitle": "Motif klasik, potongan masa kini.",
+			"waNumber": umkmWA, "buttonLabel": "Pesan", "columns": "4", "anchorId": "koleksi",
+			"items": []map[string]any{
+				{"name": "Kemeja Batik Parang Slim Fit", "image": "", "price": "Rp 289.000", "originalPrice": "Rp 349.000", "badge": "terlaris", "desc": "Katun primisima, lengan pendek, kancing batok kelapa."},
+				{"name": "Dress Batik Kawung Midi", "image": "", "price": "Rp 325.000", "originalPrice": "", "badge": "baru", "desc": "Potongan A-line dengan saku samping dan tali pinggang."},
+				{"name": "Outer Batik Tulis Lasem", "image": "", "price": "Rp 459.000", "originalPrice": "", "badge": "none", "desc": "Batik tulis tangan, satu motif hanya dibuat 12 potong."},
+				{"name": "Sarung Batik Cap Sogan", "image": "", "price": "Rp 175.000", "originalPrice": "Rp 210.000", "badge": "promo", "desc": "Warna sogan klasik, cocok untuk kondangan dan Jumatan."},
+			},
+		},
+		Trust: map[string]any{
+			"title": "Belanja batik tanpa ragu", "subtitle": "",
+			"items": []map[string]any{
+				{"icon": "handmade", "title": "Dibuat tangan", "desc": "Setiap kain dicap dan diwarnai oleh 24 pengrajin Laweyan."},
+				{"icon": "guarantee", "title": "Gratis tukar ukuran", "desc": "Kurang pas? Tukar dalam 7 hari, ongkir kami tanggung."},
+				{"icon": "delivery", "title": "Kirim ke seluruh Indonesia", "desc": "JNE, J&T, SiCepat — resi dikirim lewat WhatsApp."},
+				{"icon": "cod", "title": "Bisa COD", "desc": "Bayar di tempat untuk pengiriman Pulau Jawa."},
+			},
+		},
+		Promo: map[string]any{
+			"discountLabel": "Hemat 15%", "headline": "Seragam batik kantor & keluarga",
+			"description": "Pesan minimal 10 potong motif yang sama, gratis bordir nama. Pengerjaan 10–14 hari kerja.",
+			"voucherCode": "SERAGAM15", "validUntil": "Berlaku untuk pesanan sampai 30 Juni 2026",
+			"ctaLabel": "Konsultasi Seragam", "ctaHref": "", "waNumber": umkmWA,
+		},
+		Reviews: map[string]any{
+			"title": "Dipakai dan disukai", "subtitle": "Ulasan asli dari pembeli di Shopee, Tokopedia, dan WhatsApp.",
+			"average": "4.8", "countText": "dari 3.400+ ulasan marketplace",
+			"items": []map[string]any{
+				{"name": "Anisa Rahmawati", "location": "Jakarta · Dress Batik Kawung Midi", "rating": "5", "text": "Bahannya adem dan jatuhnya bagus. Sudah dicuci berkali-kali warnanya tidak luntur. Pasti beli motif lain.", "photo": ""},
+				{"name": "Bagus Hartono", "location": "Surabaya · Kemeja Parang Slim Fit", "rating": "5", "text": "Ukurannya pas sesuai tabel, jahitannya rapi sampai bagian dalam. Dipakai ke kantor banyak yang tanya beli di mana.", "photo": ""},
+				{"name": "Lestari Putri", "location": "Makassar · Seragam keluarga", "rating": "4", "text": "Pesan 14 potong untuk acara keluarga, selesai tepat waktu. Adminnya sabar menjawab pertanyaan soal ukuran.", "photo": ""},
+			},
+		},
+		Market: map[string]any{
+			"title": "Belanja di marketplace favoritmu", "subtitle": "Harga sama, pilih yang paling nyaman buatmu.",
+			"items": []map[string]any{
+				{"platform": "shopee", "url": "https://shopee.co.id/", "label": "Sekar Batik Official"},
+				{"platform": "tokopedia", "url": "https://www.tokopedia.com/", "label": "Sekar Batik Solo"},
+				{"platform": "tiktokshop", "url": "https://www.tiktok.com/", "label": "@sekarbatik.id"},
+				{"platform": "lazada", "url": "https://www.lazada.co.id/", "label": "Sekar Batik"},
+				{"platform": "instagram", "url": "https://instagram.com/", "label": "@sekarbatik.id"},
+			},
+		},
+		Store: map[string]any{
+			"title": "Showroom & workshop", "subtitle": "Coba langsung ukurannya dan lihat proses membatik.",
+			"address": "Jl. Sidoluhur No. 8, Laweyan, Kota Surakarta, Jawa Tengah 57148",
+			"mapSrc":  "", "showMap": "yes",
+			"hours": []map[string]any{
+				{"day": "Senin – Sabtu", "hours": "09.00 – 17.00"},
+				{"day": "Minggu", "hours": "10.00 – 15.00"},
+			},
+			"phone": "0812-3456-7890", "waNumber": umkmWA, "waMessage": "Halo Sekar Batik, saya mau berkunjung ke showroom.",
+			"email": "halo@sekarbatik.id", "areas": []string{"Seluruh Indonesia", "Same-day Solo Raya"},
+			"anchorId": "lokasi",
+		},
+		Float:       map[string]any{"waNumber": umkmWA, "waMessage": "Halo Sekar Batik, saya mau tanya ukuran.", "label": "Tanya ukuran", "position": "right", "color": "whatsapp"},
+		ProdukHero:  [2]string{"Koleksi Sekar Batik", "Kemeja, dress, outer, dan sarung — stok diperbarui setiap hari."},
+		TentangHero: [2]string{"Merawat batik Laweyan", "Usaha keluarga tiga generasi yang kini membawa batik ke lemari anak muda."},
+		CaraHero:    [2]string{"Cara pesan & panduan ukuran", "Pesan lewat WhatsApp atau marketplace — keduanya sama-sama bergaransi tukar ukuran."},
+		KontakHero:  [2]string{"Hubungi Sekar Batik", "Admin siap bantu pilih ukuran dan motif setiap hari 09.00–17.00."},
+		Story:       "Sekar Batik berawal dari **rumah produksi nenek kami di Laweyan** sejak 1987. Tahun 2020 kami mulai menjahit batik cap dengan potongan modern supaya batik tidak hanya dipakai ke kondangan.\n\nSetiap kain masih **dicap, diwarnai, dan dijemur dengan tangan** oleh 24 pengrajin tetangga kami — kami membayar mereka per potong dengan harga di atas rata-rata.",
+		Stats: []map[string]any{
+			{"value": "24", "label": "Pengrajin mitra"},
+			{"value": "38.000+", "label": "Potong terjual"},
+			{"value": "4.8/5", "label": "Rating marketplace"},
+			{"value": "1987", "label": "Mulai membatik"},
+		},
+		Steps: []map[string]any{
+			{"title": "Pilih motif & ukuran", "desc": "Cek tabel ukuran di deskripsi produk, atau tanya admin."},
+			{"title": "Chat WhatsApp", "desc": "Kirim nama produk, ukuran, dan alamat lengkap."},
+			{"title": "Bayar & lacak", "desc": "Transfer, QRIS, atau COD. Nomor resi dikirim di hari yang sama."},
+		},
+		Payments: []map[string]any{
+			{"icon": "transfer", "title": "Transfer bank", "desc": "BCA, Mandiri, BRI, BSI."},
+			{"icon": "qris", "title": "QRIS", "desc": "Semua e-wallet dan m-banking."},
+			{"icon": "cod", "title": "COD", "desc": "Bayar di tempat untuk Pulau Jawa."},
+			{"icon": "guarantee", "title": "Tukar ukuran", "desc": "Gratis dalam 7 hari setelah diterima."},
+		},
+		FAQ: []map[string]any{
+			{"question": "Apakah warnanya luntur?", "answer": "Tidak, kami memakai pewarna yang sudah dikunci. Cuci dengan tangan dan hindari pemutih."},
+			{"question": "Bagaimana kalau ukurannya tidak pas?", "answer": "Tukar gratis dalam 7 hari, selama label masih terpasang dan belum dicuci."},
+			{"question": "Bisa pesan seragam dengan motif sendiri?", "answer": "Bisa untuk minimal 50 potong. Chat admin untuk desain dan estimasi waktu."},
+		},
+	}
+}
+
+// umkmRotan — professional: rattan & woven craft workshop from Cirebon.
+func umkmRotan() umkmBiz {
+	return umkmBiz{
+		Brand:    "Anyam Lestari",
+		SEOTitle: "Anyam Lestari — Kerajinan Rotan & Anyaman Cirebon",
+		SEODesc:  "Kursi, keranjang, dan dekorasi rotan buatan tangan pengrajin Cirebon. Melayani rumah tangga, hotel, dan kafe.",
+		Hero: map[string]any{
+			"eyebrow":           "Workshop rotan sejak 2004 · Cirebon",
+			"title":             "Furnitur & dekorasi rotan, dianyam tangan untuk rumah dan usaha Anda",
+			"subtitle":          "Rotan pilihan dari Kalimantan, dianyam oleh pengrajin Tegalwangi. Melayani pembelian satuan hingga proyek hotel, vila, dan kafe.",
+			"ctaLabel":          "Minta Penawaran",
+			"waNumber":          umkmWA,
+			"waMessage":         "Halo Anyam Lestari, saya mau minta penawaran produk rotan.",
+			"ctaSecondaryLabel": "Lihat Katalog",
+			"ctaSecondaryHref":  "/produk",
+			"image":             "",
+			"chips":             []string{"Buatan tangan", "Garansi rangka 1 tahun", "Bisa custom ukuran"},
+			"rating":            "4.9 dari 650+ pembeli & 40+ hotel",
+		},
+		Showcase: map[string]any{
+			"title": "Produk unggulan", "subtitle": "Dibuat berdasarkan pesanan — waktu produksi 7–21 hari.",
+			"waNumber": umkmWA, "buttonLabel": "Minta harga", "columns": "3", "anchorId": "unggulan",
+			"items": []map[string]any{
+				{"name": "Kursi Rotan Lounge Natural", "image": "", "price": "Rp 1.850.000", "originalPrice": "", "badge": "terlaris", "desc": "Rangka rotan manau, anyaman jalinan sumbu, termasuk bantal."},
+				{"name": "Keranjang Anyam Set 3", "image": "", "price": "Rp 345.000", "originalPrice": "Rp 420.000", "badge": "promo", "desc": "Tiga ukuran bertumpuk untuk laundry, mainan, atau tanaman."},
+				{"name": "Kap Lampu Gantung Bulat", "image": "", "price": "Rp 275.000", "originalPrice": "", "badge": "baru", "desc": "Diameter 45 cm, cahaya hangat bermotif untuk ruang makan."},
+			},
+		},
+		Trust: map[string]any{
+			"title": "Standar kerja kami", "subtitle": "Dipercaya rumah tangga, hotel, dan kafe sejak 2004.",
+			"items": []map[string]any{
+				{"icon": "handmade", "title": "100% buatan tangan", "desc": "Dianyam oleh 35 pengrajin Tegalwangi."},
+				{"icon": "guarantee", "title": "Garansi rangka 1 tahun", "desc": "Rangka patah karena pemakaian normal kami perbaiki gratis."},
+				{"icon": "sni", "title": "Finishing standar ekspor", "desc": "Anti jamur dan anti rayap, aman untuk dalam ruang."},
+				{"icon": "delivery", "title": "Pengiriman kayu-krat", "desc": "Dikemas aman ke seluruh Indonesia."},
+			},
+		},
+		Promo: map[string]any{
+			"discountLabel": "Diskon proyek 15%", "headline": "Untuk hotel, vila, dan kafe",
+			"description": "Pemesanan minimal 20 unit mendapat diskon 15%, gratis desain custom, dan kunjungan survei untuk area Jawa Barat.",
+			"voucherCode": "PROYEK15", "validUntil": "Berlaku untuk PO yang masuk sampai 31 Desember 2026",
+			"ctaLabel": "Jadwalkan Konsultasi", "ctaHref": "", "waNumber": umkmWA,
+		},
+		Reviews: map[string]any{
+			"title": "Dipercaya pelanggan & mitra usaha", "subtitle": "",
+			"average": "4.9", "countText": "dari 650+ pembeli dan 40+ proyek hotel & kafe",
+			"items": []map[string]any{
+				{"name": "Hendra Wijaya", "location": "Bali · 32 kursi untuk vila", "rating": "5", "text": "Pengerjaan sesuai jadwal, kualitas anyaman konsisten di semua unit. Tim mereka juga membantu memilih warna finishing.", "photo": ""},
+				{"name": "Maya Kusuma", "location": "Bandung · Kap lampu gantung", "rating": "5", "text": "Jauh lebih bagus dari foto. Dikemas sangat aman, sampai tanpa lecet sedikit pun.", "photo": ""},
+				{"name": "Rizky Ananda", "location": "Jakarta · Keranjang anyam set", "rating": "4", "text": "Rapi dan kokoh. Waktu produksi agak lama, tapi adminnya selalu memberi kabar progres.", "photo": ""},
+			},
+		},
+		Market: map[string]any{
+			"title": "Tersedia juga di", "subtitle": "Untuk pembelian satuan dengan perlindungan pembeli marketplace.",
+			"items": []map[string]any{
+				{"platform": "tokopedia", "url": "https://www.tokopedia.com/", "label": "Anyam Lestari Official"},
+				{"platform": "shopee", "url": "https://shopee.co.id/", "label": "Anyam Lestari"},
+				{"platform": "instagram", "url": "https://instagram.com/", "label": "@anyamlestari"},
+				{"platform": "facebook", "url": "https://facebook.com/", "label": "Anyam Lestari Cirebon"},
+			},
+		},
+		Store: map[string]any{
+			"title": "Kunjungi workshop kami", "subtitle": "Lihat langsung proses produksi dan contoh finishing.",
+			"address": "Jl. Raya Tegalwangi No. 117, Weru, Kabupaten Cirebon, Jawa Barat 45154",
+			"mapSrc":  "", "showMap": "yes",
+			"hours": []map[string]any{
+				{"day": "Senin – Jumat", "hours": "08.00 – 16.00"},
+				{"day": "Sabtu", "hours": "08.00 – 13.00"},
+				{"day": "Minggu", "hours": "Dengan janji temu"},
+			},
+			"phone": "(0231) 321-456", "waNumber": umkmWA, "waMessage": "Halo Anyam Lestari, saya mau jadwalkan kunjungan workshop.",
+			"email": "sales@anyamlestari.co.id", "areas": []string{"Seluruh Indonesia", "Survei gratis Jawa Barat", "Ekspor (FOB Tanjung Priok)"},
+			"anchorId": "lokasi",
+		},
+		Float:       map[string]any{"waNumber": umkmWA, "waMessage": "Halo Anyam Lestari, saya mau konsultasi produk.", "label": "Konsultasi gratis", "position": "right", "color": "theme"},
+		ProdukHero:  [2]string{"Katalog Anyam Lestari", "Furnitur, keranjang, dan dekorasi rotan. Semua ukuran bisa disesuaikan."},
+		TentangHero: [2]string{"Dua dekade menganyam rotan", "Dari bengkel kecil di Tegalwangi menjadi mitra 40+ hotel dan kafe di Indonesia."},
+		CaraHero:    [2]string{"Alur pemesanan", "Satuan maupun proyek — semuanya dimulai dari satu pesan WhatsApp."},
+		KontakHero:  [2]string{"Hubungi tim Anyam Lestari", "Tim penjualan siap membantu Senin–Sabtu, 08.00–16.00."},
+		Story:       "Anyam Lestari didirikan **Pak Darsono tahun 2004** dengan 3 pengrajin di halaman rumahnya. Kini kami bekerja dengan 35 pengrajin Tegalwangi dan memasok furnitur rotan untuk rumah, hotel, vila, dan kafe.\n\nKami hanya memakai **rotan legal bersertifikat** dari Kalimantan dan Sulawesi, serta finishing berbasis air yang aman untuk dalam ruang.",
+		Stats: []map[string]any{
+			{"value": "35", "label": "Pengrajin"},
+			{"value": "40+", "label": "Hotel & kafe"},
+			{"value": "20 tahun", "label": "Pengalaman"},
+			{"value": "4.9/5", "label": "Rating pelanggan"},
+		},
+		Steps: []map[string]any{
+			{"title": "Konsultasi", "desc": "Kirim foto ruangan, ukuran, dan jumlah unit lewat WhatsApp."},
+			{"title": "Penawaran & DP", "desc": "Kami kirim penawaran resmi. Produksi dimulai setelah DP 50%."},
+			{"title": "Produksi & kirim", "desc": "Foto progres dikirim berkala, pelunasan sebelum pengiriman."},
+		},
+		Payments: []map[string]any{
+			{"icon": "transfer", "title": "Transfer bank", "desc": "Rekening atas nama CV Anyam Lestari."},
+			{"icon": "qris", "title": "QRIS", "desc": "Untuk pembelian satuan di workshop."},
+			{"icon": "guarantee", "title": "Faktur & PO", "desc": "Faktur pajak tersedia untuk pembelian perusahaan."},
+			{"icon": "delivery", "title": "Kirim aman", "desc": "Kemasan kayu-krat dan asuransi pengiriman."},
+		},
+		FAQ: []map[string]any{
+			{"question": "Berapa lama waktu produksi?", "answer": "Produk satuan 7–14 hari kerja, proyek di atas 20 unit 3–6 minggu tergantung desain."},
+			{"question": "Apakah bisa custom ukuran dan warna?", "answer": "Bisa. Kirim ukuran dan referensi foto, kami buatkan gambar kerja sebelum produksi."},
+			{"question": "Apakah rotan tahan untuk area luar ruang?", "answer": "Untuk teras tertutup aman. Area terbuka kami sarankan rotan sintetis — tanyakan admin."},
+		},
+	}
+}
+
 func umkmPages(cv variantCopy, variant string) []map[string]any {
+	_ = cv // UMKM copy comes from the per-variant business below.
+	biz := umkmBizFor(variant)
 	links := []map[string]any{
 		{"label": "Beranda", "href": "/"},
 		{"label": "Produk", "href": "/produk"},
@@ -687,246 +1010,87 @@ func umkmPages(cv variantCopy, variant string) []map[string]any {
 		{"label": "Cara Pesan", "href": "/cara-pesan"},
 		{"label": "Kontak", "href": "/kontak"},
 	}
-	nav := block("Navbar", map[string]any{"brand": "Toko Bahagia", "links": links})
-	footer := block("Footer", map[string]any{"copyright": "© Toko Bahagia — Produk UMKM Asli Indonesia"})
+	nav := block("Navbar", map[string]any{"brand": biz.Brand, "links": links})
+	footer := block("Footer", map[string]any{"copyright": "© " + biz.Brand + " — Produk UMKM asli Indonesia"})
+	float := block("UmkmWhatsAppFloat", biz.Float)
+	hero := block("UmkmHero", biz.Hero)
+	showcase := block("UmkmProductShowcase", biz.Showcase)
+	trust := block("UmkmTrustBadges", biz.Trust)
+	promo := block("UmkmPromoBanner", biz.Promo)
+	reviews := block("UmkmReviews", biz.Reviews)
+	market := block("UmkmMarketplaceLinks", biz.Market)
+	store := block("UmkmStoreInfo", biz.Store)
+	catalog := func(title, subtitle string, limit int) map[string]any {
+		return block("UmkmCatalogDynamic", map[string]any{
+			"title": title, "subtitle": subtitle, "waNumber": umkmWA, "buttonLabel": biz.Showcase["buttonLabel"],
+			"limit": limit, "category": "", "showOutOfStock": "no", "columns": biz.Showcase["columns"], "anchorId": "produk",
+		})
+	}
 
+	// Home arrangement differs per variant: food leads with menu + promo,
+	// fashion with the collection + marketplaces, craft with trust + projects.
+	var homeBlocks []map[string]any
+	switch variant {
+	case "clean":
+		homeBlocks = []map[string]any{nav, hero, showcase, market, reviews, trust, promo, footer, float}
+	case "professional":
+		homeBlocks = []map[string]any{nav, hero, trust, showcase, reviews, promo, store, market, footer, float}
+	default:
+		homeBlocks = []map[string]any{nav, hero, trust, showcase, promo, reviews, market, store, footer, float}
+	}
 	home := page("home", "Beranda", true,
-		map[string]any{
-			"title":       "Toko Bahagia — Produk UMKM Berkualitas, Harga Bersahabat",
-			"description": "Belanja produk UMKM asli Indonesia: keripik, kopi, sambal, dan banyak lagi. Pesan praktis lewat WhatsApp.",
-		},
-		[]map[string]any{
-			nav,
-			proHero(variant, heroCopy{
-				Eyebrow:    "GRATIS ongkir · min. belanja Rp 100.000",
-				Title:      "Produk UMKM asli Indonesia,",
-				Highlight:  "langsung dari pengrajin",
-				TitleAfter: "ke meja Anda.",
-				Subtitle:   "Belanja praktis lewat WhatsApp. Dikirim dari dapur artisan lokal — tanpa perantara, harga adil untuk kedua pihak.",
-				CTA:        "Order via WhatsApp",
-				CTAHref:    "https://wa.me/6281234567890",
-			}),
-			trustBar("Sudah dipercaya lebih dari 12.000 pelanggan di seluruh Indonesia", []string{
-				"Shopee", "Tokopedia", "Blibli", "BliBli", "TikTok Shop",
-				"Lazada", "Halodoc", "Grab", "Gofood",
-			}),
-			statsRow("Kepercayaan yang tumbuh setiap tahun", []map[string]any{
-				{"value": "12.000+", "label": "Pelanggan setia"},
-				{"value": "150+", "label": "Kota di Indonesia"},
-				{"value": "45+", "label": "Produk artisan"},
-				{"value": "4.9/5", "label": "Rating pelanggan"},
-			}),
-			proFeatureGrid(variant, "Kenapa pelanggan pilih kami", []map[string]any{
-				{"title": "100% bahan lokal", "desc": "Kami membeli langsung dari petani dan pengrajin dengan harga adil — bukan sekedar reseller."},
-				{"title": "QC ketat", "desc": "Setiap produk dicek higienitas + rasa sebelum dikirim. Tidak lolos? Tidak keluar dari gudang."},
-				{"title": "Kirim same-day", "desc": "Jabodetabek same-day (order sebelum 14.00), luar Jabodetabek 1–3 hari via JNE/J&T/SiCepat."},
-				{"title": "CS ramah", "desc": "Tim CS aktif via WhatsApp 08.00–21.00, respon rata-rata <5 menit di jam kerja."},
-				{"title": "Packaging premium", "desc": "Setiap paket dibungkus rapi + kartu ucapan gratis. Cocok untuk hampers atau hadiah."},
-				{"title": "Ramah lingkungan", "desc": "Kemasan biodegradable + program pickup box kosong untuk pelanggan langganan."},
-			}),
-			block("ProductGridDynamic", map[string]any{
-				"title": "Best seller bulan ini",
-				"limit": 6,
-			}),
-			proTestimonials("Kata pelanggan setia kami", []map[string]any{
-				{"quote": "Rasanya enak banget, pengirimannya cepat. Packaging rapi dan ada kartu ucapan — jadi ide hampers lebaran keluarga. Sudah jadi langganan tetap!", "name": "Sari Wijaya", "role": "Jakarta · 6 bulan langganan"},
-				{"quote": "Sudah langganan 6 bulan, kualitas konsisten — nggak pernah kecewa. CS-nya juga ramah kalau saya tanya-tanya soal produk baru.", "name": "Budi Prasetyo", "role": "Surabaya · reseller"},
-				{"quote": "Awalnya coba karena rekomendasi teman, sekarang malah gue yang rekomendasiin ke semua orang. Sambalnya juara, kopinya bikin nagih.", "name": "Dini Rahayu", "role": "Bandung · foodie"},
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "Paket Langganan Bulanan",
-				"subtitle": "Rasa baru setiap bulan · bisa cancel kapan saja",
-				"price":    "Rp 249.000",
-				"period":   "/bulan (hemat Rp 60.000 vs beli satuan)",
-				"ctaLabel": "Coba 1 bulan",
-				"ctaHref":  "https://wa.me/6281234567890?text=Halo,%20saya%20mau%20coba%20paket%20langganan",
-				"bullets": []map[string]any{
-					{"text": "4 produk artisan pilihan chef setiap bulan"},
-					{"text": "GRATIS ongkir seluruh Indonesia"},
-					{"text": "Prioritas rilis produk baru (1 minggu lebih awal)"},
-					{"text": "Voucher belanja Rp 25.000 setiap bulan"},
-					{"text": "Cancel/pause kapan saja tanpa penalti"},
-				},
-			}),
-			block("Section", map[string]any{
-				"title": "Promo Spesial Bulan Ini",
-				"body":  "**GRATIS ongkir** untuk pembelian minimal Rp 100.000.\n**Diskon 10%** untuk pelanggan baru — pakai kode `WELCOME10`.\n**Beli 3 gratis 1** untuk produk pilihan setiap hari Jumat!",
-			}),
-			proFinalCTA(variant,
-				"Yuk mulai belanja dari pengrajin lokal.",
-				"Chat CS kami sekarang, kami bantu pilih produk yang cocok untuk Anda.",
-				"Chat WhatsApp CS",
-				"https://wa.me/6281234567890",
-			),
-			footer,
-		},
-	)
+		map[string]any{"title": biz.SEOTitle, "description": biz.SEODesc}, homeBlocks)
 
 	produk := page("produk", "Produk", false,
-		map[string]any{"title": "Katalog Produk — Toko Bahagia", "description": "Semua produk UMKM asli — makanan, kopi, kerajinan."},
+		map[string]any{"title": "Produk — " + biz.Brand, "description": biz.ProdukHero[1]},
 		[]map[string]any{
 			nav,
-			subHero("Katalog produk kami",
-				"Telusuri semua produk UMKM asli Indonesia. Klik produk untuk detail dan pemesanan langsung via WhatsApp."),
-			block("ProductGridDynamic", map[string]any{
-				"title": "",
-				"limit": 24,
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "Pesanan Grosir / Hampers",
-				"subtitle": "Untuk event, kantor, atau reseller",
-				"price":    "Mulai Rp 3 juta",
-				"period":   "min. order 50 pcs · custom packaging",
-				"ctaLabel": "Chat penawaran",
-				"ctaHref":  "https://wa.me/6281234567890?text=Halo,%20saya%20mau%20info%20grosir",
-				"bullets": []map[string]any{
-					{"text": "Diskon 20–35% dari harga eceran"},
-					{"text": "Custom packaging + kartu ucapan brand Anda"},
-					{"text": "Pengiriman terjadwal (bisa batch mingguan)"},
-					{"text": "PIC dedicated untuk pesanan berulang"},
-				},
-			}),
-			pageFAQ("Pertanyaan produk", []map[string]any{
-				{"question": "Berapa lama masa simpan produk?"},
-				{"question": "Ada produk halal-certified?"},
-				{"question": "Bisa custom rasa / packaging?"},
-				{"question": "Minimum order berapa?"},
-			}),
-			simpleCTA("Butuh rekomendasi produk?",
-				"Chat CS kami — kami bantu pilih produk yang cocok untuk hadiah, hampers, atau konsumsi harian.",
-				"Chat WhatsApp",
-				"https://wa.me/6281234567890"),
+			subHero(biz.ProdukHero[0], biz.ProdukHero[1]),
+			catalog("Semua produk", "Klik Pesan untuk langsung chat admin lewat WhatsApp.", 24),
+			promo,
+			market,
 			footer,
+			float,
 		},
 	)
 
 	tentang := page("tentang", "Tentang Kami", false,
-		map[string]any{"title": "Tentang Toko Bahagia", "description": "Cerita, misi, dan komitmen kami mendukung UMKM Indonesia."},
+		map[string]any{"title": "Tentang " + biz.Brand, "description": biz.TentangHero[1]},
 		[]map[string]any{
 			nav,
-			subHero("Cerita di balik Toko Bahagia",
-				"Dimulai dari dapur kecil di Bekasi, kini telah dipercaya lebih dari 12.000 pelanggan di 150+ kota."),
-			statsRow("Perjalanan kami — 5 tahun bersama UMKM lokal", []map[string]any{
-				{"value": "12.000+", "label": "Pelanggan setia"},
-				{"value": "30+", "label": "UMKM mitra"},
-				{"value": "45+", "label": "Produk artisan"},
-				{"value": "150+", "label": "Kota terjangkau"},
-			}),
-			block("Section", map[string]any{
-				"title": "Awal mula",
-				"body":  "Toko Bahagia berdiri tahun 2020 dari **hobi memasak** yang berkembang jadi bisnis keluarga. Berawal dari produk keripik singkong yang dijual ke tetangga, kini kami menjadi mitra resmi lebih dari 30 pengrajin UMKM di Jawa.\n\nVisi kami sederhana: **membantu produk UMKM lokal lebih dikenal** sambil memberi pelanggan akses ke produk berkualitas dengan harga adil untuk kedua pihak.",
-			}),
-			timelineBlock("5 tahun perjalanan", []map[string]any{
-				{"date": "2020", "title": "Toko Bahagia lahir dari dapur rumah di Bekasi"},
-				{"date": "2021", "title": "Ekspansi ke marketplace + kemitraan 10 UMKM"},
-				{"date": "2022", "title": "Pindah ke workshop 200m² + tim 8 orang"},
-				{"date": "2024", "title": "12.000 pelanggan tetap + paket langganan launched"},
-				{"date": "2025", "title": "Program pemberdayaan 30+ UMKM mitra"},
-			}),
-			proFeatureGrid(variant, "Komitmen kami", []map[string]any{
-				{"title": "Mendukung UMKM", "desc": "Kami membayar pengrajin di atas harga pasar dan membantu mereka naik kelas via training + branding."},
-				{"title": "Bahan pilihan", "desc": "Hanya bahan terbaik yang dipilih. Kalau kami sendiri tidak mau makan, tidak akan kami jual."},
-				{"title": "Standar keamanan", "desc": "Semua produk diproduksi dengan standar higienitas BPOM. Tanpa pengawet berbahaya."},
-				{"title": "Ramah lingkungan", "desc": "Kemasan biodegradable + program pickup box untuk pelanggan langganan."},
-				{"title": "Harga adil", "desc": "Margin kami tetap tipis — biar produk terjangkau + pengrajin dapat bagian layak."},
-				{"title": "Logistik teruji", "desc": "5 mitra ekspedisi + QC packaging sebelum kirim — sudah 99.7% zero-complaint."},
-			}),
-			proTestimonials("Kata tim kami sendiri", []map[string]any{
-				{"quote": "Kami percaya produk lokal Indonesia tidak kalah dengan produk impor. Misi kami adalah membuktikan itu setiap hari — satu paket, satu review 5-bintang, satu pengrajin yang naik kelas.", "name": "Nadia Putri", "role": "Founder Toko Bahagia"},
-				{"quote": "Yang bikin kami beda dari toko UMKM lain: kami tinggal 30 menit dari lokasi produksi. Kalau ada complaint pelanggan, saya bisa langsung ketemu pengrajin hari itu juga.", "name": "Ari Susilo", "role": "Head of Operations"},
-				{"quote": "Melihat pengrajin kopi kami sekarang punya rumah baru dari hasil langganan bulanan kami — itu yang bikin kerja ini worth it, bukan angka omzet.", "name": "Bu Rini Astuti", "role": "Community Manager"},
-			}),
-			simpleCTA("Ingin bergabung sebagai mitra UMKM?",
-				"Kami rutin buka slot untuk pengrajin baru. Kirim contoh produk + cerita brand kamu.",
-				"Ajukan kemitraan",
-				"mailto:partnership@tokobahagia.id"),
+			subHero(biz.TentangHero[0], biz.TentangHero[1]),
+			block("RichText", map[string]any{"body": "## Cerita kami\n\n" + biz.Story}),
+			statsRow(biz.Brand+" dalam angka", biz.Stats),
+			trust,
+			reviews,
 			footer,
+			float,
 		},
 	)
 
 	caraPesan := page("cara-pesan", "Cara Pesan", false,
-		map[string]any{"title": "Cara Pesan — Toko Bahagia", "description": "3 langkah mudah pemesanan via WhatsApp."},
+		map[string]any{"title": "Cara Pesan — " + biz.Brand, "description": biz.CaraHero[1]},
 		[]map[string]any{
 			nav,
-			subHero("Pesan dalam 3 langkah",
-				"Kami sengaja bikin sederhana — nggak perlu bikin akun, nggak perlu install app. Cukup WhatsApp."),
-			processSteps("Alur pemesanan", []map[string]any{
-				{"title": "Pilih produk", "desc": "Buka halaman Produk, catat nama & jumlah."},
-				{"title": "Chat WhatsApp", "desc": "Kirim format pesanan + alamat ke CS."},
-				{"title": "Transfer & tunggu", "desc": "CS konfirmasi total, bayar, kirim 1-3 hari."},
-			}),
-			block("Section", map[string]any{
-				"title": "Format pesanan copy-paste",
-				"body":  "```\nHalo kak, mau pesan:\n• [Nama Produk 1] – [Jumlah]\n• [Nama Produk 2] – [Jumlah]\n\nAlamat lengkap:\n[Nama penerima]\n[No HP aktif]\n[Alamat + kode pos]\n```\n\nKirim ke: **0812-3456-7890** (WA)",
-			}),
-			proFeatureGrid(variant, "Metode pembayaran", []map[string]any{
-				{"title": "Transfer bank", "desc": "BCA, Mandiri, BRI, BNI — nomor rekening dikirim setelah konfirmasi order."},
-				{"title": "E-wallet", "desc": "GoPay, OVO, DANA, ShopeePay — auto-verify via nomor unik."},
-				{"title": "COD (bayar di tempat)", "desc": "Tersedia untuk Jabodetabek dengan minimum order Rp 200.000."},
-				{"title": "Invoice / PO", "desc": "Untuk pesanan corporate / instansi. Term of payment negotiable."},
-			}),
-			block("Section", map[string]any{
-				"title": "Pengiriman & pengembalian",
-				"body":  "Kami bekerja sama dengan **JNE, J&T, SiCepat, Anteraja, GoSend, GrabExpress**. Estimasi tiba:\n\n- **Jabodetabek**: same-day (order sebelum 14.00) atau next-day\n- **Jawa**: 1–3 hari kerja\n- **Luar Jawa**: 3–7 hari kerja\n\nJika produk rusak atau salah kirim, hubungi kami dalam **24 jam** — **penggantian gratis** tanpa repot.",
-			}),
-			pageFAQ("FAQ pemesanan", []map[string]any{
-				{"question": "Ada biaya packing tambahan?"},
-				{"question": "Bisa pilih ekspedisi sendiri?"},
-				{"question": "Kalau alamat salah?"},
-				{"question": "Bisa refund kalau tidak sesuai?"},
-				{"question": "Apakah bisa kirim ke luar negeri?"},
-			}),
-			simpleCTA("Siap coba produk kami?",
-				"Order pertama? Pakai kode WELCOME10 untuk diskon 10% pembelian pertama.",
-				"Chat WhatsApp CS",
-				"https://wa.me/6281234567890"),
+			subHero(biz.CaraHero[0], biz.CaraHero[1]),
+			processSteps("Langkah pemesanan", biz.Steps),
+			block("UmkmTrustBadges", map[string]any{"title": "Pembayaran & pengiriman", "subtitle": "", "items": biz.Payments}),
+			pageFAQ("Pertanyaan yang sering ditanyakan", biz.FAQ),
+			promo,
 			footer,
+			float,
 		},
 	)
 
 	kontak := page("kontak", "Kontak", false,
-		map[string]any{"title": "Hubungi Toko Bahagia", "description": "Chat WA, DM Instagram, atau kunjungi workshop kami."},
+		map[string]any{"title": "Kontak — " + biz.Brand, "description": biz.KontakHero[1]},
 		[]map[string]any{
 			nav,
-			subHero("Hubungi kami",
-				"Punya pertanyaan? Tim kami siap membantu setiap hari. Rata-rata respon <5 menit di jam kerja."),
-			block("IconList", map[string]any{
-				"title": "Cara menghubungi",
-				"items": []map[string]any{
-					{"icon": "📱", "text": "WhatsApp: 0812-3456-7890 (respon ~5 menit)"},
-					{"icon": "📸", "text": "Instagram: @tokobahagia — DM aktif"},
-					{"icon": "✉", "text": "Email: halo@tokobahagia.id (partnership & grosir)"},
-					{"icon": "📞", "text": "Telepon: (021) 1234-5678 · Sen-Jum 09.00–17.00"},
-					{"icon": "📍", "text": "Workshop: Jl. UMKM Maju No. 88, Bekasi (kunjungan by appt)"},
-					{"icon": "🕒", "text": "Jam operasional: Sen–Sab 08.00–21.00 · Min 10.00–18.00"},
-				},
-			}),
-			contactBlock("Kirim pesan langsung",
-				"Untuk pertanyaan non-urgent — kami balas via email dalam 3 jam kerja."),
-			mapBlock("Workshop kami di Bekasi"),
-			socialBlock([]map[string]any{
-				{"platform": "WhatsApp"},
-				{"platform": "Instagram"},
-				{"platform": "TikTok"},
-				{"platform": "Shopee"},
-				{"platform": "Tokopedia"},
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "Program Reseller",
-				"subtitle": "Margin sampai 35% · dukungan marketing lengkap",
-				"price":    "Modal awal Rp 500rb",
-				"period":   "· starter kit + akun reseller",
-				"ctaLabel": "Info program reseller",
-				"ctaHref":  "https://wa.me/6281234567890?text=Halo,%20saya%20mau%20info%20reseller",
-				"bullets": []map[string]any{
-					{"text": "Margin 25–35% dari setiap produk"},
-					{"text": "Free training marketing + copywriting"},
-					{"text": "Foto produk siap posting (100+ asset)"},
-					{"text": "Dropship — nggak perlu stock produk sendiri"},
-					{"text": "Support group WhatsApp aktif reseller lain"},
-				},
-			}),
+			subHero(biz.KontakHero[0], biz.KontakHero[1]),
+			store,
+			market,
 			footer,
+			float,
 		},
 	)
 
@@ -1202,338 +1366,6 @@ func portfolioPages(cv variantCopy, variant string) []map[string]any {
 	)
 
 	return []map[string]any{home, project, layanan, tentang, kontak}
-}
-
-// ---------------- Guru ----------------
-
-func teacherPages(cv variantCopy, variant string) []map[string]any {
-	links := []map[string]any{
-		{"label": "Beranda", "href": "/"},
-		{"label": "Materi", "href": "/materi"},
-		{"label": "Jadwal", "href": "/jadwal"},
-		{"label": "Tentang", "href": "/tentang"},
-		{"label": "Kontak", "href": "/kontak"},
-	}
-	nav := block("Navbar", map[string]any{"brand": "Pak Budi", "links": links})
-	footer := block("Footer", map[string]any{"copyright": "© Pak Budi — Guru Matematika SMA"})
-
-	home := page("home", "Beranda", true,
-		map[string]any{
-			"title":       "Pak Budi — Guru Matematika SMA",
-			"description": "Belajar matematika SMA dengan cara menyenangkan dan terstruktur. Materi gratis, kelas privat, dan konsultasi PR.",
-		},
-		[]map[string]any{
-			nav,
-			proHero(variant, heroCopy{
-				Eyebrow:    "Slot kelas privat semester baru dibuka",
-				Title:      "Matematika SMA yang",
-				Highlight:  "akhirnya masuk akal",
-				TitleAfter: "buat kamu.",
-				Subtitle:   "15 tahun mengajar matematika, ratusan siswa dari nilai 60 naik ke 90+. Belajar step-by-step dengan analogi sederhana yang bikin kamu ngerti — bukan hafal rumus.",
-				CTA:        "Lihat materi gratis",
-				CTAHref:    "/materi",
-			}),
-			trustBar("Alumni saya sekarang di:", []string{
-				"UI", "ITB", "UGM", "UNPAD", "UNAIR",
-				"Binus", "NTU", "NUS", "Monash",
-			}),
-			statsRow("15 tahun ngajar — rekapnya:", []map[string]any{
-				{"value": "1.200+", "label": "Siswa privat"},
-				{"value": "94%", "label": "Lolos PTN top"},
-				{"value": "300+", "label": "Materi gratis"},
-				{"value": "4.9/5", "label": "Rating siswa"},
-			}),
-			proFeatureGrid(variant, "Yang akan kamu pelajari", []map[string]any{
-				{"title": "Aljabar", "desc": "Dari konsep dasar persamaan linear hingga persiapan Olimpiade OSN/OSP. 25 modul + 100 soal."},
-				{"title": "Statistika", "desc": "Probabilitas, distribusi, dan aplikasi di kehidupan nyata (bukan cuma untuk ujian)."},
-				{"title": "Kalkulus", "desc": "Limit, turunan, integral — dijelaskan dengan analogi sederhana yang bikin kamu ngerti bukan hafal."},
-				{"title": "Geometri", "desc": "Geometri datar, ruang, dan transformasi dengan visualisasi interaktif (bukan cuma gambar 2D di papan)."},
-				{"title": "Trigonometri", "desc": "Identitas, persamaan, dan aplikasi di fisika & engineering — cocok yang mau lanjut STEM."},
-				{"title": "Soal Olimpiade", "desc": "Latihan soal tingkat OSN/OSP dengan strategi penyelesaian step-by-step."},
-			}),
-			proTestimonials("Cerita siswa Pak Budi", []map[string]any{
-				{"quote": "Awalnya benci matematika, sekarang nilai saya naik dari 60 ke 92 dalam 1 semester. Pak Budi pinter banget jelasinnya step by step — nggak asal kasih rumus.", "name": "Maya Rachman", "role": "Kelas 12 · SMA 8 Jakarta"},
-				{"quote": "Berkat Pak Budi, saya lulus SNBT jurusan Teknik Informatika UI. Trik-trik soal PTN yang diajarin bener-bener kepake pas hari-H.", "name": "Andi Wijaya", "role": "Alumni 2023 · Teknik UI"},
-				{"quote": "Anak saya jadi lebih percaya diri menghadapi matematika, dan hubungan komunikasi kami membaik karena dia nggak lagi frustrasi tiap PR. Terima kasih, Pak!", "name": "Ibu Rini Sutanto", "role": "Orang tua siswa"},
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "Kelas Privat 1-on-1",
-				"subtitle": "Slot semester baru · terbatas 8 siswa",
-				"price":    "Rp 350.000",
-				"period":   "/sesi 90 menit · min. 4 sesi/bulan",
-				"ctaLabel": "Daftar slot",
-				"ctaHref":  "/kontak",
-				"bullets": []map[string]any{
-					{"text": "Kurikulum dipersonalisasi berdasarkan target & gap"},
-					{"text": "Latihan soal dari bank soal 5.000+ (SBMPTN, olimpiade, UN)"},
-					{"text": "Recording tiap sesi — bisa diulang kapan saja"},
-					{"text": "WhatsApp 24/7 untuk tanya PR di luar jadwal"},
-					{"text": "Progress report bulanan dikirim ke orang tua"},
-				},
-			}),
-			block("Section", map[string]any{
-				"title": "Materi gratis untuk kamu",
-				"body":  "Saya menyediakan **300+ materi belajar GRATIS** untuk siswa SMA:\n\n- Video penjelasan (rata-rata 8 menit — tidak bertele-tele)\n- PDF ringkasan siap-cetak\n- Bank soal dengan pembahasan step-by-step\n- Quiz mini untuk cek pemahaman\n\nKlik halaman **Materi** untuk mulai belajar sekarang!",
-			}),
-			proFinalCTA(variant,
-				"Siap upgrade nilai matematika kamu?",
-				"Slot kelas privat semester ini tinggal 3. Booking konsultasi 20 menit gratis dulu — nggak cocok, nggak lanjut.",
-				"Book konsultasi gratis",
-				"/kontak",
-			),
-			footer,
-		},
-	)
-
-	materi := page("materi", "Materi", false,
-		map[string]any{"title": "Materi Belajar — Pak Budi"},
-		[]map[string]any{
-			nav,
-			subHero(
-				"300+ materi matematika SMA — gratis semua",
-				"PDF ringkasan · video 8-menit · latihan soal + pembahasan step-by-step. Dipakai 12.000+ siswa dari seluruh Indonesia setiap bulan.",
-			),
-			statsRow("Isi library saat ini", []map[string]any{
-				{"value": "300+", "label": "Materi PDF"},
-				{"value": "180+", "label": "Video penjelasan"},
-				{"value": "5.000", "label": "Soal + pembahasan"},
-				{"value": "12rb", "label": "Siswa aktif/bulan"},
-			}),
-			proFeatureGrid(variant, "Materi berdasarkan kelas & topik", []map[string]any{
-				{"title": "Aljabar (Kelas 10)", "desc": "Persamaan linear, kuadrat, pertidaksamaan, sistem persamaan. 25 modul + 100 soal dengan pembahasan animasi."},
-				{"title": "Trigonometri (Kelas 11)", "desc": "Identitas, persamaan, grafik + aplikasi ke fisika. 20 modul + 80 soal — cocok yang mau lanjut STEM."},
-				{"title": "Kalkulus (Kelas 11–12)", "desc": "Limit, turunan, integral. 30 modul + 120 soal. Analogi kehidupan sehari-hari, bukan cuma rumus."},
-				{"title": "Statistika & Peluang", "desc": "Distribusi, probabilitas, kombinatorik. 15 modul + 60 soal — sering muncul di UTBK & OSN."},
-				{"title": "Geometri Analitik", "desc": "Persamaan garis, lingkaran, parabola, ellips. 18 modul dengan visualisasi Desmos interaktif."},
-				{"title": "Persiapan Olimpiade", "desc": "Bank soal OSN/OSP 10 tahun terakhir + strategi penyelesaian dari tim IMO Indonesia."},
-			}),
-			block("BentoGrid", map[string]any{
-				"title": "Learning path yang saya rekomendasikan",
-				"items": []map[string]any{
-					{"title": "Kelas 10 — Fondasi", "desc": "Aljabar → persamaan → fungsi. 3 bulan konsisten cukup untuk fondasi solid.", "size": "lg"},
-					{"title": "Kelas 11 — Trigonometri + Limit", "desc": "Fase transisi yang bikin banyak siswa kesulitan. Wajib pelan-pelan.", "size": "md"},
-					{"title": "Kelas 12 — Kalkulus + UTBK", "desc": "Latihan soal HOTS 200+ dengan target skor UTBK 700+.", "size": "md"},
-					{"title": "Olimpiade — Extra Track", "desc": "Untuk yang serius kompetisi. Sesi tambahan tiap Sabtu.", "size": "lg"},
-				},
-			}),
-			proTestimonials("Cerita siswa yang pakai materi gratis", []map[string]any{
-				{"quote": "Awalnya cuma download PDF gratis Pak Budi buat UTBK. 3 bulan konsisten latihan, skor matematika saya naik dari 480 ke 720. Lulus PTN pilihan pertama!", "name": "Fira Ananda", "role": "Alumni 2024 · Teknik Kimia UGM"},
-				{"quote": "Video penjelasannya to-the-point banget. 8 menit tuntas, ga bertele-tele kayak channel lain. Anak saya lebih rajin nonton materi Pak Budi daripada TikTok 😅", "name": "Bapak Herman", "role": "Orang tua siswa kelas 11"},
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "Butuh bimbingan lebih personal?",
-				"subtitle": "Kelas privat 1-on-1 · slot terbatas",
-				"price":    "Rp 350.000",
-				"period":   "/sesi 90 menit · min. 4 sesi/bulan",
-				"ctaLabel": "Cek jadwal & booking",
-				"ctaHref":  "/jadwal",
-				"bullets": []map[string]any{
-					{"text": "Materi disesuaikan gap & target kamu"},
-					{"text": "WhatsApp support 24/7 untuk PR"},
-					{"text": "Recording sesi untuk review ulang"},
-					{"text": "Progress report bulanan ke orang tua"},
-				},
-			}),
-			pageFAQ("Pertanyaan seputar materi", []map[string]any{
-				{"q": "Materinya benar-benar gratis?", "a": "Ya, 100% gratis. Kamu bisa download PDF & akses video YouTube tanpa daftar/bayar. Yang berbayar hanya kelas privat 1-on-1."},
-				{"q": "Bagaimana cara download PDF-nya?", "a": "Klik salah satu kategori di atas → pilih modul → tombol Download PDF ada di pojok kanan atas halaman modul."},
-				{"q": "Video-nya bahasa apa?", "a": "Semua materi & video 100% berbahasa Indonesia. Sengaja untuk siswa SMA Indonesia yang lebih nyaman belajar dengan bahasa ibu."},
-				{"q": "Update materinya seberapa sering?", "a": "Setiap Sabtu saya upload 1 modul baru + 1 video pembahasan soal. Follow Instagram @pakbudi.math untuk notifikasi."},
-			}),
-			simpleCTA(
-				"Mulai belajar sekarang — gratis, tanpa daftar",
-				"Klik salah satu kategori di atas, atau follow saya di Instagram untuk update materi mingguan.",
-				"Follow @pakbudi.math",
-				"#",
-			),
-			footer,
-		},
-	)
-
-	jadwal := page("jadwal", "Jadwal Kelas", false,
-		map[string]any{"title": "Jadwal Kelas Privat — Pak Budi"},
-		[]map[string]any{
-			nav,
-			subHero(
-				"Jadwal kelas semester Ganjil 2026",
-				"Pilih tipe kelas + jam yang cocok. Online via Zoom (nasional) atau offline di Jakarta Selatan. Trial gratis 1 sesi untuk siswa baru.",
-			),
-			statsRow("Kapasitas semester ini", []map[string]any{
-				{"value": "8", "label": "Slot privat tersisa"},
-				{"value": "3", "label": "Kelas reguler dibuka"},
-				{"value": "1", "label": "Kelas olimpiade"},
-				{"value": "94%", "label": "Repeat rate siswa"},
-			}),
-			proFeatureGrid(variant, "Tipe kelas yang tersedia", []map[string]any{
-				{"title": "Privat 1-on-1", "desc": "Rp 350.000/sesi 90 menit. Materi & pace disesuaikan 100% kebutuhan kamu. Ideal untuk yang gap-nya spesifik."},
-				{"title": "Kelas Reguler (3–5 siswa)", "desc": "Rp 450.000/bulan (8× pertemuan). Belajar bareng teman + latihan soal grup. Value terbaik untuk sekolah reguler."},
-				{"title": "Kelas Olimpiade", "desc": "Rp 750.000/bulan (4× pertemuan). Khusus persiapan OSN/OSP + KSN. Kurikulum dari tim IMO."},
-				{"title": "Crash Course UTBK", "desc": "Rp 2.500.000 (8× pertemuan intensif). Skor rata-rata siswa naik 150 poin dalam 2 bulan."},
-				{"title": "Kelas PR & Konsultasi", "desc": "Rp 200.000/sesi 60 menit. Bahas PR sekolah + persiapan ulangan. Bisa spontan booking H-1."},
-				{"title": "Trial Gratis", "desc": "Untuk siswa baru — 1 sesi gratis 60 menit untuk kenalan & assessment awal. Klik kontak untuk booking."},
-			}),
-			block("BentoGrid", map[string]any{
-				"title": "Jadwal reguler mingguan",
-				"items": []map[string]any{
-					{"title": "Senin/Rabu/Jumat sore", "desc": "16.00–17.30 Kelas 10 · 18.00–19.30 Kelas 11 · 19.30–21.00 Kelas 12", "size": "lg"},
-					{"title": "Selasa/Kamis siang", "desc": "09.00–10.30 & 13.00–14.30 slot privat 1-on-1", "size": "md"},
-					{"title": "Sabtu pagi", "desc": "08.00–10.00 Kelas Olimpiade · 10.30–12.00 Pembahasan Soal Sulit", "size": "md"},
-					{"title": "Minggu libur", "desc": "Family day — WhatsApp masih standby untuk emergency PR", "size": "lg"},
-				},
-			}),
-			block("BorderBeamCard", map[string]any{
-				"title":    "🎯 Crash Course UTBK 2026",
-				"subtitle": "Batch terbatas 6 siswa · mulai Januari 2026",
-				"price":    "Rp 2.500.000",
-				"period":   "/paket 8× pertemuan intensif",
-				"ctaLabel": "Booking slot sekarang",
-				"ctaHref":  "/kontak",
-				"bullets": []map[string]any{
-					{"text": "Bank soal HOTS 800+ soal UTBK 5 tahun terakhir"},
-					{"text": "Try-out 3× dengan simulasi CBT + analisis skor"},
-					{"text": "Recording setiap pertemuan — bisa diulang bebas"},
-					{"text": "WhatsApp support unlimited sampai hari-H"},
-					{"text": "Garansi skor naik 100+ atau uang kembali"},
-				},
-			}),
-			processSteps("Cara daftar & mulai kelas", []map[string]any{
-				{"title": "1. WhatsApp / isi form", "desc": "Kirim info: nama, kelas, target belajar, jadwal preferred."},
-				{"title": "2. Trial 60 menit gratis", "desc": "Kita ngobrol + assessment level saat ini. Cocok? Lanjut. Nggak? Nggak apa-apa."},
-				{"title": "3. Bayar + mulai kelas", "desc": "Bayar per bulan (reguler/olimpiade) atau per sesi (privat). Materi & recording langsung diakses."},
-			}),
-			block("IconList", map[string]any{
-				"title": "Informasi penting",
-				"items": []map[string]any{
-					{"icon": "📍", "title": "Alamat offline", "desc": "Ruko Bahagia Blok B-12, Jl. Pendidikan Raya, Jakarta Selatan (dekat SMA 8)"},
-					{"icon": "💻", "title": "Kelas online", "desc": "Via Zoom · link dikirim H-1 · rekaman tersimpan di Google Drive khusus siswa"},
-					{"icon": "💳", "title": "Pembayaran", "desc": "Transfer BCA/Mandiri, DANA, GoPay, OVO — atau tunai di lokasi"},
-					{"icon": "🔄", "title": "Kebijakan reschedule", "desc": "Boleh reschedule max 2× per bulan dengan pemberitahuan H-1"},
-				},
-			}),
-			pageFAQ("Pertanyaan seputar jadwal", []map[string]any{
-				{"q": "Kalau saya di luar Jakarta, bisa ikut kelas?", "a": "Bisa. 60% siswa saya sekarang dari luar Jakarta (Bandung, Surabaya, Makassar, Balikpapan). Semua bisa via Zoom + akses recording."},
-				{"q": "Kalau saya berhalangan hadir, sesinya hangus?", "a": "Tidak. Setiap sesi ada recording. Kalau kelas reguler & kamu ijin H-1, sesinya bisa diganti minggu berikutnya."},
-				{"q": "Bisa gabung di tengah semester?", "a": "Bisa untuk kelas privat & konsultasi. Kelas reguler harus mulai batch baru (Januari, April, Juli, Oktober)."},
-				{"q": "Apakah ada garansi hasil?", "a": "Untuk Crash Course UTBK: garansi skor naik minimal 100 poin atau uang kembali. Untuk kelas lain: tidak ada garansi angka, tapi 94% siswa saya tetap lanjut ke semester berikutnya."},
-			}),
-			simpleCTA(
-				"Slot semester ini tinggal 8 — buruan booking",
-				"Trial gratis 1 sesi 60 menit sebelum kamu commit. Nggak cocok? Nggak masalah, tetap dapat 1 sesi gratis.",
-				"Booking trial gratis",
-				"/kontak",
-			),
-			footer,
-		},
-	)
-
-	tentang := page("tentang", "Tentang", false,
-		map[string]any{"title": "Tentang Pak Budi"},
-		[]map[string]any{
-			nav,
-			subHero(
-				"Halo, saya Budi Santoso, S.Pd., M.Si.",
-				"15 tahun mengajar matematika SMA — misi saya sederhana: nggak ada anak yang bodoh matematika, cuma cara mengajar yang belum cocok.",
-			),
-			block("Section", map[string]any{
-				"title": "Kenapa saya jadi guru matematika?",
-				"body":  "Waktu SMA saya sendiri **hampir kena remedi matematika di kelas 10**. Rasanya frustrasi — semua orang di sekitar tampak paham, saya nggak.\n\nSampai satu guru les pribadi mengubah cara saya melihat matematika: pakai analogi keseharian, mecah soal jadi langkah kecil, dan yang paling penting — sabar mengulang sampai saya benar-benar 'klik'.\n\nSekarang saya melakukan hal yang sama untuk siswa saya. Bukan drilling rumus. Bukan meme belajar. Tapi bikin siswa **paham konsep** — sisanya (nilai bagus, PTN, dst) akan mengikuti dengan sendirinya.",
-			}),
-			timelineBlock("Perjalanan karir mengajar", []map[string]any{
-				{"year": "2007", "title": "Lulus S1 Pendidikan Matematika UPI", "desc": "Skripsi soal miskonsepsi siswa dalam limit fungsi. Cikal bakal pendekatan mengajar saya."},
-				{"year": "2009", "title": "Lulus S2 Matematika ITB (cumlaude)", "desc": "Fokus di teori bilangan. Riset kecil-kecilan tapi cukup untuk memperdalam pemahaman."},
-				{"year": "2011", "title": "Guru SMA 8 Jakarta", "desc": "5 tahun mengajar reguler. Belajar bahwa 1 metode nggak cocok untuk 30 siswa berbeda."},
-				{"year": "2015", "title": "Pelatih Tim OSN Provinsi DKI", "desc": "8 tahun jadi pelatih olimpiade. 12 murid dapat medali OSN nasional."},
-				{"year": "2016", "title": "Mulai bimbel privat 'Pak Budi Math'", "desc": "Full-time fokus di 1-on-1 & kelas kecil. Siswa pertama saya sekarang sudah S2."},
-				{"year": "2020", "title": "YouTube Pak Budi Math", "desc": "Materi gratis di YouTube — sekarang 180+ video, 45.000 subscriber."},
-				{"year": "2026", "title": "1.200+ siswa · 94% masuk PTN", "desc": "Hitungan kumulatif sepanjang 15 tahun. Yang terpenting: sebagian besar tetap suka matematika sampai sekarang."},
-			}),
-			proFeatureGrid(variant, "Pendidikan & sertifikasi resmi", []map[string]any{
-				{"title": "S2 Matematika ITB", "desc": "Lulus 2009 cumlaude, IPK 3.87. Tesis di teori bilangan dengan Prof. Iwan Pranoto."},
-				{"title": "S1 Pendidikan Matematika UPI", "desc": "Lulus 2007. Sudah aktif mengajar les sejak semester 3."},
-				{"title": "Sertifikasi Guru Profesional", "desc": "Kemendikbud RI · nomor sertifikat: 15.2011.MT.045."},
-				{"title": "Pelatih OSN Terakreditasi", "desc": "Sertifikat dari Kemendikbud Puspresnas — pelatih tingkat provinsi sejak 2015."},
-				{"title": "Author 3 buku SMA", "desc": "\"Matematika SMA Rasa Cerita\" (2019), \"Bank Soal UTBK Matematika\" (2021), \"Olimpiade Untuk Pemula\" (2023)."},
-				{"title": "Pembicara nasional", "desc": "Rutin diundang MGMP Matematika DKI · kanal Ruangguru · webinar SMA se-Indonesia."},
-			}),
-			block("BentoGrid", map[string]any{
-				"title": "Pencapaian yang paling saya syukuri",
-				"items": []map[string]any{
-					{"title": "1.200+ siswa lulus PTN", "desc": "94% masuk pilihan pertama. Yang paling berkesan: siswa dari Papua yang nggak pernah les online sebelumnya, akhirnya masuk FKG UGM.", "size": "lg"},
-					{"title": "12 medali OSN Nasional", "desc": "3 emas · 5 perak · 4 perunggu. Semua siswa reguler yang saya coach.", "size": "md"},
-					{"title": "Kenaikan rata-rata 30 poin", "desc": "Dalam 3 bulan kelas reguler. Diverifikasi dari 200+ data siswa 2023–2025.", "size": "md"},
-					{"title": "700+ siswa 'lifetime'", "desc": "Siswa yang tetap chat WhatsApp minta saran karir bahkan setelah lulus PTN. Ini yang paling bikin bangga.", "size": "lg"},
-				},
-			}),
-			proTestimonials("Kata orang-orang yang kenal saya", []map[string]any{
-				{"quote": "Pak Budi bukan sekedar 'guru pinter matematika'. Dia guru yang mau download Discord biar bisa jawab pertanyaan siswa lebih cepat. Karakter guru yang saya kagumi.", "name": "Ibu Rina Susanti", "role": "Kepala SMA 8 Jakarta"},
-				{"quote": "Saya alumni 2015. Sekarang Ph.D. di NUS. Foundation matematika saya dari Pak Budi — dia yang bikin saya jatuh cinta sama analisis real.", "name": "Dr. Firman Nurhakim", "role": "Postdoc Mathematics, NUS Singapore"},
-			}),
-			simpleCTA(
-				"Ingin ikut belajar sama Pak Budi?",
-				"Trial gratis 1 sesi 60 menit — kita ngobrol dulu, lihat cocok atau nggak. Nggak ada tekanan untuk lanjut.",
-				"Booking trial gratis",
-				"/kontak",
-			),
-			footer,
-		},
-	)
-
-	kontak := page("kontak", "Kontak", false,
-		map[string]any{"title": "Kontak Pak Budi"},
-		[]map[string]any{
-			nav,
-			subHero(
-				"Yuk ngobrol dulu",
-				"Ada pertanyaan tentang materi, jadwal kelas, atau mau booking trial gratis? WhatsApp reply max 4 jam · email max 1×24 jam.",
-			),
-			block("IconList", map[string]any{
-				"title": "Cara menghubungi",
-				"items": []map[string]any{
-					{"icon": "📱", "title": "WhatsApp (paling cepat)", "desc": "0812-0000-0000 · reply 09.00–21.00 · reservasi + tanya PR"},
-					{"icon": "✉", "title": "Email (diskusi panjang)", "desc": "budi@pakbudi.math.id · reply max 24 jam · kerja sama sekolah"},
-					{"icon": "📸", "title": "Instagram", "desc": "@pakbudi.math · tips harian + quiz mingguan · 28.000 followers"},
-					{"icon": "▶️", "title": "YouTube", "desc": "Pak Budi Math · 180+ video materi gratis · 45.000 subscriber"},
-					{"icon": "📍", "title": "Lokasi offline", "desc": "Ruko Bahagia Blok B-12, Jl. Pendidikan Raya, Jakarta Selatan"},
-					{"icon": "🕒", "title": "Jam operasional", "desc": "Senin–Sabtu 09.00–21.00 WIB · Minggu family day (WA emergency only)"},
-				},
-			}),
-			contactBlock(
-				"Booking trial gratis 60 menit",
-				"Isi form ini — saya akan reply via WhatsApp max 4 jam. Sertakan nama, kelas, & topik yang ingin dipelajari.",
-			),
-			socialBlock([]map[string]any{
-				{"platform": "WhatsApp", "href": "https://wa.me/62812000000"},
-				{"platform": "Instagram", "href": "https://instagram.com/pakbudi.math"},
-				{"platform": "YouTube", "href": "https://youtube.com/@pakbudimath"},
-				{"platform": "TikTok", "href": "https://tiktok.com/@pakbudi.math"},
-				{"platform": "Email", "href": "mailto:budi@pakbudi.math.id"},
-			}),
-			mapBlock("Lokasi kelas offline (dekat SMA 8 Jakarta)"),
-			block("BorderBeamCard", map[string]any{
-				"title":    "🎁 Trial Gratis 1 Sesi 60 Menit",
-				"subtitle": "Untuk siswa baru — no strings attached",
-				"price":    "Rp 0",
-				"period":   "sesi assessment + kenalan",
-				"ctaLabel": "WhatsApp untuk booking",
-				"ctaHref":  "https://wa.me/62812000000",
-				"bullets": []map[string]any{
-					{"text": "Assessment level matematika kamu saat ini"},
-					{"text": "Rekomendasi tipe kelas yang paling cocok"},
-					{"text": "1 sesi 60 menit pembahasan topik pilihan kamu"},
-					{"text": "Kalau cocok — lanjut. Kalau nggak — nggak apa-apa, tetap dapat sesi gratis"},
-				},
-			}),
-			pageFAQ("Pertanyaan yang sering ditanya", []map[string]any{
-				{"q": "Berapa lama reply WhatsApp?", "a": "Max 4 jam di jam kerja (09.00–21.00). Kalau kirim di luar jam kerja, saya reply besok pagi."},
-				{"q": "Bisa cancel booking trial?", "a": "Bisa, tapi tolong info H-1 supaya saya bisa alokasikan slot ke calon siswa lain."},
-				{"q": "Saya di luar kota, tetap bisa trial?", "a": "Bisa. Trial online via Zoom sama seperti kelas reguler. 60% siswa saya sekarang dari luar Jakarta."},
-				{"q": "Untuk kerja sama sekolah / meetup, kontak kemana?", "a": "Email langsung ke budi@pakbudi.math.id dengan detail acara + audience. Reply max 3 hari."},
-			}),
-			footer,
-		},
-	)
-
-	return []map[string]any{home, materi, jadwal, tentang, kontak}
 }
 
 // ---------------- Blog ----------------

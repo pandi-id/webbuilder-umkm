@@ -38,11 +38,6 @@ export function PropEditor({
 }) {
   const schema = schemaFor(block.type);
   const [q, setQ] = useState("");
-  if (!schema) {
-    return (
-      <p className="text-xs text-muted-foreground">Tidak ada skema untuk block ini.</p>
-    );
-  }
   const props = block.props ?? {};
   function update(name: string, value: unknown) {
     onChange({ ...block, props: { ...props, [name]: value } });
@@ -54,7 +49,7 @@ export function PropEditor({
   const grouped = useMemo(() => {
     const out: Array<{ name: string; fields: FieldDef[] }> = [];
     const idx = new Map<string, number>();
-    for (const f of schema.fields) {
+    for (const f of schema?.fields ?? []) {
       const g = f.group ?? DEFAULT_GROUP;
       let i = idx.get(g);
       if (i == null) {
@@ -83,6 +78,16 @@ export function PropEditor({
       }))
       .filter((g) => g.fields.length > 0);
   }, [grouped, q]);
+
+  // Early return must come after hooks — legacy block types (no schema) can
+  // be selected and then swapped for a known type without remounting.
+  if (!schema) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Blok ini tidak didukung lagi dan tidak bisa diedit. Hapus blok ini dari halaman.
+      </p>
+    );
+  }
 
   const singleGroup = filtered.length === 1;
   // Only show search when there are enough fields to justify it (>4).

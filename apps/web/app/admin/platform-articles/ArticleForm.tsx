@@ -459,7 +459,7 @@ export function ArticleForm({ article }: { article: PlatformArticle | null }) {
                   id="tags"
                   value={tagsText}
                   onChange={(e) => setTagsText(e.target.value)}
-                  placeholder="tutorial, guru, panduan"
+                  placeholder="tutorial, umkm, toko online"
                 />
                 {tags.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">

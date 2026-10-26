@@ -7,10 +7,10 @@ import (
 // LayoutJSON — shape yang disimpan di sites.layout_json. Semua field optional
 // untuk backward compat: layout kosong `{}` = renderer skip prepend/append.
 type LayoutJSON struct {
-	Header         []json.RawMessage `json:"header,omitempty"`
-	Footer         []json.RawMessage `json:"footer,omitempty"`
-	HeaderEnabled  bool              `json:"header_enabled"`
-	FooterEnabled  bool              `json:"footer_enabled"`
+	Header        []json.RawMessage `json:"header,omitempty"`
+	Footer        []json.RawMessage `json:"footer,omitempty"`
+	HeaderEnabled bool              `json:"header_enabled"`
+	FooterEnabled bool              `json:"footer_enabled"`
 }
 
 // headerBlockTypes / footerBlockTypes — jenis block yang dianggap header/footer
@@ -18,12 +18,10 @@ type LayoutJSON struct {
 // = extraction dari home page existing site.
 var (
 	headerBlockTypes = map[string]bool{
-		"Navbar":     true,
-		"GuruNavbar": true,
+		"Navbar": true,
 	}
 	footerBlockTypes = map[string]bool{
-		"Footer":     true,
-		"GuruFooter": true,
+		"Footer": true,
 	}
 )
 

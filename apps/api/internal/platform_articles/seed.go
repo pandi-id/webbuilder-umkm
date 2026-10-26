@@ -37,395 +37,365 @@ func samples() []CreateInput {
 	return []CreateInput{
 		// ---- Featured: hero ----
 		{
-			Slug:            "kenapa-guru-indonesia-perlu-website-pribadi",
-			Title:           "Kenapa Guru Indonesia Perlu Website Pribadi?",
-			Excerpt:         "Website pribadi bukan lagi tren teknologi — ia adalah cara guru merawat rekam jejak pengetahuan dan menjaga identitas digital dari platform milik orang lain.",
-			CoverImageURL:   "",
-			Category:        "cerita",
-			AuthorName:      "Tim PANDI × UPI",
-			Tags:            tags("guru", "digital", "identitas", "pendidikan"),
-			Status:          "published",
-			Featured:        true,
-			ReadingTimeMin:  6,
-			SEOTitle:        "Kenapa Guru Indonesia Perlu Website Pribadi — Rumah Digital Guru",
-			SEODescription:  "Manfaat website pribadi untuk guru: identitas digital, rekam jejak pengetahuan, dan cara terlepas dari algoritma platform besar.",
-			BodyMD: `## Antara jejak digital dan platform yang menyewa
+			Slug:           "kenapa-umkm-perlu-website-sendiri",
+			Title:          "Kenapa UMKM Perlu Website Sendiri?",
+			Excerpt:        "Marketplace dan media sosial memang ramai, tapi aturannya milik orang lain. Website sendiri adalah etalase yang tidak bisa diambil siapa pun dari usaha Anda.",
+			CoverImageURL:  "",
+			Category:       "cerita",
+			AuthorName:     "Tim Web Builder",
+			Tags:           tags("umkm", "website", "branding", "jualan-online"),
+			Status:         "published",
+			Featured:       true,
+			ReadingTimeMin: 6,
+			SEOTitle:       "Kenapa UMKM Perlu Website Sendiri — Bukan Cuma Akun Marketplace",
+			SEODescription: "Manfaat website sendiri untuk UMKM: kepercayaan pembeli, kendali penuh atas etalase, dan tidak bergantung pada algoritma atau potongan marketplace.",
+			BodyMD: `## Etalase yang benar-benar milik Anda
 
-Sepuluh tahun terakhir, banyak guru mendokumentasikan proses mengajar mereka
-lewat platform yang bukan miliknya sendiri — media sosial, halaman komunitas,
-grup pesan. Konten yang dibuat menghilang saat platformnya menghilang.
+Banyak usaha kecil memulai dari lapak marketplace atau akun media sosial. Itu
+langkah yang bagus — pembeli memang ada di sana. Masalahnya muncul belakangan:
+biaya admin naik, algoritma berubah, atau akun tiba-tiba dibatasi. Semua yang
+sudah dibangun bertahun-tahun bisa hilang dalam semalam.
 
-Website pribadi menawarkan cara berbeda: **rumah digital yang benar-benar milik
-Anda**. Alamat sendiri, isi sendiri, arsip yang bisa diekspor dan dipindahkan
-kapan saja.
+Website sendiri memberi Anda **alamat tetap** di internet. Pembeli yang sudah
+kenal bisa kembali kapan saja, tanpa harus mencari nama toko Anda di antara
+ribuan penjual lain.
 
-## Empat manfaat konkret
+## Tiga alasan praktis
 
-### 1. Identitas Digital yang Konsisten
+### 1. Pembeli lebih percaya
 
-Nama Anda + domain ` + "`.id`" + ` = kartu nama digital yang profesional.
-Bandingkan ` + "`ibu-ratna.pandi.id`" + ` dengan URL panjang di platform lain — mana
-yang lebih mudah dibagikan ke wali murid?
+Calon pembeli yang menemukan ` + "`namausaha.id`" + ` langsung menangkap bahwa
+usaha ini serius. Alamat web sendiri, foto produk rapi, dan informasi kontak
+yang jelas adalah sinyal kepercayaan — apalagi untuk pembeli pertama kali.
 
-### 2. Rekam Jejak yang Terkumpul
+### 2. Anda yang mengatur tampilan
 
-Tulisan pertama Anda 3 tahun lalu masih ada. Materi ajar semester lalu masih
-bisa dibuka. Tidak seperti feed sosial yang tenggelam, arsip website tetap
-tersedia untuk dibaca ulang.
+Di marketplace, semua toko terlihat sama. Di website sendiri, Anda menentukan
+warna, cerita usaha, urutan produk, dan promo mana yang ditampilkan paling
+depan. Merek Anda tampil utuh, bukan sekadar nama di daftar pencarian.
 
-### 3. Kontrol Penuh atas Interaksi
+### 3. Tidak bergantung pada satu platform
 
-Anda yang memutuskan siapa yang bisa berkomentar, kapan, dan bagaimana
-moderasinya. Tidak ada algoritma yang menyaring atau menyembunyikan tulisan
-Anda dari pembaca yang butuh.
+Website tidak menggantikan marketplace — keduanya saling melengkapi. Tautkan
+website di bio Instagram, kartu nama, dan kemasan produk. Kalau suatu saat
+satu kanal bermasalah, pelanggan tetap tahu ke mana harus mencari Anda.
 
-### 4. Portabilitas Data
+## Mulai dari yang sederhana
 
-Ekspor semua tulisan Anda ke file statis kapan saja. Kalau suatu saat platform
-tidak lagi tersedia, konten Anda tetap dapat dipindah ke server manapun.
+Website UMKM tidak harus rumit. Halaman beranda, katalog produk, cerita
+singkat tentang usaha, dan tombol pesan lewat WhatsApp sudah cukup untuk
+mulai menerima pesanan. Sisanya bisa ditambah sambil jalan.
 
-## Bukan tentang teknologi
-
-Yang paling penting: website pribadi memberi guru **ruang untuk berpikir
-panjang**. Media sosial menuntut konten pendek. Blog pribadi mengundang
-tulisan yang lebih dalam, refleksi yang tidak terburu-buru, dan percakapan
-dengan pembaca yang sungguh tertarik.
-
-Rumah digital guru bukan tren. Ini kebutuhan dasar profesi yang mulai kita
-pahami setelah bertahun-tahun bergantung pada milik orang lain.`,
+Yang terpenting: **mulai sekarang**, selagi nama domain usaha Anda masih
+tersedia.`,
 		},
+
 		// ---- Tutorial ----
 		{
-			Slug:            "cara-memulai-website-guru-dalam-15-menit",
-			Title:           "Cara Memulai Website Guru dalam 15 Menit",
-			Excerpt:         "Panduan langkah demi langkah untuk membuat website pribadi guru dari nol — pilih domain, pilih template, isi profil, publikasi. Semuanya bisa selesai dalam waktu satu jam istirahat sekolah.",
-			CoverImageURL:   "",
-			Category:        "tutorial",
-			AuthorName:      "Tim Web Builder",
-			Tags:            tags("tutorial", "guru", "panduan-cepat"),
-			Status:          "published",
-			Featured:        true,
-			ReadingTimeMin:  8,
-			SEOTitle:        "Tutorial: Bikin Website Guru dalam 15 Menit dari Nol",
-			SEODescription:  "Langkah demi langkah membuat website pribadi guru: beli domain .id, pilih template guru, isi profil, publish. Cocok untuk pemula.",
-			BodyMD: `## Yang Anda butuhkan
+			Slug:           "cara-membuat-toko-online-dalam-15-menit",
+			Title:          "Cara Membuat Toko Online dalam 15 Menit",
+			Excerpt:        "Panduan langkah demi langkah dari nol sampai toko online Anda tayang: beli domain, pilih template UMKM, isi produk, lalu publikasikan.",
+			CoverImageURL:  "",
+			Category:       "tutorial",
+			AuthorName:     "Tim Web Builder",
+			Tags:           tags("tutorial", "toko-online", "panduan-cepat"),
+			Status:         "published",
+			Featured:       true,
+			ReadingTimeMin: 8,
+			SEOTitle:       "Tutorial: Membuat Toko Online UMKM dalam 15 Menit",
+			SEODescription: "Langkah praktis membuat toko online untuk UMKM: beli domain .id, pilih template, tambah produk, dan publikasikan. Cocok untuk pemula.",
+			BodyMD: `## Yang perlu disiapkan
 
-- Alamat email aktif
-- Nomor HP (untuk verifikasi domain .id kalau relevan)
-- 15 menit fokus
+Sebelum mulai, siapkan tiga hal ini supaya prosesnya lancar:
 
-## Langkah 1: Daftar & Verifikasi Akun
+- **Nama usaha** dan ide nama domain (2–3 alternatif)
+- **Foto produk** — minimal 3–5 produk andalan
+- **Nomor WhatsApp** yang aktif untuk menerima pesanan
 
-Buka [halaman utama](/) → klik **"Buat Website Saya"**. Isi nama, email,
-password minimal 8 karakter. Cek email untuk link verifikasi.
+## Langkah 1: Cari dan beli domain
 
-## Langkah 2: Cari & Beli Domain
+Dari dashboard, klik **Beli Domain + Buat Situs**. Ketik nama usaha Anda,
+lalu cek ketersediaannya. Beberapa contoh pola yang mudah diingat:
 
-Di wizard **Beli Domain**, ketik nama Anda atau frasa yang mewakili identitas
-Anda. Contoh:
+- ` + "`keripikbudesi.id`" + ` — nama produk + pemilik
+- ` + "`kopilerengmerapi.id`" + ` — produk + asal daerah
+- ` + "`batikjelita.my.id`" + ` — merek pendek
 
-- ` + "`ibu-siti.id`" + ` — nama pribadi
-- ` + "`gurumatematika.id`" + ` — mata pelajaran
-- ` + "`kelas-bahasa.id`" + ` — nama kelas / program
+Lengkapi data pemilik, pilih metode pembayaran, dan selesaikan pembayaran.
 
-Sistem cek ketersediaan real-time. Kalau tersedia, klik **Beli** — bayar via
-transfer bank / e-wallet / kartu kredit. Domain aktif 1–5 menit setelah bayar.
+## Langkah 2: Pilih template UMKM
 
-## Langkah 3: Pilih Template Guru PANDI × UPI
+Setelah domain aktif, pilihan template akan muncul. Pilih salah satu varian
+kategori **UMKM / Jualan**. Template ini sudah berisi beranda, katalog produk,
+halaman tentang, dan kontak — tinggal diganti dengan konten Anda.
 
-Setelah domain aktif, template picker akan muncul. Pilih **Guru PANDI × UPI**.
-Template ini otomatis membuat:
+## Langkah 3: Tambahkan produk
 
-- 9 halaman lengkap (Beranda, Profil, 5 rubrik, Forum Diskusi, Pembelajaran)
-- 8 sample tulisan (siap diedit / dihapus)
-- 4 sample materi pembelajaran
-- 3 sample banner promosi
+Buka menu **Produk** di dashboard situs. Untuk setiap produk, isi:
 
-## Langkah 4: Isi Profil Guru
+- Nama produk dan harga
+- Foto (pakai foto terbaik, rasio persegi paling aman)
+- Deskripsi singkat: bahan, ukuran, varian rasa atau warna
 
-Buka menu **Guru → Profil** di dashboard site. Isi:
+Produk yang berstatus aktif otomatis tampil di blok katalog.
 
-- **Mata Pelajaran**: contoh "Guru Bahasa Indonesia"
-- **Foto Profil**: upload dulu di menu Aset, lalu salin URL
-- **Hero Statement**: kalimat 1–2 baris tentang Anda
-- **Bio**: perjalanan singkat sebagai guru
+## Langkah 4: Sesuaikan tampilan
 
-Klik **Simpan**. Data ini akan otomatis muncul di direktori guru portal.
+Masuk ke **Editor**. Ganti judul beranda, cerita singkat usaha, dan nomor
+WhatsApp di tombol pesan. Atur warna utama agar sesuai logo atau kemasan
+produk Anda.
 
-## Langkah 5: Publikasi
+## Langkah 5: Publikasikan
 
-Kembali ke dashboard site → klik **Publikasikan** di kanan atas. Situs Anda
-sekarang live di domain yang Anda beli.
+Klik **Publish**. Dalam hitungan menit toko online Anda sudah bisa dibuka di
+domain sendiri. Bagikan tautannya ke grup pelanggan, bio Instagram, dan
+status WhatsApp.
 
-## Selesai! Apa selanjutnya?
+## Setelah tayang
 
-- Edit sample tulisan → ganti dengan cerita Anda sendiri
-- Tambah materi pembelajaran di menu **Pembelajaran**
-- Cek statistik pengunjung di **Ringkasan**
-
-Kalau ada kendala, buka [Bantuan](/artikel?category=panduan).`,
+- Tambah produk baru setiap ada stok atau varian baru
+- Tulis artikel singkat di blog — misalnya cara penyajian atau cerita bahan
+- Pantau statistik pengunjung untuk tahu produk mana yang paling diminati`,
 		},
+
 		// ---- Tips ----
 		{
-			Slug:            "5-tips-menulis-konten-yang-menginspirasi",
-			Title:           "5 Tips Menulis Konten yang Menginspirasi di Website Anda",
-			Excerpt:         "Menulis untuk pembaca online berbeda dengan menulis untuk kertas. Berikut lima prinsip yang membuat tulisan Anda dibaca sampai selesai — bukan cuma di-scroll.",
-			CoverImageURL:   "",
-			Category:        "tips",
-			AuthorName:      "Tim Web Builder",
-			Tags:            tags("menulis", "konten", "seo", "tips"),
-			Status:          "published",
-			Featured:        false,
-			ReadingTimeMin:  5,
-			SEOTitle:        "5 Tips Menulis Konten Web yang Menginspirasi Pembaca",
-			SEODescription:  "Prinsip menulis konten online: judul yang menarik, paragraf pendek, cerita spesifik, CTA yang jelas, dan revisi setelah jeda.",
-			BodyMD: `## 1. Judul Menjelaskan Manfaat, Bukan Sekadar Topik
+			Slug:           "tips-foto-produk-dengan-hp",
+			Title:          "Tips Foto Produk yang Menarik Cukup dengan HP",
+			Excerpt:        "Tidak perlu kamera mahal. Dengan cahaya jendela, latar polos, dan sedikit trik komposisi, foto produk dari HP bisa terlihat profesional.",
+			CoverImageURL:  "",
+			Category:       "tips",
+			AuthorName:     "Tim Web Builder",
+			Tags:           tags("foto-produk", "tips", "konten"),
+			Status:         "published",
+			Featured:       false,
+			ReadingTimeMin: 5,
+			SEOTitle:       "Tips Foto Produk UMKM dengan HP — Hasil Rapi Tanpa Studio",
+			SEODescription: "Panduan foto produk dengan HP untuk UMKM: memanfaatkan cahaya alami, memilih latar, mengatur komposisi, dan mengedit secukupnya.",
+			BodyMD: `Foto adalah hal pertama yang dilihat pembeli. Kabar baiknya, HP yang Anda
+pakai sehari-hari sudah lebih dari cukup. Kuncinya ada di persiapan, bukan
+di alat.
 
-**Kurang bagus**: "Tentang Pendidikan Karakter"
+## 1. Manfaatkan cahaya jendela
 
-**Lebih bagus**: "Cara Mengajarkan Empati Lewat Cerita Sederhana"
+Cahaya alami dari jendela di pagi atau sore hari adalah lampu studio
+gratis. Letakkan produk di dekat jendela, hindari sinar matahari langsung
+yang membuat bayangan keras. Kalau terlalu terang, tempel kertas HVS atau
+kain tipis di kaca sebagai peredam.
 
-Pembaca datang dengan pertanyaan. Judul yang bagus menjawab "apa yang saya
-dapat kalau membaca ini?"
+**Matikan lampu ruangan** supaya warna produk tidak tercampur cahaya kuning.
 
-## 2. Paragraf Maksimal 3 Kalimat
+## 2. Pakai latar yang polos
 
-Di layar HP, blok teks panjang terasa berat. Pecah paragraf jadi unit kecil.
+Kertas karton putih, kain linen, atau papan kayu sudah cukup. Latar polos
+membuat produk menjadi pusat perhatian. Untuk produk makanan, latar kayu
+atau kain bertekstur memberi kesan hangat dan alami.
 
-Kalau satu paragraf punya 5 kalimat, pikir ulang — apakah ada 2 ide yang
-sebenarnya perlu dipisah?
+## 3. Atur sudut sesuai produk
 
-## 3. Mulai dari Kejadian Spesifik
+- **Dari atas (flat lay)** — cocok untuk makanan dalam piring, aksesori,
+  atau produk yang ditata berjajar
+- **Sejajar mata (45°)** — cocok untuk minuman dalam botol, kemasan berdiri,
+  dan produk yang punya sisi depan
+- **Detail dekat** — tunjukkan tekstur: renyahnya keripik, serat kain, atau
+  jahitan tas
 
-**Kurang bagus**: "Motivasi belajar siswa sering menurun di semester genap."
+## 4. Bersihkan lensa dan kunci fokus
 
-**Lebih bagus**: "Kamis lalu, Farhan mengangkat tangan pertama kali dalam satu
-bulan. Bukan karena dia tahu jawabannya — karena pertanyaan gurunya berubah."
+Lap lensa HP sebelum memotret — sidik jari membuat foto tampak buram. Ketuk
+layar di bagian produk untuk mengunci fokus dan atur kecerahan dengan
+menggeser ikon matahari.
 
-Detail spesifik = trust. Generalisasi = pembaca skip.
+## 5. Edit secukupnya
 
-## 4. Setiap Tulisan Punya CTA
+Naikkan sedikit kecerahan dan kontras, rapikan potongan, lalu berhenti.
+Hindari filter berlebihan: pembeli ingin melihat warna asli produk. Foto
+yang jujur mengurangi komplain setelah barang diterima.
 
-Setelah pembaca selesai baca, apa yang Anda ingin mereka lakukan?
+## Bonus: konsisten
 
-- Baca artikel lain? → tautkan
-- Bagikan? → sediakan tombol share
-- Kirim tanggapan? → aktifkan komentar
-- Berlangganan? → email form
-
-Tanpa CTA, pembaca sekadar closer tab.
-
-## 5. Tulis, Tinggalkan 24 Jam, Baru Publish
-
-Draft yang baru selesai selalu terasa sempurna. Dua puluh empat jam kemudian,
-Anda akan melihat kalimat yang belibet, transisi yang kaku, atau argumen yang
-sebenarnya bisa dipertajam.
-
-Jeda ini yang membedakan tulisan biasa dan tulisan yang layak dibaca berulang.
-
-## Ringkasan
-
-1. Judul menjelaskan manfaat
-2. Paragraf pendek
-3. Kejadian spesifik dulu
-4. Selalu ada CTA
-5. Endapkan sebelum publish
-
-Selamat menulis!`,
+Pakai latar, sudut, dan pencahayaan yang sama untuk semua produk. Katalog
+yang seragam terlihat jauh lebih profesional daripada foto bagus yang
+gayanya berbeda-beda.`,
 		},
+
 		// ---- Panduan ----
 		{
-			Slug:            "memilih-domain-id-untuk-guru-dan-umkm",
-			Title:           "Memilih Domain .id untuk Guru dan UMKM",
-			Excerpt:         "Domain .id, .co.id, .my.id — apa bedanya, siapa yang boleh pakai, dan bagaimana memilih yang paling cocok untuk profesi Anda. Panduan lengkap plus perbandingan harga.",
-			CoverImageURL:   "",
-			Category:        "panduan",
-			AuthorName:      "Tim PANDI",
-			Tags:            tags("domain", "pandi", ".id", "identitas"),
-			Status:          "published",
-			Featured:        true,
-			ReadingTimeMin:  7,
-			SEOTitle:        "Panduan Memilih Domain .id — Guru, UMKM, Perusahaan",
-			SEODescription:  "Perbandingan .id, .co.id, .my.id, .biz.id: syarat, harga, dan kecocokan untuk berbagai profesi.",
-			BodyMD: `## Kenapa .id?
+			Slug:           "memilih-domain-id-untuk-usaha",
+			Title:          "Memilih Domain .id untuk Usaha Anda",
+			Excerpt:        ".id, .co.id, .my.id, .biz.id — apa bedanya dan mana yang paling pas untuk usaha Anda? Panduan singkat memilih ekstensi dan nama domain.",
+			CoverImageURL:  "",
+			Category:       "panduan",
+			AuthorName:     "Tim PANDI",
+			Tags:           tags("domain", "id", "panduan", "branding"),
+			Status:         "published",
+			Featured:       true,
+			ReadingTimeMin: 7,
+			SEOTitle:       "Panduan Memilih Domain .id untuk UMKM dan Usaha",
+			SEODescription: "Perbedaan .id, .co.id, .my.id, .biz.id, dan .web.id, plus tips memilih nama domain yang mudah diingat untuk usaha Anda.",
+			BodyMD: `## Kenapa domain .id?
 
-Domain ` + "`.id`" + ` adalah TLD (Top-Level Domain) resmi Indonesia. Dikelola oleh
-**PANDI** (Pengelola Nama Domain Internet Indonesia). Menggunakan ` + "`.id`" + `
-berarti secara eksplisit menunjukkan identitas Indonesia — cocok untuk
-audiens lokal.
+Domain berakhiran **.id** adalah identitas internet Indonesia. Pembeli di
+dalam negeri langsung mengenali bahwa usaha Anda berasal dari Indonesia,
+dan namanya masih relatif lebih banyak tersedia dibanding .com.
 
-## Varian Domain .id
+## Mengenal ekstensinya
 
-| Domain | Untuk Siapa | Syarat Verifikasi |
-|---|---|---|
-| ` + "`.id`" + ` | Personal / bebas | NIK / KTP |
-| ` + "`.co.id`" + ` | Perusahaan (PT) | Akta perusahaan + NPWP |
-| ` + "`.web.id`" + ` | Personal / komunitas | KTP saja |
-| ` + "`.my.id`" + ` | Personal / minor edit | KTP saja |
-| ` + "`.biz.id`" + ` | Bisnis kecil | KTP + bukti usaha |
-| ` + "`.or.id`" + ` | Organisasi non-profit | Akta pendirian |
-| ` + "`.sch.id`" + ` | Sekolah | Surat rekomendasi Dinas |
+| Ekstensi   | Cocok untuk                                  | Persyaratan                    |
+|------------|----------------------------------------------|--------------------------------|
+| ` + "`.id`" + `      | Merek usaha, toko online, semua kalangan      | KTP                            |
+| ` + "`.biz.id`" + `  | Usaha dan bisnis kecil                        | KTP                            |
+| ` + "`.my.id`" + `   | Usaha rumahan atau personal branding          | KTP                            |
+| ` + "`.web.id`" + `  | Komunitas atau usaha yang baru dirintis       | KTP                            |
+| ` + "`.co.id`" + `   | Badan usaha resmi (PT, CV, koperasi)          | KTP + dokumen legalitas usaha  |
 
-## Rekomendasi per Profesi
+Kalau usaha Anda belum berbadan hukum, **.id** atau **.biz.id** adalah
+pilihan yang aman dan mudah. Ketika usaha sudah resmi menjadi CV atau PT,
+Anda bisa menambah **.co.id** untuk memperkuat kepercayaan.
 
-### Guru
-- **Pilihan utama**: ` + "`namaanda.id`" + ` — pendek, mudah diingat, kesan personal profesional
-- **Alternatif**: ` + "`namaanda.web.id`" + ` — lebih murah, tetap ` + "`.id`" + `
+## Tips memilih nama
 
-### UMKM
-- **Pilihan utama**: ` + "`namatoko.biz.id`" + ` — dirancang khusus bisnis kecil, syarat mudah
-- **Alternatif**: ` + "`namatoko.id`" + ` — kesan lebih established, harga premium
+1. **Pendek dan mudah diucapkan.** Bayangkan menyebutkannya lewat telepon —
+   kalau perlu dieja berkali-kali, cari alternatif.
+2. **Hindari angka dan tanda hubung** kecuali memang bagian dari merek.
+3. **Sesuaikan dengan merek**, bukan produk saat ini. ` + "`dapurbunda.id`" + `
+   lebih awet daripada ` + "`jualnastarmurah.id`" + ` kalau suatu hari Anda menambah
+   produk lain.
+4. **Cek media sosial.** Usahakan nama domain sama dengan akun Instagram
+   atau TikTok usaha supaya pelanggan tidak bingung.
 
-### Perusahaan / PT
-- **Wajib**: ` + "`.co.id`" + ` — legal recognition, kredibilitas B2B tinggi
+## Jangan lupa perpanjang
 
-### Sekolah / Yayasan
-- ` + "`.sch.id`" + ` (sekolah) atau ` + "`.or.id`" + ` (yayasan) — subsidi negara,
-  kredibilitas institusional
+Domain berlaku per tahun. Aktifkan pengingat dan perpanjang sebelum masa
+aktif habis — domain yang terlepas bisa didaftarkan orang lain, dan semua
+tautan yang sudah tersebar di kemasan atau kartu nama ikut mati.
 
-## Cara Cek Ketersediaan
-
-Buka [wizard beli domain](/sites/new-with-domain) → ketik nama yang Anda
-mau. Sistem cek ke registry PANDI secara real-time. Kalau tersedia, langsung
-lanjut ke pembayaran.
-
-## Tips
-
-1. **Pendek lebih baik** — 6-12 huruf ideal
-2. **Hindari angka & hyphen** — sulit dieja
-3. **Cek trademark** — jangan pakai nama brand orang lain
-4. **Beli 2 tahun sekaligus** — hemat perpanjangan, cegah hangus lupa bayar
-
-## Domain sudah dibeli, apa selanjutnya?
-
-Setelah bayar, domain aktif 1-5 menit. Pilih template, isi konten, publish.
-Kalau butuh guide, baca [Cara Memulai Website dalam 15 Menit](/artikel/cara-memulai-website-guru-dalam-15-menit).`,
+Siap memulai? Ikuti [Cara Membuat Toko Online dalam 15 Menit](/artikel/cara-membuat-toko-online-dalam-15-menit).`,
 		},
-		// ---- Pengumuman ----
+
+		// ---- Tips: WhatsApp ----
 		{
-			Slug:            "peluncuran-rumah-digital-guru",
-			Title:           "Peluncuran Program Rumah Digital Guru PANDI × UPI",
-			Excerpt:         "Kolaborasi PANDI dan UPI menghadirkan platform website pribadi untuk guru Indonesia dengan template khusus, subsidi domain, dan komunitas belajar bersama.",
-			CoverImageURL:   "",
-			Category:        "pengumuman",
-			AuthorName:      "Tim PANDI × UPI",
-			Tags:            tags("pengumuman", "pandi", "upi", "program"),
-			Status:          "published",
-			Featured:        false,
-			ReadingTimeMin:  4,
-			SEOTitle:        "Peluncuran Rumah Digital Guru — PANDI × UPI",
-			SEODescription:  "Program kolaborasi PANDI dan UPI: website pribadi untuk guru Indonesia dengan template siap pakai.",
-			BodyMD: `## Program Baru untuk Guru Indonesia
+			Slug:           "menerima-pesanan-lewat-whatsapp-dari-website",
+			Title:          "Menerima Pesanan lewat WhatsApp dari Website",
+			Excerpt:        "Belum perlu sistem keranjang yang rumit. Tombol WhatsApp yang ditata dengan baik sudah bisa mengubah pengunjung website menjadi pembeli.",
+			CoverImageURL:  "",
+			Category:       "tips",
+			AuthorName:     "Tim Web Builder",
+			Tags:           tags("whatsapp", "pesanan", "jualan-online"),
+			Status:         "published",
+			Featured:       false,
+			ReadingTimeMin: 5,
+			SEOTitle:       "Cara Menerima Pesanan WhatsApp dari Website Toko Online",
+			SEODescription: "Cara memasang tombol pesan WhatsApp di website UMKM, membuat pesan otomatis, dan tips merespons pembeli agar pesanan cepat jadi.",
+			BodyMD: `Sebagian besar pembeli UMKM di Indonesia lebih nyaman bertanya dulu
+sebelum membayar. WhatsApp adalah tempat percakapan itu terjadi. Website
+Anda cukup menjadi etalase yang mengantar mereka ke sana.
 
-**PANDI** (Pengelola Nama Domain Internet Indonesia) dan **UPI** (Universitas
-Pendidikan Indonesia) resmi meluncurkan program **Rumah Digital Guru** — platform
-website pribadi khusus untuk komunitas guru di Indonesia.
+## 1. Pakai tautan wa.me
 
-## Yang Ditawarkan
+Format tautannya sederhana:
 
-- **Template Guru PANDI × UPI** yang dirancang khusus untuk mendokumentasikan
-  proses mengajar, dengan 6 rubrik: Ceritaku, Bacaanku, Inspirasiku, Bangsaku,
-  Peradaban, dan Forum Diskusi
-- **Domain .id / .my.id** dengan skema harga khusus untuk guru
-- **Direktori guru publik** — website Anda otomatis muncul di ` + "`/guru`" + ` supaya
-  pembaca bisa menemukan Anda
-- **Portal komunitas** untuk berbagi promosi program pengembangan guru
+` + "```" + `
+https://wa.me/6281234567890
+` + "```" + `
 
-## Kenapa Program Ini?
+Ganti angka 0 di depan nomor dengan **62**, tanpa spasi atau tanda hubung.
+Pasang tautan ini di tombol utama beranda, di setiap halaman produk, dan di
+bagian kontak.
 
-Selama ini banyak guru berbagi konten pengajaran lewat platform yang bukan
-miliknya sendiri. Konten hilang saat platform berubah, algoritma menyembunyikan
-tulisan panjang, dan identitas guru tidak konsisten.
+## 2. Siapkan pesan pembuka otomatis
 
-Rumah Digital Guru hadir sebagai **ruang milik guru sendiri** — sederhana untuk
-digunakan, tapi tetap serius sebagai identitas digital profesional.
+Tambahkan parameter ` + "`text`" + ` supaya pembeli tidak bingung mau menulis apa:
 
-## Cara Bergabung
+` + "```" + `
+https://wa.me/6281234567890?text=Halo,%20saya%20mau%20pesan%20Keripik%20Pedas%20200gr
+` + "```" + `
 
-1. Buka [halaman utama](/) → **"Buat Website Saya"**
-2. Beli domain (Anda dapat harga khusus program guru)
-3. Pilih template **Guru PANDI × UPI**
-4. Isi profil, publikasi, mulai menulis
+Tulis pesan yang menyebutkan nama produk. Anda langsung tahu produk mana
+yang ditanyakan tanpa harus bertanya balik.
 
-## Dukungan
+## 3. Letakkan tombol di tempat yang tepat
 
-- **Panduan lengkap**: [Panduan Guru](/artikel?category=panduan)
-- **Komunitas**: forum diskusi antar guru di direktori portal
-- **Support teknis**: hubungi tim support platform
+- **Beranda** — tombol besar "Pesan via WhatsApp" di bagian paling atas
+- **Katalog** — tombol kecil di setiap kartu produk
+- **Bagian bawah halaman** — untuk pengunjung yang membaca sampai habis
 
-Kami menantikan tulisan-tulisan Anda!`,
+## 4. Gunakan WhatsApp Business
+
+Aplikasi WhatsApp Business gratis dan punya fitur yang sangat membantu:
+pesan sapaan otomatis, balasan cepat untuk pertanyaan yang sering muncul,
+label untuk menandai status pesanan, dan katalog produk.
+
+## 5. Balas dengan cepat dan jelas
+
+Pembeli yang menunggu terlalu lama biasanya pindah ke penjual lain.
+Cantumkan jam operasional di website, dan siapkan template balasan berisi
+harga, ongkos kirim, dan cara pembayaran supaya transaksi cepat selesai.
+
+Dengan alur sederhana ini, website bekerja 24 jam mengenalkan produk Anda,
+sementara percakapan dan penutupan transaksi tetap terasa personal.`,
 		},
+
 		// ---- Cerita ----
 		{
-			Slug:            "cerita-guru-desa-yang-mengubah-cara-membaca",
-			Title:           "Cerita Guru Desa yang Mengubah Cara Siswa Memandang Buku",
-			Excerpt:         "Pak Rahmat tidak punya perpustakaan lengkap. Yang dia punya satu rak buku bekas dan komitmen 15 menit setiap pagi. Enam bulan kemudian, kelasnya berubah.",
-			CoverImageURL:   "",
-			Category:        "cerita",
-			AuthorName:      "Tim Editorial",
-			Tags:            tags("cerita", "literasi", "guru-desa", "inspirasi"),
-			Status:          "published",
-			Featured:        false,
-			ReadingTimeMin:  6,
-			SEOTitle:        "Cerita Guru Desa yang Mengubah Cara Membaca — Rumah Digital Guru",
-			SEODescription:  "Inspirasi: bagaimana satu rak buku bekas dan rutinitas sederhana mengubah budaya membaca di kelas SD di desa.",
-			BodyMD: `## Sebuah kelas di ujung Kabupaten
+			Slug:           "cerita-umkm-dari-lapak-ke-toko-online",
+			Title:          "Cerita UMKM: dari Lapak Pasar ke Toko Online",
+			Excerpt:        "Bu Ratna sepuluh tahun berjualan sambal di lapak pasar. Pandemi memaksanya mencoba jualan online — dan ternyata justru membuka pasar yang tidak pernah ia bayangkan.",
+			CoverImageURL:  "",
+			Category:       "cerita",
+			AuthorName:     "Tim Editorial",
+			Tags:           tags("cerita", "umkm", "inspirasi", "kuliner"),
+			Status:         "published",
+			Featured:       false,
+			ReadingTimeMin: 6,
+			SEOTitle:       "Cerita UMKM: Perjalanan dari Lapak Pasar ke Toko Online",
+			SEODescription: "Kisah pelaku UMKM sambal rumahan yang beralih dari lapak pasar ke toko online dengan website sendiri dan pesanan lewat WhatsApp.",
+			BodyMD: `## Sepuluh tahun di lapak yang sama
 
-Pak Rahmat mengajar kelas 5 SD di sebuah desa 3 jam dari kota. Perpustakaan
-sekolah cuma satu ruangan kecil dengan buku pelajaran lama. Tidak ada anggaran
-untuk buku bacaan tambahan.
+Setiap pagi pukul lima, Bu Ratna sudah menata toples-toples sambal di
+lapaknya di pasar. Sambal bawang, sambal cumi, sambal teri — semua diulek
+sendiri di dapur rumahnya. Pelanggannya setia, tapi jumlahnya hampir tidak
+bertambah dari tahun ke tahun.
 
-Di awal tahun ajaran, dia bertanya ke murid-muridnya: "Berapa dari kalian yang
-membaca buku selain buku pelajaran dalam sebulan terakhir?"
+"Yang beli ya itu-itu saja. Orang pasar sini," kenangnya.
 
-Dari 24 anak, cuma 2 yang angkat tangan.
+## Ketika pasar sepi
 
-## Satu rak buku bekas
+Saat pengunjung pasar menurun drastis, pemasukan ikut anjlok. Anak
+sulungnya menyarankan mencoba jualan lewat status WhatsApp. Beberapa
+pesanan masuk dari kerabat, lalu dari teman kerabat. Masalahnya, setiap
+calon pembeli menanyakan hal yang sama berulang kali: ada varian apa saja,
+berapa harganya, bisa dikirim ke luar kota atau tidak.
 
-Pak Rahmat menghabiskan gaji bulan itu untuk beli **60 buku bekas** dari toko
-loakan di kota — cerita anak, dongeng lokal, buku sains sederhana. Dia
-menata rak kecil di sudut kelas dan menuliskan satu aturan di atasnya:
+## Satu alamat untuk semua pertanyaan
 
-> "Baca kapan saja. Kembalikan ke rak. Rekomendasikan kalau kamu suka."
+Mereka lalu membuat website sederhana dengan domain nama usahanya sendiri.
+Isinya tidak banyak: foto setiap varian sambal, harga, daya tahan produk,
+cara pengiriman, dan tombol pesan lewat WhatsApp.
 
-## 15 menit setiap pagi
+Perubahannya terasa dalam beberapa minggu:
 
-Setiap pagi selama 15 menit sebelum pelajaran mulai, seluruh kelas — termasuk
-Pak Rahmat — membaca. Tidak ada evaluasi. Tidak ada tugas resume. Cuma
-membaca.
+- **Pertanyaan berulang berkurang** — pembeli sudah membaca informasinya
+  sebelum menghubungi
+- **Pesanan datang dari luar kota** — tautan website dibagikan dari satu
+  grup keluarga ke grup lainnya
+- **Pembeli lebih yakin** — melihat foto dapur dan cerita usaha membuat
+  mereka percaya sambalnya dibuat dengan bersih
 
-Pertama-tama banyak siswa yang cuma pura-pura. Mereka membuka buku tapi mata
-tertuju ke jendela. Pak Rahmat tidak memaksa.
+## Lapak tetap buka
 
-## Bulan ketiga: perubahan pertama
+Bu Ratna tidak meninggalkan pasar. Lapaknya kini justru menjadi tempat
+pelanggan lama mengambil pesanan, sementara website melayani pembeli dari
+kota lain. Di setiap toples kini tertempel stiker kecil berisi alamat
+websitenya.
 
-Anak-anak mulai bertanya. "Pak, buku yang tentang burung tadi ada bagian
-duanya nggak?" — "Pak, saya bisa pinjem yang tentang planet Mars?"
-
-Rekomendasi antarsiswa mulai muncul. Farhan menyerahkan bukunya ke Nadia
-sambil bilang "kamu pasti suka bagian yang ini".
-
-## Bulan keenam
-
-Rak sudah kosong. Bukan karena buku hilang — karena semuanya sedang dipinjam.
-Pak Rahmat menambah rak kedua.
-
-Nilai bahasa Indonesia rata-rata kelas naik 12%. Yang lebih penting: anak-anak
-mulai **menulis cerita mereka sendiri** di buku tulis dan menempelnya di dinding
-kelas.
-
-## Yang saya pelajari
-
-Cerita ini bukan tentang membaca. Ini tentang **konsistensi kecil yang
-menciptakan budaya baru**.
-
-Kadang perubahan pendidikan tidak butuh anggaran besar atau kurikulum baru.
-Cukup satu rak buku, 15 menit setiap pagi, dan guru yang ikut membaca bersama.
+"Dulu saya kira jualan online itu harus ngerti teknologi," katanya sambil
+tertawa. "Ternyata yang penting sambalnya enak, fotonya jelas, dan cepat
+balas chat."
 
 ---
 
-*Cerita ini disampaikan Pak Rahmat di sesi diskusi guru literasi. Nama
-disamarkan atas permintaannya.*`,
+*Nama dan detail usaha disamarkan atas permintaan narasumber.*`,
 		},
 	}
 }

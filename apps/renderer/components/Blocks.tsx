@@ -1,54 +1,8 @@
 import { marked } from "marked";
 import { formatPrice, getPublicForm, listBlogPosts, listProducts, type Block } from "@/lib/api";
 import { FormBlock } from "@/components/FormBlock";
-import {
-  GuruArticleGrid,
-  GuruFooter,
-  GuruForumThreadList,
-  GuruHero,
-  GuruLatestGrid,
-  GuruProfileCard,
-  GuruPromoCarousel,
-  GuruQuote,
-  GuruRubricGrid,
-  GuruRubricHero,
-  GuruStatsBar,
-  GuruStyles,
-  GuruTagList,
-  GuruTimeline,
-} from "@/components/GuruBlocks";
-import { GuruNavbarClient } from "@/components/GuruNavbarClient";
-import {
-  GuruPlusAudioEpisode,
-  GuruPlusAwardShowcase,
-  GuruPlusBeforeAfter,
-  GuruPlusBookingSlot,
-  GuruPlusBookshelf,
-  GuruPlusCertificateGrid,
-  GuruPlusContactCTA,
-  GuruPlusFAQ,
-  GuruPlusLessonCard,
-  GuruPlusMapLocation,
-  GuruPlusMarquee,
-  GuruPlusNewsletter,
-  GuruPlusPhotoEssay,
-  GuruPlusSkillBars,
-  GuruPlusStats,
-  GuruPlusStoryBlock,
-  GuruPlusStudentWall,
-  GuruPlusStyles,
-  GuruPlusTestimonials,
-  GuruPlusTimeline,
-  GuruPlusVideoEmbed,
-} from "@/components/GuruPlusBlocks";
-import {
-  GuruArticleGridDynamic,
-  GuruForumThreadListDynamic,
-  GuruLatestGridDynamic,
-  GuruLearningGridDynamic,
-  GuruPromoCarouselDynamic,
-  GuruStatsBarDynamic,
-} from "@/components/GuruBlocksDynamic";
+import { liveUmkmCtx, renderUmkmBlock } from "@/components/umkm/UmkmBlocks";
+import { UMKM_SAMPLE_PRODUCTS, formatRupiah, type UmkmCard } from "@/lib/umkm";
 
 // marked configured once at module scope — strips raw HTML so a malicious
 // markdown payload (`<script>`) can't leak through. Matches the blog renderer
@@ -163,45 +117,6 @@ function layoutWrapperStyle(b: Block): React.CSSProperties | undefined {
       out["--color-fg"] = O.fg;
       out.color = O.fg;
     }
-
-    // --- Guru template vars override ---
-    // Guru block CSS pakai var(--guru-navy), --guru-cream, dsb. — bukan
-    // var(--color-primary) langsung. Nilai di-set static di canvasStyle
-    // (editor) + themeToCss (renderer :root). Kalau cuma override
-    // --color-* di wrapper ini, --guru-* di wrapper tetap pakai nilai
-    // canvas → override block visually tidak ngaruh.
-    // Fallback ke primary/secondary/bg/fg override di atas → pakai nilai
-    // itu. Kalau salah satu field nggak di-override, fallback ke CSS var
-    // dari canvas (jadi hanya field yang di-override yg ter-replace).
-    const primary = O.primary ?? "var(--guru-navy)";
-    const secondary = O.secondary ?? "var(--guru-red)";
-    const bg = O.bg ?? "var(--guru-cream)";
-    const fg = O.fg ?? "var(--guru-ink)";
-    if (O.primary) out["--guru-navy"] = O.primary;
-    if (O.secondary) out["--guru-red"] = O.secondary;
-    if (O.bg) out["--guru-cream"] = O.bg;
-    if (O.fg) out["--guru-ink"] = O.fg;
-    // Derived — pakai field apapun yang di-override. Kalau cuma primary
-    // yang override, --guru-navy-2 akan mix primary user baru dengan
-    // nilai cream canvas (atau cream override kalau juga di-override).
-    if (O.primary || O.bg) {
-      out["--guru-navy-2"] = `color-mix(in srgb, ${primary} 70%, #ffffff)`;
-      out["--guru-blue-soft"] = `color-mix(in srgb, ${primary} 10%, ${bg})`;
-      out["--guru-sage"] = `color-mix(in srgb, ${primary} 6%, ${bg})`;
-      out["--guru-shadow"] = `0 20px 60px color-mix(in srgb, ${primary} 20%, transparent)`;
-      out["--guru-shadow-sm"] = `0 10px 30px color-mix(in srgb, ${primary} 15%, transparent)`;
-    }
-    if (O.fg || O.bg) {
-      out["--guru-muted"] = `color-mix(in srgb, ${fg} 55%, ${bg})`;
-      out["--guru-line"] = `color-mix(in srgb, ${fg} 10%, ${bg})`;
-    }
-    if (O.bg) {
-      out["--guru-paper"] = `color-mix(in srgb, ${bg} 30%, #ffffff)`;
-    }
-    if (O.secondary || O.bg) {
-      out["--guru-red-soft"] = `color-mix(in srgb, ${secondary} 15%, ${bg})`;
-      out["--guru-gold"] = `color-mix(in srgb, ${secondary} 60%, #d6a84d)`;
-    }
   }
   return Object.keys(out).length ? (out as React.CSSProperties) : undefined;
 }
@@ -260,77 +175,8 @@ export async function RenderBlocks({
       if (b.type === "Form") {
         return withLayout(b, i, <FormBlockAsync block={b} />);
       }
-      // Guru dynamic blocks — fetch data live dari API guru (Fase 4).
-      if (b.type === "GuruPromoCarouselDynamic") {
-        return withLayout(b, i, <GuruPromoCarouselDynamic siteId={siteId} />);
-      }
-      if (b.type === "GuruStatsBarDynamic") {
-        const pp = b.props ?? {};
-        return withLayout(
-          b,
-          i,
-          <GuruStatsBarDynamic
-            siteId={siteId}
-            eyebrow={pp.eyebrow as string | undefined}
-            title={pp.title as string | undefined}
-            subtitle={pp.subtitle as string | undefined}
-          />,
-        );
-      }
-      if (b.type === "GuruLatestGridDynamic") {
-        const pp = b.props ?? {};
-        return withLayout(
-          b,
-          i,
-          <GuruLatestGridDynamic
-            siteId={siteId}
-            eyebrow={pp.eyebrow as string | undefined}
-            title={pp.title as string | undefined}
-            subtitle={pp.subtitle as string | undefined}
-          />,
-        );
-      }
-      if (b.type === "GuruArticleGridDynamic") {
-        const pp = b.props ?? {};
-        return withLayout(
-          b,
-          i,
-          <GuruArticleGridDynamic
-            siteId={siteId}
-            rubric={String(pp.rubric ?? "ceritaku")}
-            sidebarTitle={pp.sidebarTitle as string | undefined}
-            sidebarBody={pp.sidebarBody as string | undefined}
-            sidebarTags={pp.sidebarTags as string[] | undefined}
-            sidebarLinks={pp.sidebarLinks as Array<{ label: string; href: string }> | undefined}
-          />,
-        );
-      }
-      if (b.type === "GuruLearningGridDynamic") {
-        const pp = b.props ?? {};
-        return withLayout(
-          b,
-          i,
-          <GuruLearningGridDynamic
-            siteId={siteId}
-            sidebarTitle={pp.sidebarTitle as string | undefined}
-            sidebarBody={pp.sidebarBody as string | undefined}
-            sidebarTags={pp.sidebarTags as string[] | undefined}
-            sidebarLinks={pp.sidebarLinks as Array<{ label: string; href: string }> | undefined}
-          />,
-        );
-      }
-      if (b.type === "GuruForumThreadListDynamic") {
-        const pp = b.props ?? {};
-        return withLayout(
-          b,
-          i,
-          <GuruForumThreadListDynamic
-            siteId={siteId}
-            moderationNote={pp.moderationNote as { badge: string; title: string; body: string } | undefined}
-            participants={pp.participants as string[] | undefined}
-            sidebarLinks={pp.sidebarLinks as Array<{ label: string; href: string }> | undefined}
-          />,
-        );
+      if (b.type === "UmkmCatalogDynamic") {
+        return withLayout(b, i, <UmkmCatalogDynamic block={b} siteId={siteId} />);
       }
       return withLayout(b, i, <BlockView block={b} />);
     }),
@@ -1901,187 +1747,14 @@ function BlockView({ block }: { block: Block }) {
       );
     }
 
-    // -------- Guru PANDI × UPI custom blocks (template guru-pandi-upi) --------
-    // Renders style block once + delegates to GuruBlocks.tsx per type.
-    case "GuruStyles":
-      return <GuruStyles />;
-    case "GuruNavbar":
-      return <GuruNavbarClient {...(p as Parameters<typeof GuruNavbarClient>[0])} />;
-    case "GuruHero":
-      return <GuruHero {...(p as Parameters<typeof GuruHero>[0])} />;
-    case "GuruPromoCarousel":
-      return <GuruPromoCarousel {...(p as Parameters<typeof GuruPromoCarousel>[0])} />;
-    case "GuruStatsBar":
-      return <GuruStatsBar {...(p as Parameters<typeof GuruStatsBar>[0])} />;
-    case "GuruRubricGrid":
-      return <GuruRubricGrid {...(p as Parameters<typeof GuruRubricGrid>[0])} />;
-    case "GuruLatestGrid":
-      return <GuruLatestGrid {...(p as Parameters<typeof GuruLatestGrid>[0])} />;
-    case "GuruQuote":
-      return <GuruQuote {...(p as Parameters<typeof GuruQuote>[0])} />;
-    case "GuruRubricHero":
-      return <GuruRubricHero {...(p as Parameters<typeof GuruRubricHero>[0])} />;
-    case "GuruArticleGrid":
-      return <GuruArticleGrid {...(p as Parameters<typeof GuruArticleGrid>[0])} />;
-    case "GuruForumThreadList":
-      return <GuruForumThreadList {...(p as Parameters<typeof GuruForumThreadList>[0])} />;
-    case "GuruProfileCard":
-      return <GuruProfileCard {...(p as Parameters<typeof GuruProfileCard>[0])} />;
-    case "GuruTimeline":
-      return <GuruTimeline {...(p as Parameters<typeof GuruTimeline>[0])} />;
-    case "GuruTagList":
-      return <GuruTagList {...(p as Parameters<typeof GuruTagList>[0])} />;
-    case "GuruFooter":
-      return <GuruFooter {...(p as Parameters<typeof GuruFooter>[0])} />;
-
-    // -------- Guru Plus — extensi modern block (Phase 1) --------
-    // Satu <style> inject sekali via GuruPlusStyles pada case pertama; sisanya
-    // reuse. Pattern sama dengan GuruStyles di template core.
-    case "GuruPlusStyles":
-      return <GuruPlusStyles />;
-    case "GuruPlusFAQ":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusFAQ {...(p as Parameters<typeof GuruPlusFAQ>[0])} />
-        </>
-      );
-    case "GuruPlusStats":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusStats {...(p as Parameters<typeof GuruPlusStats>[0])} />
-        </>
-      );
-    case "GuruPlusTimeline":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusTimeline {...(p as Parameters<typeof GuruPlusTimeline>[0])} />
-        </>
-      );
-    case "GuruPlusTestimonials":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusTestimonials {...(p as Parameters<typeof GuruPlusTestimonials>[0])} />
-        </>
-      );
-    case "GuruPlusMarquee":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusMarquee {...(p as Parameters<typeof GuruPlusMarquee>[0])} />
-        </>
-      );
-    case "GuruPlusBookshelf":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusBookshelf {...(p as Parameters<typeof GuruPlusBookshelf>[0])} />
-        </>
-      );
-    case "GuruPlusVideoEmbed":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusVideoEmbed {...(p as Parameters<typeof GuruPlusVideoEmbed>[0])} />
-        </>
-      );
-    case "GuruPlusPhotoEssay":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusPhotoEssay {...(p as Parameters<typeof GuruPlusPhotoEssay>[0])} />
-        </>
-      );
-    case "GuruPlusAudioEpisode":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusAudioEpisode {...(p as Parameters<typeof GuruPlusAudioEpisode>[0])} />
-        </>
-      );
-    case "GuruPlusCertificateGrid":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusCertificateGrid {...(p as Parameters<typeof GuruPlusCertificateGrid>[0])} />
-        </>
-      );
-    case "GuruPlusBeforeAfter":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusBeforeAfter {...(p as Parameters<typeof GuruPlusBeforeAfter>[0])} />
-        </>
-      );
-    case "GuruPlusLessonCard":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusLessonCard {...(p as Parameters<typeof GuruPlusLessonCard>[0])} />
-        </>
-      );
-    case "GuruPlusMapLocation":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusMapLocation {...(p as Parameters<typeof GuruPlusMapLocation>[0])} />
-        </>
-      );
-    case "GuruPlusSkillBars":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusSkillBars {...(p as Parameters<typeof GuruPlusSkillBars>[0])} />
-        </>
-      );
-    case "GuruPlusAwardShowcase":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusAwardShowcase {...(p as Parameters<typeof GuruPlusAwardShowcase>[0])} />
-        </>
-      );
-    case "GuruPlusContactCTA":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusContactCTA {...(p as Parameters<typeof GuruPlusContactCTA>[0])} />
-        </>
-      );
-    case "GuruPlusBookingSlot":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusBookingSlot {...(p as Parameters<typeof GuruPlusBookingSlot>[0])} />
-        </>
-      );
-    case "GuruPlusNewsletter":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusNewsletter {...(p as Parameters<typeof GuruPlusNewsletter>[0])} />
-        </>
-      );
-    case "GuruPlusStudentWall":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusStudentWall {...(p as Parameters<typeof GuruPlusStudentWall>[0])} />
-        </>
-      );
-    case "GuruPlusStoryBlock":
-      return (
-        <>
-          <GuruPlusStyles />
-          <GuruPlusStoryBlock {...(p as Parameters<typeof GuruPlusStoryBlock>[0])} />
-        </>
-      );
-
-    default:
+    // Nested catalogs have no siteId here (same as ProductGridDynamic) — skip.
+    case "UmkmCatalogDynamic":
       return null;
+
+    // Umkm* blocks render via the shared module; unknown types (incl. retired
+    // Guru* blocks in old published trees) fall through to null.
+    default:
+      return renderUmkmBlock(block.type, block.props, liveUmkmCtx);
   }
 }
 
@@ -2183,6 +1856,41 @@ async function ProductGridDynamic({ block, siteId }: { block: Block; siteId: str
       )}
     </section>
   );
+}
+
+// UmkmCatalogDynamic — product cards from the Produk tab. The public API has no
+// category/stock filters, so over-fetch then filter here.
+async function UmkmCatalogDynamic({ block, siteId }: { block: Block; siteId: string }) {
+  const p = block.props ?? {};
+  const limit = Math.min(48, Math.max(1, Number(p.limit ?? 8) || 8));
+  if (siteId.startsWith("_template")) {
+    // Template previews have no products; samples + note keep the page looking finished.
+    return renderUmkmBlock(block.type, p, liveUmkmCtx, {
+      cards: UMKM_SAMPLE_PRODUCTS.slice(0, limit),
+      note: "Contoh tampilan — produk asli diambil otomatis dari tab Produk.",
+    });
+  }
+  const category = String(p.category ?? "").trim().toLowerCase();
+  const showSoldOut = p.showOutOfStock === "yes";
+  const products = await listProducts(siteId, category || !showSoldOut ? 100 : limit);
+  const cards: UmkmCard[] = products
+    .filter((pr) => !category || (pr.category ?? "").trim().toLowerCase() === category)
+    .filter((pr) => showSoldOut || pr.stock == null || pr.stock > 0)
+    .slice(0, limit)
+    .map((pr) => {
+      const soldOut = pr.stock != null && pr.stock <= 0;
+      return {
+        name: pr.name,
+        image: pr.image_url,
+        price: !pr.currency || pr.currency === "IDR" ? formatRupiah(pr.price) : formatPrice(pr.price, pr.currency),
+        originalPrice: "",
+        badge: soldOut ? "habis" : "",
+        desc: (pr.description ?? "").replace(/[#*_`>\[\]]/g, "").slice(0, 160),
+        href: `/produk/${pr.slug}`,
+        soldOut,
+      };
+    });
+  return renderUmkmBlock(block.type, p, liveUmkmCtx, { cards });
 }
 
 // FormBlockAsync — server component yang fetch definisi form (fields, kind)

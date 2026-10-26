@@ -55,8 +55,7 @@ func collectImageSrcs(docs []exportDoc) []string {
 }
 
 // resolveAssetURL hanya menerima URL absolut. Gambar unggahan user selalu
-// ber-URL absolut dari storage, dan aset template dilayani dari binary — jadi
-// src root-relative sisanya tidak punya basis yang bisa dipercaya untuk
+// ber-URL absolut dari storage — jadi src root-relative sisanya tidak punya basis yang bisa dipercaya untuk
 // diunduh, dan lebih baik dibiarkan menunjuk live daripada jadi link mati.
 func resolveAssetURL(src string) (string, bool) {
 	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
@@ -171,13 +170,9 @@ func downloadImages(ctx context.Context, z *zip.Writer, srcs []string, client *h
 	return out, failed
 }
 
-// loadImage mengambil satu gambar dari sumber terbaik yang tersedia: aset
-// bawaan dilayani dari binary, sisanya diunduh. Mengembalikan juga URL/kunci
-// kanonik supaya penamaan file di ZIP tetap content-addressed.
+// loadImage mengunduh satu gambar. Mengembalikan juga URL kanonik supaya
+// penamaan file di ZIP tetap content-addressed.
 func loadImage(ctx context.Context, client *http.Client, src string) (string, []byte, string, error) {
-	if body, ctype, ok := builtinAsset(src); ok {
-		return src, body, ctype, nil
-	}
 	abs, ok := resolveAssetURL(src)
 	if !ok {
 		return "", nil, "", errors.New("src tidak bisa diresolusi: " + src)

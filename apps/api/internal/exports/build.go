@@ -12,13 +12,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/webbuilder/api/internal/articles"
-	"github.com/webbuilder/api/internal/banners"
 	"github.com/webbuilder/api/internal/blog"
-	"github.com/webbuilder/api/internal/learning"
 	"github.com/webbuilder/api/internal/pages"
 	"github.com/webbuilder/api/internal/products"
-	"github.com/webbuilder/api/internal/responses"
 	"github.com/webbuilder/api/internal/sites"
 )
 
@@ -27,13 +23,6 @@ type Builder struct {
 	Pages    *pages.Repo
 	Products *products.Repo
 	Blog     *blog.Repo
-
-	// Konten "Rumah Digital Guru". Nil untuk deployment tanpa modul guru —
-	// blok Guru*Dynamic lalu render empty state, bukan panic.
-	Articles  *articles.Repo
-	Learning  *learning.Repo
-	Banners   *banners.Repo
-	Responses *responses.Repo
 
 	// StoragePublicURL adalah URL publik tempat gambar unggahan user disajikan.
 	// Guard SSRF memblokir alamat privat, sedangkan storage sering memang
@@ -84,11 +73,7 @@ func (b *Builder) Write(ctx context.Context, w io.Writer, siteID, ownerID uuid.U
 		}
 	}
 
-	guru, err := b.loadGuru(ctx, siteID)
-	if err != nil {
-		return err
-	}
-	data := &siteData{products: prods, posts: posts, guru: guru}
+	data := &siteData{products: prods, posts: posts}
 
 	z := zip.NewWriter(w)
 	defer z.Close()
@@ -116,22 +101,13 @@ func (b *Builder) Write(ctx context.Context, w io.Writer, siteID, ownerID uuid.U
 	// Render dulu ke memori, tulis belakangan: src gambar baru bisa ditulis
 	// ulang ke path lokal setelah semua halaman diketahui dan file-nya terunduh.
 	var docs []exportDoc
-	var guruHeader, guruFooterBlocks []Block
 	for _, p := range ps {
 		tree := parseTree(p.Tree)
-		// Template guru menaruh navbar/footer di dalam tree halaman, bukan di
-		// site.layout_json. Halaman detail artikel/materi yang kita bangkitkan
-		// sendiri tidak punya sumber chrome lain, jadi pinjam dari beranda.
-		if guruHeader == nil && guruFooterBlocks == nil {
-			guruHeader, guruFooterBlocks = guruChrome(tree)
-		}
 		docs = append(docs, exportDoc{
 			path: pageZipPath(p),
 			html: renderPageHTML(site, p, tree, ps, headerBlocks, footerBlocks, data),
 		})
 	}
-	rewriteLinks(&Tree{Blocks: guruHeader}, ps)
-	rewriteLinks(&Tree{Blocks: guruFooterBlocks}, ps)
 
 	for _, pr := range prods {
 		docs = append(docs, exportDoc{
@@ -145,23 +121,6 @@ func (b *Builder) Write(ctx context.Context, w io.Writer, siteID, ownerID uuid.U
 			html: renderBlogPostHTML(site, post, headerBlocks, footerBlocks, data),
 		})
 	}
-	if guru != nil {
-		// Artikel + materi guru: tanpa halaman detail, setiap "Baca
-		// selengkapnya" di hasil export menunjuk file yang tidak ada.
-		for _, a := range guru.articles {
-			docs = append(docs, exportDoc{
-				path: a.Rubric + "/" + a.Slug + "/index.html",
-				html: renderGuruArticleHTML(site, a, guruHeader, guruFooterBlocks, data),
-			})
-		}
-		for _, m := range guru.materials {
-			docs = append(docs, exportDoc{
-				path: "pembelajaran/" + m.Slug + "/index.html",
-				html: renderGuruMaterialHTML(site, m, guruHeader, guruFooterBlocks, data),
-			})
-		}
-	}
-
 	imgs, failedImgs := downloadImages(ctx, z, collectImageSrcs(docs), b.assetClient())
 	for _, d := range docs {
 		// Urutan wajib: rewrite dulu (menghasilkan path root-absolute
@@ -192,44 +151,6 @@ func (b *Builder) assetClient() *http.Client {
 		return b.HTTPClient
 	}
 	return newAssetClient(allowedInternalHosts(b.StoragePublicURL))
-}
-
-// loadGuru memuat seluruh konten modul guru sekali di muka. Nil kalau repo
-// guru tidak dipasang atau situs ini memang tidak punya artikel sama sekali.
-func (b *Builder) loadGuru(ctx context.Context, siteID uuid.UUID) (*guruData, error) {
-	if b.Articles == nil {
-		return nil, nil
-	}
-	arts, err := listAll(func(limit, offset int) ([]articles.Article, int, error) {
-		return b.Articles.ListPage(ctx, siteID, "%", "", "published", "published_desc", limit, offset)
-	})
-	if err != nil {
-		return nil, err
-	}
-	stats, err := b.Articles.SiteStats(ctx, siteID)
-	if err != nil {
-		return nil, err
-	}
-	g := &guruData{articles: arts, stats: stats}
-	if b.Learning != nil {
-		g.materials, err = listAll(func(limit, offset int) ([]learning.Material, int, error) {
-			return b.Learning.ListPage(ctx, siteID, "%", "published", "newest", limit, offset)
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	if b.Banners != nil {
-		if g.banners, err = b.Banners.ListEligibleBySite(ctx, siteID); err != nil {
-			return nil, err
-		}
-	}
-	if b.Responses != nil {
-		if g.responses, err = b.Responses.ApprovedCountsBySite(ctx, siteID); err != nil {
-			return nil, err
-		}
-	}
-	return g, nil
 }
 
 // relativize converts root-absolute href/src into paths relative to docPath.

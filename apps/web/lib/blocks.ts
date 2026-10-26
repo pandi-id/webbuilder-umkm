@@ -3,6 +3,8 @@
 //   - apps/web/app/sites/[id]/editor/page.tsx (preview)
 //   - apps/renderer/components/Blocks.tsx     (live render)
 //   - apps/api/internal/exports/render.go     (static export)
+// Umkm* blocks share markup via components/umkm/UmkmBlocks.tsx (web + renderer)
+// and render_umkm.go in the exporter.
 
 // Field kinds the PropEditor can render. New kinds extend this union; the
 // PropEditor's <Field> switch must stay exhaustive.
@@ -45,6 +47,7 @@ export type FieldDef =
   | (FieldBase & { type: "select"; options: SelectOption[] });
 
 export type BlockCategory =
+  | "umkm"
   | "pro"
   | "layout"
   | "hero"
@@ -54,11 +57,10 @@ export type BlockCategory =
   | "sosial"
   | "media"
   | "list"
-  | "dynamic"
-  | "guru"
-  | "guru-plus";
+  | "dynamic";
 
 export const CATEGORY_LABELS: Record<BlockCategory, string> = {
+  umkm: "UMKM Pro",
   pro: "Pro ✨",
   layout: "Layout",
   hero: "Hero",
@@ -69,8 +71,6 @@ export const CATEGORY_LABELS: Record<BlockCategory, string> = {
   media: "Media",
   list: "List",
   dynamic: "Dynamic (DB)",
-  guru: "Rumah Digital Guru 🎓",
-  "guru-plus": "Guru Plus ✨",
 };
 
 export type BlockSchema = {
@@ -93,7 +93,383 @@ export function isContainer(type: string): boolean {
   return Boolean(schemaFor(type)?.container);
 }
 
+
+// Shared option lists for the UMKM block family.
+const UMKM_BADGE_OPTIONS: SelectOption[] = [
+  { value: "none", label: "Tanpa badge" },
+  { value: "terlaris", label: "Terlaris" },
+  { value: "baru", label: "Baru" },
+  { value: "promo", label: "Promo" },
+  { value: "habis", label: "Habis" },
+];
+const UMKM_COLUMN_OPTIONS: SelectOption[] = [
+  { value: "4", label: "4 kolom" },
+  { value: "3", label: "3 kolom" },
+];
+const UMKM_RATING_OPTIONS: SelectOption[] = ["5", "4", "3", "2", "1"].map((v) => ({ value: v, label: `${v} bintang` }));
+const UMKM_PLATFORM_OPTIONS: SelectOption[] = [
+  { value: "shopee", label: "Shopee" },
+  { value: "tokopedia", label: "Tokopedia" },
+  { value: "tiktokshop", label: "TikTok Shop" },
+  { value: "lazada", label: "Lazada" },
+  { value: "gofood", label: "GoFood" },
+  { value: "grabfood", label: "GrabFood" },
+  { value: "shopeefood", label: "ShopeeFood" },
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "website", label: "Website lain" },
+];
+const UMKM_TRUST_ICON_OPTIONS: SelectOption[] = [
+  { value: "halal", label: "Halal" },
+  { value: "pirt", label: "P-IRT" },
+  { value: "bpom", label: "BPOM" },
+  { value: "sni", label: "SNI" },
+  { value: "qris", label: "QRIS" },
+  { value: "cod", label: "COD / bayar di tempat" },
+  { value: "transfer", label: "Transfer bank" },
+  { value: "delivery", label: "Pengiriman" },
+  { value: "guarantee", label: "Garansi" },
+  { value: "handmade", label: "Buatan tangan" },
+];
+
 export const blockSchemas: BlockSchema[] = [
+
+  // ---------- UMKM Pro ----------
+  // Markup + CSS shared via components/umkm (web + renderer); Go mirror in
+  // apps/api/internal/exports/render_umkm.go.
+  {
+    type: "UmkmHero",
+    label: "Hero Toko UMKM",
+    category: "umkm",
+    emoji: "🏪",
+    description: "Hero split dengan tombol pesan WhatsApp, keunggulan, dan rating",
+    defaults: {
+      eyebrow: "Buka setiap hari · 08.00–22.00",
+      title: "Kopi susu gula aren, diseduh segar setiap hari",
+      subtitle:
+        "Biji kopi pilihan dari petani Garut, disangrai sendiri dan diantar hangat ke rumahmu. Pesan lewat WhatsApp, kami balas kurang dari 5 menit.",
+      ctaLabel: "Pesan via WhatsApp",
+      waNumber: "081234567890",
+      waMessage: "Halo Kopi Senja, saya mau pesan kopi.",
+      ctaSecondaryLabel: "Lihat Menu",
+      ctaSecondaryHref: "#menu",
+      image: "",
+      chips: ["100% Halal", "Gratis ongkir Bandung", "Bisa bayar di tempat"],
+      rating: "4.9 dari 1.200+ pembeli",
+    },
+    fields: [
+      { name: "eyebrow", label: "Info singkat (badge)", type: "string", placeholder: "Buka setiap hari 08.00–21.00" },
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Deskripsi", type: "textarea" },
+      { name: "image", label: "Foto utama", type: "image" },
+      { name: "chips", label: "Keunggulan (maks. 3)", type: "strings", placeholder: "100% Halal" },
+      { name: "rating", label: "Teks rating", type: "string", placeholder: "4.9 dari 1.200+ pembeli" },
+      { name: "ctaLabel", label: "Label tombol WhatsApp", type: "string", group: "Tombol" },
+      { name: "waNumber", label: "Nomor WhatsApp", type: "string", group: "Tombol", placeholder: "0812xxxxxxx", help: "Format 08xx atau 628xx — otomatis dirapikan." },
+      { name: "waMessage", label: "Pesan awal WhatsApp", type: "textarea", group: "Tombol" },
+      { name: "ctaSecondaryLabel", label: "Label tombol kedua", type: "string", group: "Tombol" },
+      { name: "ctaSecondaryHref", label: "Link tombol kedua", type: "url", group: "Tombol" },
+    ],
+  },
+  {
+    type: "UmkmProductShowcase",
+    label: "Etalase Produk",
+    category: "umkm",
+    emoji: "🛒",
+    description: "Kartu produk unggulan dengan harga coret, badge, dan tombol pesan WA",
+    defaults: {
+      title: "Menu Favorit",
+      subtitle: "Paling sering dipesan pelanggan minggu ini.",
+      waNumber: "081234567890",
+      buttonLabel: "Pesan",
+      columns: "4",
+      anchorId: "menu",
+      items: [
+        { name: "Kopi Susu Gula Aren", image: "", price: "Rp 22.000", originalPrice: "Rp 28.000", badge: "terlaris", desc: "Espresso, susu segar, dan gula aren asli Garut. 250 ml." },
+        { name: "Es Kopi Pandan", image: "", price: "Rp 25.000", originalPrice: "", badge: "baru", desc: "Kopi susu dengan sirup pandan wangi buatan sendiri." },
+        { name: "Paket Hemat Berdua", image: "", price: "Rp 45.000", originalPrice: "Rp 56.000", badge: "promo", desc: "2 kopi susu + 2 roti bakar cokelat keju." },
+        { name: "Kopi Literan 1 Liter", image: "", price: "Rp 85.000", originalPrice: "", badge: "none", desc: "Cukup untuk 6–8 gelas, tahan 3 hari di kulkas." },
+      ],
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      {
+        name: "items",
+        label: "Produk",
+        type: "items",
+        itemFields: [
+          { name: "name", label: "Nama produk", type: "string" },
+          { name: "image", label: "Foto", type: "image" },
+          { name: "price", label: "Harga", type: "string" },
+          { name: "originalPrice", label: "Harga coret (opsional)", type: "string" },
+          { name: "badge", label: "Badge", type: "select", options: UMKM_BADGE_OPTIONS },
+          { name: "desc", label: "Deskripsi singkat", type: "textarea" },
+        ],
+      },
+      { name: "waNumber", label: "Nomor WhatsApp pesanan", type: "string", group: "Pemesanan", placeholder: "0812xxxxxxx" },
+      { name: "buttonLabel", label: "Label tombol", type: "string", group: "Pemesanan" },
+      { name: "columns", label: "Kolom di desktop", type: "select", options: UMKM_COLUMN_OPTIONS, group: "Tampilan" },
+      { name: "anchorId", label: "ID anchor (untuk link #menu)", type: "string", group: "Tampilan" },
+    ],
+  },
+  {
+    type: "UmkmCatalogDynamic",
+    label: "Katalog Produk (DB)",
+    category: "umkm",
+    emoji: "🗂️",
+    description: "Kartu produk otomatis dari tab Produk, tombol pesan via WhatsApp",
+    defaults: {
+      title: "Semua Produk",
+      subtitle: "Stok diperbarui setiap hari.",
+      waNumber: "081234567890",
+      buttonLabel: "Pesan",
+      limit: 8,
+      category: "",
+      showOutOfStock: "no",
+      columns: "4",
+      anchorId: "produk",
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      { name: "limit", label: "Jumlah maks", type: "number" },
+      { name: "category", label: "Filter kategori (opsional)", type: "string", help: "Sama persis dengan kategori di tab Produk. Kosongkan untuk semua." },
+      {
+        name: "showOutOfStock",
+        label: "Produk stok habis",
+        type: "select",
+        options: [
+          { value: "no", label: "Sembunyikan" },
+          { value: "yes", label: "Tampilkan dengan label Habis" },
+        ],
+      },
+      { name: "waNumber", label: "Nomor WhatsApp pesanan", type: "string", group: "Pemesanan", placeholder: "0812xxxxxxx" },
+      { name: "buttonLabel", label: "Label tombol", type: "string", group: "Pemesanan" },
+      { name: "columns", label: "Kolom di desktop", type: "select", options: UMKM_COLUMN_OPTIONS, group: "Tampilan" },
+      { name: "anchorId", label: "ID anchor", type: "string", group: "Tampilan" },
+    ],
+  },
+  {
+    type: "UmkmPromoBanner",
+    label: "Banner Promo & Voucher",
+    category: "umkm",
+    emoji: "🏷️",
+    description: "Kartu promo dengan label diskon, kode voucher yang bisa disalin, dan CTA",
+    defaults: {
+      discountLabel: "Diskon 20%",
+      headline: "Promo Gajian: semua kopi literan",
+      description: "Berlaku untuk pembelian langsung maupun lewat WhatsApp. Minimal belanja Rp 50.000.",
+      voucherCode: "GAJIAN20",
+      validUntil: "Berlaku sampai 31 Desember 2026",
+      ctaLabel: "Pakai Sekarang",
+      ctaHref: "",
+      waNumber: "081234567890",
+    },
+    fields: [
+      { name: "discountLabel", label: "Label diskon", type: "string" },
+      { name: "headline", label: "Judul promo", type: "string" },
+      { name: "description", label: "Deskripsi / syarat", type: "textarea" },
+      { name: "voucherCode", label: "Kode voucher (opsional)", type: "string" },
+      { name: "validUntil", label: "Masa berlaku", type: "string" },
+      { name: "ctaLabel", label: "Label tombol", type: "string", group: "Tombol" },
+      { name: "waNumber", label: "Nomor WhatsApp", type: "string", group: "Tombol", help: "Kalau diisi, tombol membuka WhatsApp dengan kode voucher." },
+      { name: "ctaHref", label: "Link tombol (kalau tanpa WhatsApp)", type: "url", group: "Tombol" },
+    ],
+  },
+  {
+    type: "UmkmStoreInfo",
+    label: "Info Toko & Lokasi",
+    category: "umkm",
+    emoji: "📍",
+    description: "Alamat, peta, jam buka, kontak, dan area pengiriman",
+    defaults: {
+      title: "Kunjungi Toko Kami",
+      subtitle: "Ngopi di tempat atau ambil pesanan langsung.",
+      address: "Jl. Braga No. 21, Sumur Bandung, Kota Bandung, Jawa Barat 40111",
+      mapSrc: "",
+      showMap: "yes",
+      hours: [
+        { day: "Senin – Jumat", hours: "08.00 – 22.00" },
+        { day: "Sabtu – Minggu", hours: "07.00 – 23.00" },
+        { day: "Libur nasional", hours: "10.00 – 20.00" },
+      ],
+      phone: "0812-3456-7890",
+      waNumber: "081234567890",
+      waMessage: "Halo, saya mau tanya soal pesanan.",
+      email: "halo@kopisenja.id",
+      areas: ["Bandung Kota", "Cimahi", "Dago & Lembang", "Antapani"],
+      anchorId: "lokasi",
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      { name: "address", label: "Alamat", type: "textarea" },
+      {
+        name: "hours",
+        label: "Jam buka",
+        type: "items",
+        itemFields: [
+          { name: "day", label: "Hari", type: "string" },
+          { name: "hours", label: "Jam", type: "string" },
+        ],
+      },
+      { name: "phone", label: "Telepon", type: "string" },
+      { name: "waNumber", label: "Nomor WhatsApp", type: "string", placeholder: "0812xxxxxxx" },
+      { name: "waMessage", label: "Pesan awal WhatsApp", type: "textarea" },
+      { name: "email", label: "Email", type: "string" },
+      { name: "areas", label: "Area pengiriman", type: "strings", placeholder: "Nama kota/kecamatan" },
+      {
+        name: "showMap",
+        label: "Peta",
+        type: "select",
+        group: "Peta",
+        options: [
+          { value: "yes", label: "Tampilkan" },
+          { value: "no", label: "Sembunyikan" },
+        ],
+      },
+      { name: "mapSrc", label: "URL embed Google Maps (opsional)", type: "url", group: "Peta", help: "Kosongkan untuk membuat peta otomatis dari alamat. Hanya google.com/maps yang didukung." },
+      { name: "anchorId", label: "ID anchor", type: "string", group: "Tampilan" },
+    ],
+  },
+  {
+    type: "UmkmMarketplaceLinks",
+    label: "Link Marketplace",
+    category: "umkm",
+    emoji: "🛍️",
+    description: "Tombol ke Shopee, Tokopedia, GoFood, GrabFood, dan lainnya",
+    defaults: {
+      title: "Juga tersedia di",
+      subtitle: "Belanja lewat aplikasi favoritmu — promo berbeda di tiap platform.",
+      items: [
+        { platform: "shopee", url: "https://shopee.co.id/", label: "Kopi Senja Official" },
+        { platform: "tokopedia", url: "https://www.tokopedia.com/", label: "Kopi Senja Store" },
+        { platform: "gofood", url: "https://gofood.co.id/", label: "Kopi Senja Braga" },
+        { platform: "grabfood", url: "https://food.grab.com/id/", label: "Kopi Senja Braga" },
+        { platform: "instagram", url: "https://instagram.com/", label: "@kopisenja.bdg" },
+      ],
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      {
+        name: "items",
+        label: "Platform",
+        type: "items",
+        itemFields: [
+          { name: "platform", label: "Platform", type: "select", options: UMKM_PLATFORM_OPTIONS },
+          { name: "url", label: "Link toko", type: "url" },
+          { name: "label", label: "Nama toko (opsional)", type: "string" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "UmkmTrustBadges",
+    label: "Badge Kepercayaan",
+    category: "umkm",
+    emoji: "🛡️",
+    description: "Halal, P-IRT, BPOM, QRIS, COD, garansi — tampil dengan ikon",
+    defaults: {
+      title: "Kenapa belanja di Kopi Senja?",
+      subtitle: "",
+      items: [
+        { icon: "halal", title: "Bersertifikat Halal", desc: "Nomor sertifikat BPJPH tercantum di setiap kemasan." },
+        { icon: "pirt", title: "Izin P-IRT", desc: "Diproduksi di dapur yang terdaftar dan diawasi Dinkes." },
+        { icon: "qris", title: "Bayar pakai QRIS", desc: "Semua e-wallet dan m-banking bisa." },
+        { icon: "delivery", title: "Kirim hari ini", desc: "Pesan sebelum 15.00, dikirim hari itu juga." },
+        { icon: "guarantee", title: "Garansi uang kembali", desc: "Produk rusak saat diterima? Kami ganti." },
+      ],
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      {
+        name: "items",
+        label: "Badge",
+        type: "items",
+        itemFields: [
+          { name: "icon", label: "Ikon", type: "select", options: UMKM_TRUST_ICON_OPTIONS },
+          { name: "title", label: "Judul", type: "string" },
+          { name: "desc", label: "Keterangan", type: "textarea" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "UmkmReviews",
+    label: "Ulasan Pelanggan",
+    category: "umkm",
+    emoji: "⭐",
+    description: "Ulasan dengan rating bintang, ringkasan nilai, dan foto pembeli",
+    defaults: {
+      title: "Kata pelanggan kami",
+      subtitle: "",
+      average: "4.9",
+      countText: "dari 1.248 ulasan di Google & marketplace",
+      items: [
+        { name: "Rina Marlina", location: "Bandung · Kopi Susu Gula Aren", rating: "5", text: "Manisnya pas, kopinya tetap kerasa. Sudah langganan tiap pagi sebelum ngantor, adminnya juga ramah banget.", photo: "" },
+        { name: "Dimas Prasetyo", location: "Cimahi · Kopi Literan 1 Liter", rating: "5", text: "Beli literan buat stok seminggu, rasanya konsisten dan pengirimannya cepat. Botolnya rapi, nggak ada yang bocor.", photo: "" },
+        { name: "Sari Wulandari", location: "Lembang · Paket Hemat Berdua", rating: "4", text: "Roti bakarnya enak, kopinya mantap. Semoga nanti ada pilihan less sugar juga.", photo: "" },
+      ],
+    },
+    fields: [
+      { name: "title", label: "Judul", type: "string" },
+      { name: "subtitle", label: "Subjudul", type: "textarea" },
+      { name: "average", label: "Nilai rata-rata", type: "string", placeholder: "4.9" },
+      { name: "countText", label: "Teks jumlah ulasan", type: "string" },
+      {
+        name: "items",
+        label: "Ulasan",
+        type: "items",
+        itemFields: [
+          { name: "name", label: "Nama", type: "string" },
+          { name: "location", label: "Kota · produk dibeli", type: "string" },
+          { name: "rating", label: "Rating", type: "select", options: UMKM_RATING_OPTIONS },
+          { name: "text", label: "Isi ulasan", type: "textarea" },
+          { name: "photo", label: "Foto (opsional)", type: "image" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "UmkmWhatsAppFloat",
+    label: "Tombol WhatsApp Melayang",
+    category: "umkm",
+    emoji: "💬",
+    description: "Tombol chat WhatsApp yang selalu terlihat di pojok layar",
+    defaults: {
+      waNumber: "081234567890",
+      waMessage: "Halo admin, saya mau tanya produk.",
+      label: "Tanya admin",
+      position: "right",
+      color: "whatsapp",
+    },
+    fields: [
+      { name: "waNumber", label: "Nomor WhatsApp", type: "string", placeholder: "0812xxxxxxx" },
+      { name: "waMessage", label: "Pesan awal", type: "textarea" },
+      { name: "label", label: "Teks gelembung (opsional)", type: "string" },
+      {
+        name: "position",
+        label: "Posisi",
+        type: "select",
+        options: [
+          { value: "right", label: "Kanan bawah" },
+          { value: "left", label: "Kiri bawah" },
+        ],
+      },
+      {
+        name: "color",
+        label: "Warna tombol",
+        type: "select",
+        options: [
+          { value: "whatsapp", label: "Hijau WhatsApp" },
+          { value: "theme", label: "Warna utama tema" },
+        ],
+      },
+    ],
+  },
   // ---------- Layout ----------
   {
     type: "Navbar",
@@ -1704,1243 +2080,6 @@ export const blockSchemas: BlockSchema[] = [
       },
     ],
   },
-
-  // ==================== Rumah Digital Guru ====================
-  // Block ini di-render lengkap di renderer server-side. Di editor schema
-  // di sini hanya cover field yang benar-benar bisa di-edit user (text
-  // copy). Untuk yang butuh data live (articles/materials/banners/stats),
-  // pakai variant Dynamic — data di-fetch runtime, tidak perlu diisi user.
-  {
-    type: "GuruStyles",
-    label: "Guru Styles (CSS scoped)",
-    category: "guru",
-    emoji: "🎨",
-    description: "CSS `.guru-*` untuk semua block Guru (wajib ada 1× di halaman)",
-    defaults: {},
-    fields: [],
-  },
-  {
-    type: "GuruNavbar",
-    label: "Guru Navbar",
-    category: "guru",
-    emoji: "🎓",
-    description: "Header navigasi: brand (nama/role/mark) + menu (label + tautan)",
-    defaults: {
-      brandName: "Nama Guru",
-      brandRole: "Guru Bahasa Indonesia",
-      brandMark: "G",
-      links: [
-        { label: "Beranda", href: "/", active: true },
-        { label: "Profil", href: "/profil" },
-        { label: "Ceritaku", href: "/ceritaku" },
-        { label: "Bacaanku", href: "/bacaanku" },
-        { label: "Inspirasiku", href: "/inspirasiku" },
-        { label: "Bangsaku", href: "/bangsaku" },
-        { label: "Peradaban", href: "/peradaban" },
-        { label: "Forum Diskusi", href: "/forum-diskusi" },
-        { label: "Pembelajaran", href: "/pembelajaran" },
-      ],
-    },
-    fields: [
-      { name: "brandName", label: "Nama Guru", type: "string" },
-      { name: "brandRole", label: "Peran / Mata Pelajaran", type: "string" },
-      { name: "brandMark", label: "Inisial Logo (1 karakter)", type: "string" },
-      {
-        name: "links",
-        label: "Menu Navigasi",
-        type: "items",
-        itemFields: [
-          { name: "label", label: "Label", type: "string" },
-          { name: "href", label: "Tautan", type: "url" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruHero",
-    label: "Guru Hero",
-    category: "guru",
-    emoji: "🌟",
-    description: "Hero beranda guru — foto + statement + CTA + 2 floating notes",
-    defaults: {
-      eyebrow: "Program guru Indonesia",
-      title: "Nama Guru",
-      subtitle: "Deskripsi singkat tentang Anda sebagai pengajar.",
-      image: "",
-      ctaLabel: "Baca Tulisan",
-      ctaHref: "/ceritaku",
-      // Floating notes — default visible + posisi mockup PANDI × UPI.
-      noteAShow: "show",
-      noteAText: "Bahasa Indonesia",
-      noteASub: "SMP · Literasi · Sastra",
-      noteAX: 10,
-      noteAY: 80,
-      noteBShow: "show",
-      noteBText: "Catatan hari ini",
-      noteBSub: "Siswa berani bertanya.",
-      noteBX: 0,
-      noteBY: 44,
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Deskripsi", type: "textarea" },
-      { name: "image", label: "Foto/Ilustrasi (URL)", type: "image" },
-      { name: "ctaLabel", label: "CTA Label", type: "string" },
-      { name: "ctaHref", label: "CTA Link", type: "string" },
-      // ---------- Note A (top-left) ----------
-      {
-        name: "noteAShow",
-        label: "Tampilkan Note A",
-        type: "select",
-        group: "Note A (Kiri Atas)",
-        options: [
-          { value: "show", label: "Tampilkan" },
-          { value: "hide", label: "Sembunyikan" },
-        ],
-      },
-      {
-        name: "noteAText",
-        label: "Judul Note A",
-        type: "string",
-        group: "Note A (Kiri Atas)",
-        showIf: (p) => (p.noteAShow ?? "show") !== "hide",
-      },
-      {
-        name: "noteASub",
-        label: "Sub Note A",
-        type: "string",
-        group: "Note A (Kiri Atas)",
-        showIf: (p) => (p.noteAShow ?? "show") !== "hide",
-      },
-      {
-        name: "noteAX",
-        label: "Posisi X dari kiri (px)",
-        type: "number",
-        group: "Note A (Kiri Atas)",
-        showIf: (p) => (p.noteAShow ?? "show") !== "hide",
-        help: "Jarak dari kiri figure profil, dalam pixel. Angka negatif = keluar figure.",
-      },
-      {
-        name: "noteAY",
-        label: "Posisi Y dari atas (px)",
-        type: "number",
-        group: "Note A (Kiri Atas)",
-        showIf: (p) => (p.noteAShow ?? "show") !== "hide",
-      },
-      // ---------- Note B (bottom-right) ----------
-      {
-        name: "noteBShow",
-        label: "Tampilkan Note B",
-        type: "select",
-        group: "Note B (Kanan Bawah)",
-        options: [
-          { value: "show", label: "Tampilkan" },
-          { value: "hide", label: "Sembunyikan" },
-        ],
-      },
-      {
-        name: "noteBText",
-        label: "Judul Note B",
-        type: "string",
-        group: "Note B (Kanan Bawah)",
-        showIf: (p) => (p.noteBShow ?? "show") !== "hide",
-      },
-      {
-        name: "noteBSub",
-        label: "Sub Note B",
-        type: "string",
-        group: "Note B (Kanan Bawah)",
-        showIf: (p) => (p.noteBShow ?? "show") !== "hide",
-      },
-      {
-        name: "noteBX",
-        label: "Posisi X dari kanan (px)",
-        type: "number",
-        group: "Note B (Kanan Bawah)",
-        showIf: (p) => (p.noteBShow ?? "show") !== "hide",
-      },
-      {
-        name: "noteBY",
-        label: "Posisi Y dari bawah (px)",
-        type: "number",
-        group: "Note B (Kanan Bawah)",
-        showIf: (p) => (p.noteBShow ?? "show") !== "hide",
-      },
-    ],
-  },
-  {
-    type: "GuruRubricHero",
-    label: "Guru Rubric Hero",
-    category: "guru",
-    emoji: "📖",
-    description: "Hero untuk halaman rubrik (Ceritaku/Bacaanku/dst.)",
-    defaults: { eyebrow: "Rubrik pribadi", title: "Judul Rubrik", subtitle: "" },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Deskripsi", type: "textarea" },
-      {
-        name: "iconKey", label: "Ikon", type: "select",
-        options: [
-          { value: "book", label: "Buku" },
-          { value: "bookmark", label: "Bookmark" },
-          { value: "sparkle", label: "Sparkle" },
-          { value: "flag", label: "Bendera" },
-          { value: "temple", label: "Candi" },
-          { value: "chat", label: "Chat" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruQuote",
-    label: "Guru Quote",
-    category: "guru",
-    emoji: "💬",
-    description: "Kutipan pribadi guru",
-    defaults: { text: "Kutipan pendek yang mewakili filosofi mengajar.", author: "Nama Guru" },
-    fields: [
-      { name: "text", label: "Kutipan", type: "textarea" },
-      { name: "author", label: "Author", type: "string" },
-    ],
-  },
-  {
-    type: "GuruFooter",
-    label: "Guru Footer",
-    category: "guru",
-    emoji: "🦶",
-    description: "Footer website guru dengan brand + credit + navigation + bottom bar",
-    defaults: {
-      brandName: "Nama Guru",
-      brandRole: "Guru Bahasa Indonesia",
-      brandMark: "G",
-      copyText: "Ruang pribadi untuk menyimpan cerita, bacaan, inspirasi, dan refleksi tentang pendidikan.",
-      builderTitle: "Web Builder Guru",
-      builderBrand: "PANDI × UPI",
-      builderNote: "Co-branding program website pribadi guru",
-      links: [
-        { label: "Beranda", href: "/" },
-        { label: "Profil", href: "/profil" },
-        { label: "Ceritaku", href: "/ceritaku" },
-        { label: "Bacaanku", href: "/bacaanku" },
-        { label: "Forum Diskusi", href: "/forum-diskusi" },
-        { label: "Pembelajaran", href: "/pembelajaran" },
-      ],
-      bottomLeft: "© Website Guru",
-      bottomRight: "Rumah Digital Guru",
-    },
-    fields: [
-      { name: "brandName", label: "Nama Guru", type: "string", group: "Brand" },
-      { name: "brandRole", label: "Peran / Mata Pelajaran", type: "string", group: "Brand" },
-      { name: "brandMark", label: "Inisial Logo (1 karakter)", type: "string", group: "Brand" },
-      { name: "copyText", label: "Deskripsi Footer", type: "textarea", group: "Brand" },
-      { name: "builderTitle", label: "Builder Title", type: "string", group: "Credit" },
-      { name: "builderBrand", label: "Builder Brand", type: "string", group: "Credit" },
-      { name: "builderNote", label: "Builder Note", type: "string", group: "Credit" },
-      {
-        name: "links",
-        label: "Menu Footer",
-        type: "items",
-        group: "Navigasi",
-        itemFields: [
-          { name: "label", label: "Label", type: "string" },
-          { name: "href", label: "Tautan", type: "url" },
-        ],
-      },
-      { name: "bottomLeft", label: "Teks Kiri Bawah", type: "string", group: "Bottom Bar" },
-      { name: "bottomRight", label: "Teks Kanan Bawah", type: "string", group: "Bottom Bar" },
-    ],
-  },
-  // Carousel promo — static: user isi banner manual via items array.
-  // Cocok untuk showcase/mockup. Untuk data live dari Guru dashboard
-  // pakai variant Dynamic di bawah.
-  {
-    type: "GuruPromoCarousel",
-    label: "Ruang Promosi (Static)",
-    category: "guru",
-    emoji: "📢",
-    description: "Carousel banner rasio 2:1 — items diisi manual (untuk mockup/demo)",
-    defaults: {
-      items: [
-        { image: "", alt: "Banner 1", href: "#" },
-        { image: "", alt: "Banner 2", href: "#" },
-        { image: "", alt: "Banner 3", href: "#" },
-      ],
-    },
-    fields: [
-      {
-        name: "items",
-        label: "Banner (rasio 2:1)",
-        type: "items",
-        itemFields: [
-          { name: "image", label: "URL Gambar (2:1)", type: "image" },
-          { name: "alt", label: "Alt Text", type: "string" },
-          { name: "href", label: "Tautan", type: "url" },
-          { name: "caption", label: "Caption (opsional)", type: "string" },
-        ],
-      },
-    ],
-  },
-  // --- Dynamic variants — data fetched at render time ---
-  {
-    type: "GuruPromoCarouselDynamic",
-    label: "Ruang Promosi (Dynamic)",
-    category: "guru",
-    emoji: "📢",
-    description: "Carousel banner promosi guru — data dari menu Guru → Ruang Promosi",
-    defaults: {},
-    fields: [],
-  },
-  {
-    type: "GuruStatsBarDynamic",
-    label: "Jejak Website Saya (Dynamic)",
-    category: "guru",
-    emoji: "📊",
-    description: "3 stat live: Total Views + Tanggapan + Tulisan (spec §12)",
-    defaults: {
-      eyebrow: "Jejak Website Saya",
-      title: "Tulisan yang tumbuh bersama pembaca.",
-      subtitle: "Catatan kecil tentang bagaimana tulisan di website ini dibaca dan ditanggapi.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-    ],
-  },
-  {
-    type: "GuruLatestGridDynamic",
-    label: "Tulisan Terbaru (Dynamic)",
-    category: "guru",
-    emoji: "📰",
-    description: "4 tulisan published terbaru — featured + 3 side",
-    defaults: {
-      eyebrow: "Tulisan terbaru",
-      title: "Dari kelas, buku, dan sekitar.",
-      subtitle: "Beberapa catatan yang paling baru saya tulis.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-    ],
-  },
-  {
-    type: "GuruArticleGridDynamic",
-    label: "Grid Artikel per Rubrik (Dynamic)",
-    category: "guru",
-    emoji: "📚",
-    description: "List artikel dari 1 rubrik tertentu — dipakai di halaman /ceritaku/dst.",
-    defaults: {
-      rubric: "ceritaku",
-      sidebarTitle: "Tentang rubrik",
-      sidebarBody: "Kumpulan tulisan pada rubrik ini.",
-      sidebarLinks: [
-        { label: "Ceritaku", href: "/ceritaku" },
-        { label: "Bacaanku", href: "/bacaanku" },
-        { label: "Inspirasiku", href: "/inspirasiku" },
-        { label: "Bangsaku", href: "/bangsaku" },
-      ],
-    },
-    fields: [
-      {
-        name: "rubric", label: "Rubrik", type: "select",
-        options: [
-          { value: "ceritaku", label: "Ceritaku" },
-          { value: "bacaanku", label: "Bacaanku" },
-          { value: "inspirasiku", label: "Inspirasiku" },
-          { value: "bangsaku", label: "Bangsaku" },
-          { value: "peradaban", label: "Peradaban" },
-          { value: "forum-diskusi", label: "Forum Diskusi" },
-        ],
-      },
-      { name: "sidebarTitle", label: "Judul Sidebar", type: "string" },
-      { name: "sidebarBody", label: "Isi Sidebar", type: "textarea" },
-      {
-        name: "sidebarTags",
-        label: "Topik Sidebar",
-        type: "strings",
-        help: "Daftar label topik di card \"Topik\". Satu baris = satu topik.",
-        placeholder: "Praktik Baik",
-      },
-      {
-        name: "sidebarLinks",
-        label: "Link Sidebar \"Jelajahi ruang lain\"",
-        type: "items",
-        help: "Daftar link ke rubrik/halaman lain. Hapus entry yang halamannya sudah dihapus supaya tidak jadi broken link.",
-        itemFields: [
-          { name: "label", label: "Label", type: "string" },
-          { name: "href", label: "URL", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruForumThreadListDynamic",
-    label: "Forum Thread List (Dynamic)",
-    category: "guru",
-    emoji: "💬",
-    description: "List topik forum — data dari rubric=forum-diskusi",
-    defaults: {
-      participants: ["Guru", "Siswa", "Orang tua", "Pembaca"],
-      sidebarLinks: [
-        { label: "Ceritaku", href: "/ceritaku" },
-        { label: "Bacaanku", href: "/bacaanku" },
-        { label: "Inspirasiku", href: "/inspirasiku" },
-      ],
-    },
-    fields: [
-      {
-        name: "participants",
-        label: "Partisipan Diskusi",
-        type: "strings",
-        help: "Siapa saja yang terlibat di forum. Satu baris = satu label.",
-        placeholder: "Guru",
-      },
-      {
-        name: "sidebarLinks",
-        label: "Link Sidebar \"Jelajahi ruang lain\"",
-        type: "items",
-        help: "Daftar link ke rubrik/halaman lain. Hapus entry yang halamannya sudah dihapus.",
-        itemFields: [
-          { name: "label", label: "Label", type: "string" },
-          { name: "href", label: "URL", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruLearningGridDynamic",
-    label: "Grid Materi Pembelajaran (Dynamic)",
-    category: "guru",
-    emoji: "🎒",
-    description: "List materi pembelajaran (tanpa views/tanggapan sesuai spec §19)",
-    defaults: {
-      sidebarTitle: "Tentang Pembelajaran",
-      sidebarBody: "Ruang ini berisi materi belajar yang disusun dalam format ringkas.",
-      sidebarLinks: [
-        { label: "Ceritaku", href: "/ceritaku" },
-        { label: "Bacaanku", href: "/bacaanku" },
-        { label: "Inspirasiku", href: "/inspirasiku" },
-        { label: "Forum Diskusi", href: "/forum-diskusi" },
-      ],
-    },
-    fields: [
-      { name: "sidebarTitle", label: "Judul Sidebar", type: "string" },
-      { name: "sidebarBody", label: "Isi Sidebar", type: "textarea" },
-      {
-        name: "sidebarTags",
-        label: "Topik Sidebar",
-        type: "strings",
-        help: "Daftar label topik di card \"Topik\". Satu baris = satu topik.",
-        placeholder: "Cerpen",
-      },
-      {
-        name: "sidebarLinks",
-        label: "Link Sidebar \"Jelajahi ruang lain\"",
-        type: "items",
-        help: "Daftar link ke rubrik/halaman lain. Hapus entry yang halamannya sudah dihapus.",
-        itemFields: [
-          { name: "label", label: "Label", type: "string" },
-          { name: "href", label: "URL", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruProfileCard",
-    label: "Guru Profile Card",
-    category: "guru",
-    emoji: "👤",
-    description: "Kartu profil guru (foto + kontak + panels bio) untuk halaman /profil",
-    defaults: {
-      image: "",
-      name: "Nama Guru",
-      role: "Guru Bahasa Indonesia · Sekolah",
-      contacts: [
-        { icon: "📍", label: "Kota, Indonesia" },
-        { icon: "✉️", label: "email@example.id" },
-      ],
-      panels: [
-        { eyebrow: "Tentang Saya", title: "Ruang kelas sebagai ruang tumbuh.", body: "Cerita singkat tentang perjalanan mengajar Anda." },
-      ],
-    },
-    fields: [
-      { name: "image", label: "Foto (URL)", type: "image" },
-      { name: "name", label: "Nama", type: "string" },
-      { name: "role", label: "Peran/Sekolah", type: "string" },
-      {
-        name: "contacts",
-        label: "Kontak",
-        type: "items",
-        itemFields: [
-          { name: "icon", label: "Ikon (emoji)", type: "string" },
-          { name: "label", label: "Label", type: "string" },
-        ],
-      },
-      {
-        name: "panels",
-        label: "Panels Bio",
-        type: "items",
-        itemFields: [
-          { name: "eyebrow", label: "Eyebrow", type: "string" },
-          { name: "title", label: "Judul Panel", type: "string" },
-          { name: "body", label: "Isi Panel", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruTimeline",
-    label: "Guru Timeline",
-    category: "guru",
-    emoji: "🗓",
-    description: "Timeline jejak mengajar (date + title + description per item)",
-    defaults: {
-      title: "Jejak mengajar",
-      items: [
-        { date: "2014—2018", title: "Guru Bahasa Indonesia", desc: "Mengembangkan kebiasaan jurnal membaca." },
-        { date: "2019—Kini", title: "Koordinator literasi", desc: "Mendampingi klub baca dan lokakarya menulis." },
-      ],
-    },
-    fields: [
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Timeline",
-        type: "items",
-        itemFields: [
-          { name: "date", label: "Tanggal / Periode", type: "string" },
-          { name: "title", label: "Judul", type: "string" },
-          { name: "desc", label: "Deskripsi", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruTagList",
-    label: "Guru Tag List",
-    category: "guru",
-    emoji: "🏷",
-    description: "Chip tag (fokus, minat, topik) untuk halaman profil",
-    defaults: {
-      title: "Fokus & minat",
-      tags: [
-        { label: "Literasi" },
-        { label: "Bahasa Indonesia" },
-        { label: "Sastra" },
-        { label: "Refleksi Mengajar" },
-      ],
-    },
-    fields: [
-      { name: "title", label: "Judul", type: "string" },
-      // items dengan 1 field `label` = user friendly UI (tambah/hapus/edit
-      // per tag). Component render terima both format (string[] legacy dan
-      // Array<{label}> baru) supaya template lama tetap kompatibel.
-      {
-        name: "tags",
-        label: "Daftar Tag",
-        type: "items",
-        itemFields: [
-          { name: "label", label: "Tag", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruRubricGrid",
-    label: "6 Ruang Utama",
-    category: "guru",
-    emoji: "🏛",
-    description: "Grid 6 rubrik utama (spec §4.4)",
-    defaults: {
-      eyebrow: "Enam ruang utama",
-      title: "Apa yang saya simpan di sini?",
-      subtitle: "",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-    ],
-  },
-
-  // ========================= GURU PLUS (Phase 1) =========================
-  // Set block modern dengan animasi scroll + marquee pure CSS. Terpisah
-  // kategori dari "Rumah Digital Guru" supaya user tidak bingung. Namespace
-  // komponen GuruPlus* (lihat renderer: apps/renderer/components/GuruPlusBlocks.tsx).
-  {
-    type: "GuruPlusStyles",
-    label: "Guru Plus Styles",
-    category: "guru-plus",
-    emoji: "🎨",
-    description: "WAJIB untuk block Guru Plus — inject CSS .guruplus-*",
-    defaults: {},
-    fields: [],
-  },
-  {
-    type: "GuruPlusFAQ",
-    label: "Guru Plus FAQ",
-    category: "guru-plus",
-    emoji: "❓",
-    description: "Accordion FAQ elegan dengan nomor besar",
-    defaults: {
-      eyebrow: "Tanya Jawab",
-      title: "Pertanyaan yang sering ditanyakan",
-      items: [
-        { q: "Apakah materi di sini bisa diunduh?", a: "Ya, sebagian besar materi tersedia untuk diunduh dalam format PDF." },
-        { q: "Bagaimana cara menghubungi guru?", a: "Silakan isi form respon atau hubungi via kontak yang tertera di halaman profil." },
-        { q: "Apakah ada biaya untuk mengakses konten?", a: "Semua konten di ruang ini gratis untuk tujuan belajar." },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar FAQ",
-        type: "items",
-        itemFields: [
-          { name: "q", label: "Pertanyaan", type: "string" },
-          { name: "a", label: "Jawaban", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusStats",
-    label: "Guru Plus Stats",
-    category: "guru-plus",
-    emoji: "📊",
-    description: "Angka counting-up saat di-scroll ke viewport",
-    defaults: {
-      eyebrow: "Jejak kami",
-      title: "Dalam angka",
-      items: [
-        { value: 1200, suffix: "+", label: "Murid terbantu" },
-        { value: 85, suffix: "%", label: "Tingkat kehadiran" },
-        { value: 12, label: "Tahun mengajar" },
-        { value: 48, label: "Materi diterbitkan" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Statistik",
-        type: "items",
-        itemFields: [
-          { name: "value", label: "Angka", type: "string" },
-          { name: "suffix", label: "Suffix (ex: +, %)", type: "string" },
-          { name: "label", label: "Label", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusTimeline",
-    label: "Guru Plus Timeline",
-    category: "guru-plus",
-    emoji: "📅",
-    description: "Timeline vertikal dengan dot connector + reveal animasi",
-    defaults: {
-      eyebrow: "Perjalanan",
-      title: "Milestone yang saya syukuri",
-      items: [
-        { year: "2012", title: "Mulai mengajar", desc: "Masuk kelas pertama di sekolah dasar." },
-        { year: "2016", title: "Koordinator literasi", desc: "Membangun klub baca mingguan." },
-        { year: "2020", title: "Workshop daring", desc: "Memandu lokakarya menulis untuk guru lain." },
-        { year: "2024", title: "Rumah Digital Guru", desc: "Membuka ruang digital untuk murid & ortu." },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Timeline",
-        type: "items",
-        itemFields: [
-          { name: "year", label: "Tahun / Periode", type: "string" },
-          { name: "title", label: "Judul", type: "string" },
-          { name: "desc", label: "Deskripsi", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusTestimonials",
-    label: "Guru Plus Testimonials",
-    category: "guru-plus",
-    emoji: "💬",
-    description: "Dinding kutipan testimoni (masonry layout)",
-    defaults: {
-      eyebrow: "Suara mereka",
-      title: "Apa kata murid & ortu",
-      items: [
-        { quote: "Rangkuman materinya ringkas, anak saya jadi semangat belajar.", author: "Ibu Dewi", role: "Orang tua kelas 5" },
-        { quote: "Guru favorit saya, selalu sabar menjawab pertanyaan.", author: "Rama", role: "Murid kelas 6" },
-        { quote: "Terima kasih sudah mengenalkan kebiasaan membaca jurnal.", author: "Pak Hendra", role: "Rekan guru" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Testimoni",
-        type: "items",
-        itemFields: [
-          { name: "quote", label: "Kutipan", type: "textarea" },
-          { name: "author", label: "Nama", type: "string" },
-          { name: "role", label: "Peran", type: "string" },
-          { name: "avatar", label: "Avatar (URL)", type: "image" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusMarquee",
-    label: "Guru Plus Marquee",
-    category: "guru-plus",
-    emoji: "🎠",
-    description: "Baris teks berjalan horizontal (seamless loop)",
-    defaults: {
-      items: ["Literasi", "Numerasi", "Kreativitas", "Empati", "Berbagi", "Belajar sepanjang hayat"],
-      speed: "normal",
-    },
-    fields: [
-      {
-        name: "items",
-        label: "Teks Marquee",
-        type: "strings",
-        placeholder: "Satu baris = satu item",
-      },
-      {
-        name: "speed",
-        label: "Kecepatan",
-        type: "select",
-        options: [
-          { value: "slow", label: "Lambat" },
-          { value: "normal", label: "Normal" },
-          { value: "fast", label: "Cepat" },
-        ],
-      },
-    ],
-  },
-
-  // ========================= GURU PLUS (Phase 2) =========================
-  {
-    type: "GuruPlusBookshelf",
-    label: "Guru Plus Bookshelf",
-    category: "guru-plus",
-    emoji: "📚",
-    description: "Rak buku rekomendasi dengan cover + catatan",
-    defaults: {
-      eyebrow: "Yang saya baca",
-      title: "Rekomendasi bacaan",
-      items: [
-        { title: "Totto-chan: Gadis Cilik di Jendela", author: "Tetsuko Kuroyanagi", year: "1981", note: "Pengingat bahwa ruang kelas yang ramah mengubah hidup." },
-        { title: "Pedagogy of the Oppressed", author: "Paulo Freire", year: "1968", note: "Mendidik adalah membebaskan." },
-        { title: "The Courage to Teach", author: "Parker J. Palmer", year: "1998", note: "Guru sebagai pribadi yang hadir." },
-        { title: "Laskar Pelangi", author: "Andrea Hirata", year: "2005", note: "Semangat belajar di tengah keterbatasan." },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Buku",
-        type: "items",
-        itemFields: [
-          { name: "title", label: "Judul buku", type: "string" },
-          { name: "author", label: "Penulis", type: "string" },
-          { name: "cover", label: "Cover (URL)", type: "image" },
-          { name: "year", label: "Tahun", type: "string" },
-          { name: "note", label: "Catatan singkat", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusVideoEmbed",
-    label: "Guru Plus Video",
-    category: "guru-plus",
-    emoji: "🎬",
-    description: "Gallery video YouTube/Vimeo (lazy load)",
-    defaults: {
-      eyebrow: "Dokumentasi",
-      title: "Momen di kelas",
-      items: [
-        { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Kelas membaca jurnal", description: "Dokumentasi sesi membaca jurnal di kelas 5." },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Video",
-        type: "items",
-        itemFields: [
-          { name: "url", label: "URL (YouTube/Vimeo)", type: "url" },
-          { name: "title", label: "Judul", type: "string" },
-          { name: "description", label: "Deskripsi", type: "textarea" },
-          { name: "thumbnail", label: "Thumbnail (opsional)", type: "image" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusPhotoEssay",
-    label: "Guru Plus Photo Essay",
-    category: "guru-plus",
-    emoji: "🖼️",
-    description: "Foto essay asimetris dengan caption + meta",
-    defaults: {
-      eyebrow: "Foto cerita",
-      title: "Satu hari di kelas",
-      items: [
-        { image: "/placeholder-1.jpg", caption: "Suasana pagi", meta: "Senin · Kelas 5" },
-        { image: "/placeholder-2.jpg", caption: "Bacaan jurnal", meta: "08:00" },
-        { image: "/placeholder-3.jpg", caption: "Diskusi kelompok", meta: "09:30" },
-        { image: "/placeholder-4.jpg", caption: "Istirahat", meta: "10:15" },
-        { image: "/placeholder-5.jpg", caption: "Pelajaran lanjutan", meta: "11:00" },
-        { image: "/placeholder-6.jpg", caption: "Pulang sekolah", meta: "13:00" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Foto",
-        type: "items",
-        itemFields: [
-          { name: "image", label: "Foto", type: "image" },
-          { name: "caption", label: "Caption", type: "string" },
-          { name: "meta", label: "Meta (tanggal/lokasi)", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusAudioEpisode",
-    label: "Guru Plus Audio",
-    category: "guru-plus",
-    emoji: "🎧",
-    description: "Daftar episode audio dengan HTML5 player",
-    defaults: {
-      eyebrow: "Dengarkan",
-      title: "Episode audio",
-      items: [
-        { title: "Pengantar kelas literasi", src: "", duration: "08:12", description: "Pengantar singkat tentang literasi di kelas 5." },
-        { title: "Membaca jurnal: Episode 1", src: "", duration: "12:40", description: "Diskusi tentang kebiasaan membaca jurnal harian." },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Episode",
-        type: "items",
-        itemFields: [
-          { name: "title", label: "Judul episode", type: "string" },
-          { name: "src", label: "URL audio (mp3/ogg)", type: "url" },
-          { name: "duration", label: "Durasi (mis. 12:40)", type: "string" },
-          { name: "description", label: "Deskripsi", type: "textarea" },
-          { name: "cover", label: "Cover (opsional)", type: "image" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusCertificateGrid",
-    label: "Guru Plus Certificate",
-    category: "guru-plus",
-    emoji: "🏆",
-    description: "Grid sertifikat / penghargaan dengan gambar + link",
-    defaults: {
-      eyebrow: "Pengakuan",
-      title: "Sertifikat & penghargaan",
-      items: [
-        { title: "Guru Berprestasi Tingkat Kabupaten", issuer: "Dinas Pendidikan", date: "2023" },
-        { title: "Workshop Literasi Nasional", issuer: "Kemendikbud", date: "2022" },
-        { title: "Pelatihan Microsoft Educator", issuer: "Microsoft Education", date: "2021" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Sertifikat",
-        type: "items",
-        itemFields: [
-          { name: "title", label: "Judul", type: "string" },
-          { name: "issuer", label: "Penerbit", type: "string" },
-          { name: "date", label: "Tanggal / Tahun", type: "string" },
-          { name: "image", label: "Gambar (opsional)", type: "image" },
-          { name: "href", label: "Link verifikasi (opsional)", type: "url" },
-        ],
-      },
-    ],
-  },
-
-  // ========================= GURU PLUS (Phase 3) =========================
-  {
-    type: "GuruPlusBeforeAfter",
-    label: "Guru Plus Before/After",
-    category: "guru-plus",
-    emoji: "↔️",
-    description: "Slider perbandingan 2 foto (draggable divider)",
-    defaults: {
-      eyebrow: "Sebelum & sesudah",
-      title: "Perubahan di kelas kami",
-      beforeImage: "",
-      afterImage: "",
-      beforeLabel: "Sebelum",
-      afterLabel: "Sesudah",
-      caption: "Geser pembatas untuk membandingkan ruang kelas sebelum dan sesudah renovasi.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "beforeImage", label: "Foto Sebelum", type: "image" },
-      { name: "afterImage", label: "Foto Sesudah", type: "image" },
-      { name: "beforeLabel", label: "Label 'Sebelum'", type: "string" },
-      { name: "afterLabel", label: "Label 'Sesudah'", type: "string" },
-      { name: "caption", label: "Caption bawah", type: "textarea" },
-    ],
-  },
-  {
-    type: "GuruPlusLessonCard",
-    label: "Guru Plus Lesson",
-    category: "guru-plus",
-    emoji: "📘",
-    description: "Grid kartu pelajaran dengan level + durasi + CTA",
-    defaults: {
-      eyebrow: "Modul pembelajaran",
-      title: "Pelajaran yang tersedia",
-      items: [
-        { title: "Membaca Jurnal Harian", level: "Pemula", duration: "15 menit", description: "Membangun kebiasaan refleksi lewat jurnal.", icon: "📓", href: "#", ctaLabel: "Mulai modul" },
-        { title: "Menulis Cerita Pendek", level: "Menengah", duration: "30 menit", description: "Teknik dasar menyusun narasi.", icon: "✍️", href: "#", ctaLabel: "Mulai modul" },
-        { title: "Analisis Puisi", level: "Lanjutan", duration: "45 menit", description: "Membedah struktur dan makna puisi.", icon: "📜", href: "#", ctaLabel: "Mulai modul" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Pelajaran",
-        type: "items",
-        itemFields: [
-          { name: "title", label: "Judul pelajaran", type: "string" },
-          { name: "level", label: "Tingkat (mis. Pemula)", type: "string" },
-          { name: "duration", label: "Durasi (mis. 15 menit)", type: "string" },
-          { name: "description", label: "Deskripsi", type: "textarea" },
-          { name: "icon", label: "Ikon (emoji)", type: "string" },
-          { name: "href", label: "Link mulai belajar", type: "url" },
-          { name: "ctaLabel", label: "Label tombol", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusMapLocation",
-    label: "Guru Plus Peta Lokasi",
-    category: "guru-plus",
-    emoji: "📍",
-    description: "Peta OpenStreetMap + alamat + petunjuk arah",
-    defaults: {
-      eyebrow: "Temui kami",
-      title: "Lokasi sekolah",
-      address: "Jl. Pendidikan No. 1, Jakarta Selatan",
-      lat: -6.2,
-      lon: 106.816666,
-      zoom: 14,
-      directionsHref: "",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "address", label: "Alamat", type: "textarea" },
-      { name: "lat", label: "Latitude (contoh -6.2)", type: "string" },
-      { name: "lon", label: "Longitude (contoh 106.816666)", type: "string" },
-      { name: "zoom", label: "Zoom (10-18)", type: "string" },
-      { name: "directionsHref", label: "Link Google Maps / Petunjuk arah", type: "url" },
-    ],
-  },
-  {
-    type: "GuruPlusSkillBars",
-    label: "Guru Plus Skill Bars",
-    category: "guru-plus",
-    emoji: "📈",
-    description: "Progress bar skill/fokus dengan reveal animasi",
-    defaults: {
-      eyebrow: "Fokus pengajaran",
-      title: "Komposisi kelas",
-      items: [
-        { label: "Literasi membaca", value: 90, note: "Fokus utama di kelas 5-6." },
-        { label: "Numerasi dasar", value: 75 },
-        { label: "Keterampilan menulis", value: 85, note: "Jurnal + cerita pendek." },
-        { label: "Diskusi kelompok", value: 70 },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Skill",
-        type: "items",
-        itemFields: [
-          { name: "label", label: "Nama skill", type: "string" },
-          { name: "value", label: "Nilai (0-100)", type: "string" },
-          { name: "note", label: "Catatan (opsional)", type: "string" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusAwardShowcase",
-    label: "Guru Plus Award",
-    category: "guru-plus",
-    emoji: "🏆",
-    description: "Showcase penghargaan dengan medal emas/perak/perunggu",
-    defaults: {
-      eyebrow: "Penghargaan",
-      title: "Juara yang membanggakan",
-      items: [
-        { rank: "Juara 1", title: "Lomba Guru Teladan", subtitle: "Tingkat Kabupaten", year: "2024" },
-        { rank: "Juara 2", title: "Olimpiade Literasi", subtitle: "Tingkat Provinsi", year: "2023" },
-        { rank: "Juara 3", title: "Festival Sastra Guru", subtitle: "Tingkat Nasional", year: "2022" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Daftar Penghargaan",
-        type: "items",
-        itemFields: [
-          { name: "rank", label: "Peringkat (Juara 1/Emas/dll)", type: "string" },
-          { name: "title", label: "Judul lomba", type: "string" },
-          { name: "subtitle", label: "Keterangan", type: "string" },
-          { name: "year", label: "Tahun", type: "string" },
-          { name: "icon", label: "Ikon (emoji)", type: "string" },
-        ],
-      },
-    ],
-  },
-
-  // ========================= GURU PLUS (Phase 4) =========================
-  {
-    type: "GuruPlusContactCTA",
-    label: "Guru Plus Contact CTA",
-    category: "guru-plus",
-    emoji: "📞",
-    description: "Section call-to-action besar dengan kontak",
-    defaults: {
-      eyebrow: "Hubungi kami",
-      title: "Mari bekerja sama untuk murid.",
-      subtitle: "Buka ruang diskusi dengan guru melalui kontak di bawah ini.",
-      ctaLabel: "Jadwalkan konsultasi",
-      ctaHref: "#",
-      ctaSecondaryLabel: "Pelajari lebih lanjut",
-      ctaSecondaryHref: "#",
-      variant: "navy",
-      contacts: [
-        { icon: "✉️", label: "Email", value: "guru@example.id", href: "mailto:guru@example.id" },
-        { icon: "📱", label: "WhatsApp", value: "+62 812-3456-7890", href: "https://wa.me/62" },
-        { icon: "📍", label: "Alamat", value: "Jl. Pendidikan No. 1" },
-      ],
-    },
-    fields: [
-      {
-        name: "variant",
-        label: "Varian warna",
-        type: "select",
-        options: [
-          { value: "navy", label: "Navy (gelap)" },
-          { value: "cream", label: "Cream (terang)" },
-        ],
-      },
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-      { name: "ctaLabel", label: "Tombol utama (label)", type: "string" },
-      { name: "ctaHref", label: "Tombol utama (link)", type: "url" },
-      { name: "ctaSecondaryLabel", label: "Tombol sekunder (label)", type: "string" },
-      { name: "ctaSecondaryHref", label: "Tombol sekunder (link)", type: "url" },
-      {
-        name: "contacts",
-        label: "Daftar Kontak",
-        type: "items",
-        itemFields: [
-          { name: "icon", label: "Ikon (emoji)", type: "string" },
-          { name: "label", label: "Label", type: "string" },
-          { name: "value", label: "Nilai", type: "string" },
-          { name: "href", label: "Link (opsional)", type: "url" },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusBookingSlot",
-    label: "Guru Plus Booking Slot",
-    category: "guru-plus",
-    emoji: "🗓️",
-    description: "Grid slot waktu konsultasi (available / booked / full)",
-    defaults: {
-      eyebrow: "Jadwal konsultasi",
-      title: "Pilih slot yang tersedia",
-      subtitle: "Konsultasi 1-on-1 untuk murid, orang tua, atau rekan guru.",
-      slots: [
-        { day: "Senin", time: "09:00", status: "available", href: "#" },
-        { day: "Senin", time: "11:00", status: "booked" },
-        { day: "Selasa", time: "10:00", status: "available", href: "#" },
-        { day: "Rabu", time: "13:00", status: "available", href: "#" },
-        { day: "Kamis", time: "09:30", status: "full" },
-        { day: "Jumat", time: "14:00", status: "available", href: "#" },
-      ],
-      footerNote: "Setiap sesi berdurasi 30 menit. Konfirmasi lewat email setelah booking.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-      {
-        name: "slots",
-        label: "Slot Waktu",
-        type: "items",
-        itemFields: [
-          { name: "day", label: "Hari", type: "string" },
-          { name: "time", label: "Waktu (mis. 09:00)", type: "string" },
-          {
-            name: "status",
-            label: "Status",
-            type: "select",
-            options: [
-              { value: "available", label: "Tersedia" },
-              { value: "booked", label: "Dipesan" },
-              { value: "full", label: "Penuh" },
-            ],
-          },
-          { name: "href", label: "Link booking (jika tersedia)", type: "url" },
-        ],
-      },
-      { name: "footerNote", label: "Catatan bawah", type: "textarea" },
-    ],
-  },
-  {
-    type: "GuruPlusNewsletter",
-    label: "Guru Plus Newsletter",
-    category: "guru-plus",
-    emoji: "📧",
-    description: "Form langganan email dengan gradient card",
-    defaults: {
-      eyebrow: "Tetap terhubung",
-      title: "Dapatkan materi mingguan",
-      subtitle: "Satu email per minggu — ringkas, tanpa spam.",
-      placeholder: "Email kamu…",
-      buttonLabel: "Langganan",
-      actionHref: "",
-      disclaimer: "Dengan berlangganan, kamu setuju dengan kebijakan privasi kami.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      { name: "subtitle", label: "Subtitle", type: "textarea" },
-      { name: "placeholder", label: "Placeholder email", type: "string" },
-      { name: "buttonLabel", label: "Label tombol", type: "string" },
-      {
-        name: "actionHref",
-        label: "URL action form (opsional)",
-        type: "url",
-        help: "Kosongkan untuk preview-only (menampilkan pesan sukses).",
-      },
-      { name: "disclaimer", label: "Disclaimer bawah", type: "textarea" },
-    ],
-  },
-  {
-    type: "GuruPlusStudentWall",
-    label: "Guru Plus Student Wall",
-    category: "guru-plus",
-    emoji: "📝",
-    description: "Dinding pesan murid (sticky-note bergaya tulis tangan)",
-    defaults: {
-      eyebrow: "Suara mereka",
-      title: "Pesan dari murid",
-      items: [
-        { message: "Terima kasih sudah membuat belajar jadi menyenangkan!", author: "Rama", grade: "Kelas 5", color: "amber" },
-        { message: "Ibu guru paling sabar yang pernah aku kenal 💛", author: "Siti", grade: "Kelas 6", color: "pink" },
-        { message: "Aku jadi suka membaca gara-gara Ibu.", author: "Dira", grade: "Kelas 5", color: "blue" },
-        { message: "Kami rindu kelas puisi hari Jumat!", author: "Angga", grade: "Kelas 6", color: "green" },
-      ],
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul", type: "string" },
-      {
-        name: "items",
-        label: "Pesan Murid",
-        type: "items",
-        itemFields: [
-          { name: "message", label: "Pesan", type: "textarea" },
-          { name: "author", label: "Nama murid", type: "string" },
-          { name: "grade", label: "Kelas", type: "string" },
-          {
-            name: "color",
-            label: "Warna note",
-            type: "select",
-            options: [
-              { value: "amber", label: "Amber (kuning)" },
-              { value: "pink", label: "Pink" },
-              { value: "blue", label: "Blue" },
-              { value: "green", label: "Green" },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    type: "GuruPlusStoryBlock",
-    label: "Guru Plus Story",
-    category: "guru-plus",
-    emoji: "📖",
-    description: "Long-form story dengan dropcap + pullquote",
-    defaults: {
-      eyebrow: "Catatan guru",
-      title: "Satu hari di kelas literasi",
-      byline: "Oleh Ibu Sari · 15 Oktober 2026",
-      image: "",
-      imageCaption: "",
-      body: "Hari ini kami membuka kelas dengan ritual sederhana: lima menit menulis bebas di jurnal. Tidak ada aturan baku — anak-anak boleh menulis apapun, dari mimpi semalam, keluh kesah, sampai sekadar deskripsi langit pagi.\n\nSaat saya berkeliling, saya menemukan satu catatan dari Rani: 'Pak Hendra kemarin bilang, membaca itu seperti mendapat teman baru setiap hari.' Saya terdiam sejenak. Kalimat itu lebih kuat dari seribu lembar modul.\n\nIni yang saya pelajari setelah dua belas tahun mengajar: metode terbaik tidak selalu metode yang paling rumit. Kadang, cukup dengan ruang yang aman untuk berpikir, anak-anak akan menemukan jalannya sendiri.",
-      pullquote: "Metode terbaik tidak selalu metode yang paling rumit. Kadang, cukup dengan ruang yang aman untuk berpikir.",
-    },
-    fields: [
-      { name: "eyebrow", label: "Eyebrow", type: "string" },
-      { name: "title", label: "Judul cerita", type: "string" },
-      { name: "byline", label: "Byline (penulis + tanggal)", type: "string" },
-      { name: "image", label: "Foto header (opsional)", type: "image" },
-      { name: "imageCaption", label: "Caption foto", type: "string" },
-      {
-        name: "body",
-        label: "Isi cerita",
-        type: "textarea",
-        help: "Pisahkan paragraf dengan baris kosong. Huruf pertama paragraf pertama otomatis dropcap.",
-      },
-      { name: "pullquote", label: "Pullquote (opsional)", type: "textarea" },
-    ],
-  },
 ];
 
 export function schemaFor(type: string): BlockSchema | undefined {
@@ -2954,6 +2093,7 @@ export function blockSchemasByCategory(): Array<{
   blocks: BlockSchema[];
 }> {
   const order: BlockCategory[] = [
+    "umkm",
     "pro",
     "hero",
     "layout",
@@ -2964,8 +2104,6 @@ export function blockSchemasByCategory(): Array<{
     "sosial",
     "list",
     "dynamic",
-    "guru",
-    "guru-plus",
   ];
   return order.map((key) => ({
     key,

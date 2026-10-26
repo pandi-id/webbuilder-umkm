@@ -186,15 +186,11 @@ img { max-width: 100%%; height: auto; display: block; }
 @media (max-width: 768px) { .wb-columns-grid { grid-template-columns: 1fr !important; } }
 `, primary, secondary, bg, fg, radius, heading, body)
 
-	// Guru palette — mirror apps/renderer/lib/theme.ts. guruCSS sengaja tidak
-	// mendeklarasikan var warna ini supaya tema user yang menang; di export
-	// sumbernya harus di stylesheet, bukan inline <style> renderer.
-	b.WriteString(guruVarsCSS(primary, secondary, bg, fg))
-
 	// Append the Pro block stylesheet — same rules used in renderer + editor
 	// so exported HTML matches the live preview.
 	b.WriteString(proCSS)
 	b.WriteString(proExtraCSS)
+	b.WriteString(umkmCSS)
 
 	return b.String()
 }

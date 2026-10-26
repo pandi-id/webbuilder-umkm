@@ -21,9 +21,6 @@ import {
   listPages,
   listBlogPosts,
   listProducts,
-  listArticles,
-  listLearningMaterials,
-  GURU_RUBRICS,
 } from "@/lib/api";
 
 export async function GET() {
@@ -85,40 +82,6 @@ export async function GET() {
     }
   } catch {
     /* products optional */
-  }
-
-  // Guru articles — 6 rubric × 100 max. Priority 0.7 karena artikel guru
-  // adalah primary content. Loop per rubric supaya URL punya struktur
-  // /{rubric}/{slug} sesuai routing spec §31.
-  for (const rubric of GURU_RUBRICS) {
-    try {
-      const articles = await listArticles(site.id, rubric, 100);
-      for (const a of articles) {
-        urls.push({
-          loc: `${baseURL}/${rubric}/${a.slug}`,
-          lastmod: a.published_at ?? a.updated_at ?? now,
-          priority: 0.7,
-          changefreq: "weekly",
-        });
-      }
-    } catch {
-      /* rubric optional — skip on failure */
-    }
-  }
-
-  // Learning materials — priority 0.6 (utilitas, tapi valuable untuk SEO).
-  try {
-    const materials = await listLearningMaterials(site.id, 200);
-    for (const m of materials) {
-      urls.push({
-        loc: `${baseURL}/pembelajaran/${m.slug}`,
-        lastmod: m.published_at ?? m.updated_at ?? now,
-        priority: 0.6,
-        changefreq: "monthly",
-      });
-    }
-  } catch {
-    /* materials optional */
   }
 
   const xml = renderSitemap(urls);

@@ -188,9 +188,9 @@ www.kubaca.id {
 
 # ---------- Renderer (public multi-tenant SSR) ----------
 # Catch-all :443 untuk custom domain tenant (via on_demand_tls).
-# Tenant site = guru's website → butuh Google Fonts + bisa di-iframe di
+# Tenant site = website toko user → butuh Google Fonts + bisa di-iframe di
 # dashboard editor preview + bisa di-share link.
-# CSP TIDAK boleh terlalu ketat karena setiap guru punya kebutuhan beda
+# CSP TIDAK boleh terlalu ketat karena setiap tenant punya kebutuhan beda
 # (mis. embed YouTube, Google Maps, Twitter widget, dll).
 :443 {
 	tls {

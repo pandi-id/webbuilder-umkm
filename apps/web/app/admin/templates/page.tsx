@@ -702,7 +702,6 @@ function CreateTemplateDialog({
                 <option value="school">School</option>
                 <option value="umkm">UMKM</option>
                 <option value="portfolio">Portfolio</option>
-                <option value="teacher">Teacher</option>
                 <option value="blog">Blog</option>
                 <option value="landing">Landing</option>
                 <option value="other">Other</option>

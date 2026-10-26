@@ -12,16 +12,14 @@ import (
 
 	"github.com/webbuilder/api/internal/admin"
 	"github.com/webbuilder/api/internal/analytics"
-	"github.com/webbuilder/api/internal/articles"
 	"github.com/webbuilder/api/internal/assets"
 	"github.com/webbuilder/api/internal/audit"
 	"github.com/webbuilder/api/internal/auth"
-	"github.com/webbuilder/api/internal/banners"
 	"github.com/webbuilder/api/internal/blog"
 	"github.com/webbuilder/api/internal/caddy"
 	"github.com/webbuilder/api/internal/cloudflare"
-	"github.com/webbuilder/api/internal/dns_providers"
 	"github.com/webbuilder/api/internal/config"
+	"github.com/webbuilder/api/internal/dns_providers"
 	"github.com/webbuilder/api/internal/documents_local"
 	"github.com/webbuilder/api/internal/domain_purchase"
 	"github.com/webbuilder/api/internal/domains"
@@ -30,19 +28,16 @@ import (
 	"github.com/webbuilder/api/internal/exports"
 	"github.com/webbuilder/api/internal/forms"
 	"github.com/webbuilder/api/internal/invoices"
-	"github.com/webbuilder/api/internal/learning"
-	"github.com/webbuilder/api/internal/litera"
 	"github.com/webbuilder/api/internal/pages"
 	"github.com/webbuilder/api/internal/payments"
-	platform_articles "github.com/webbuilder/api/internal/platform_articles"
 	"github.com/webbuilder/api/internal/paymentwh"
+	platform_articles "github.com/webbuilder/api/internal/platform_articles"
 	"github.com/webbuilder/api/internal/pricing"
 	"github.com/webbuilder/api/internal/products"
 	"github.com/webbuilder/api/internal/promos"
 	"github.com/webbuilder/api/internal/public"
 	"github.com/webbuilder/api/internal/registrar"
 	"github.com/webbuilder/api/internal/reseller"
-	"github.com/webbuilder/api/internal/responses"
 	"github.com/webbuilder/api/internal/settings"
 	"github.com/webbuilder/api/internal/site_byo_domains"
 	"github.com/webbuilder/api/internal/sites"
@@ -66,7 +61,7 @@ type Deps struct {
 
 	Auth       *auth.Handler
 	AuthGoogle *auth.GoogleHandler
-	Sites     *sites.Handler
+	Sites      *sites.Handler
 	// SitesRepo — dipakai HostSiteGuard middleware di /public/sites/:id/*
 	// untuk verify Host header match site.id URL param (defense in depth
 	// cross-tenant leak). Dipisah dari Sites handler supaya middleware
@@ -84,19 +79,6 @@ type Deps struct {
 
 	Caddy  *caddy.Handler
 	Public *public.Handler
-
-	// Guru content model — Phase 1 spec Rumah Digital Guru.
-	Articles  *articles.Handler
-	Learning  *learning.Handler
-
-	// Litera — NFT publishing integration (Phase 1 artikel-only). Nil = fitur
-	// disabled (config DB kosong / API key not set). Admin kelola di
-	// /admin/settings/litera.
-	Litera *litera.Handler
-	Responses *responses.Handler
-	Banners   *banners.Handler
-	// PublicGuru — public endpoints untuk website guru + portal directory.
-	PublicGuru *public.GuruHandler
 
 	// PlatformArticles — blog / knowledge base level platform (bukan per-site).
 	// Admin CRUD + public read. Konsumer: homepage marketing + /artikel.

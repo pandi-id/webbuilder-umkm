@@ -5,7 +5,7 @@
 //      pakai 'unsafe-inline' / 'unsafe-eval' di script-src
 //
 // Multi-tenant note: CSP sama untuk semua tenant karena renderer serve
-// konten pattern yang sama (user markdown + guru blocks). Kalau tenant
+// konten pattern yang sama (user markdown + blocks). Kalau tenant
 // butuh embed custom (mis. widget pihak ke-3), tambah ke script-src/frame-src.
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -19,7 +19,7 @@ export function proxy(req: NextRequest) {
   );
 
   // CSP tenant renderer — permisif untuk embed (YouTube, Spotify, Maps) karena
-  // guru boleh pakai di tulisan. Tetap drop 'unsafe-inline'/'unsafe-eval' di
+  // owner boleh pakai di konten. Tetap drop 'unsafe-inline'/'unsafe-eval' di
   // script-src → W3C CSP3 compliance.
   //
   // script-src pakai 'self' + nonce (bukan strict-dynamic) — tenant page

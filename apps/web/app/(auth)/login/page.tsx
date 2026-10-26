@@ -1,9 +1,8 @@
 "use client";
 
-// Halaman Login — mirror mockup dashboard-guru/login.html.
-// Split-panel: kiri brand storytelling (dark navy), kanan form.
+// Halaman Login — split-panel: kiri brand storytelling (dark navy), kanan form.
 // Mobile: brand panel di-hide, form full width.
-// Login tetap generic (semua persona), tapi brand identity dipoles ala guru.
+// Login generic untuk semua role; brand copy diarahkan ke pemilik UMKM.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,15 +10,15 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
-  BookOpen,
   Eye,
   EyeOff,
+  Globe,
   LayoutTemplate,
   Loader2,
   Lock,
   Mail,
-  Megaphone,
-  PenLine,
+  Package,
+  Store,
 } from "lucide-react";
 import { api, clearTokens, getAccessToken, setTokens } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
@@ -106,46 +105,46 @@ export default function LoginPage() {
         <div className="relative z-10 max-w-[560px]">
           <Link href="/" className="mb-16 flex items-center gap-3">
             <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-[#ffbc85] to-[#e98555] shadow-lg shadow-orange-500/25">
-              <BookOpen className="size-6 text-white" />
+              <Store className="size-6 text-white" />
             </div>
             <div>
-              <div className="text-[16px] font-bold text-white">Dashboard Guru</div>
-              <div className="text-[12px] text-slate-400">Website Pribadi Guru</div>
+              <div className="text-[16px] font-bold text-white">Dashboard Toko</div>
+              <div className="text-[12px] text-slate-400">Website & toko online UMKM</div>
             </div>
           </Link>
 
           <span className="inline-block text-[11px] font-black uppercase tracking-[0.12em] text-orange-300">
-            Ruang kerja digital untuk guru
+            Ruang kerja digital untuk UMKM
           </span>
           <h1 className="mt-4 max-w-xl text-[clamp(2.15rem,3.4vw,3.4rem)] font-bold leading-[1.05] tracking-tight">
-            Kelola tulisan, pembelajaran, diskusi, dan website Anda dari satu tempat.
+            Kelola produk, artikel, pesanan, dan website toko Anda dari satu tempat.
           </h1>
           <p className="mt-5 max-w-[560px] text-[15px] leading-relaxed text-slate-300">
-            Masuk untuk melanjutkan pengelolaan Website Pribadi Guru dengan tampilan yang
+            Masuk untuk melanjutkan pengelolaan website toko Anda dengan tampilan yang
             sederhana dan terarah.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FeatureCard
-              icon={PenLine}
-              title="Kelola Konten"
-              subtitle="Tulisan, materi, forum, dan tanggapan."
+              icon={Package}
+              title="Kelola Produk"
+              subtitle="Katalog produk, artikel, dan formulir."
             />
             <FeatureCard
               icon={LayoutTemplate}
               title="Atur Tampilan"
-              subtitle="Pilih template, hero, dan warna aksen."
+              subtitle="Pilih template toko dan warna aksen."
             />
             <FeatureCard
-              icon={Megaphone}
-              title="Ruang Promosi"
-              subtitle="Kelola banner 2:1 dan periode tayangnya."
+              icon={Globe}
+              title="Domain Sendiri"
+              subtitle="Alamat .id milik toko, SSL otomatis."
             />
           </div>
         </div>
 
         <div className="relative z-10 text-[11px] tracking-wider text-slate-500">
-          Website Pribadi Guru · PANDI × UPI
+          Website & Toko Online UMKM
         </div>
       </section>
 
@@ -155,11 +154,11 @@ export default function LoginPage() {
           {/* Mobile brand — hanya tampil di layar sempit karena panel kiri di-hide */}
           <div className="mb-7 flex items-center gap-3 lg:hidden">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#ffbc85] to-[#e98555] shadow-lg shadow-orange-500/20">
-              <BookOpen className="size-5 text-white" />
+              <Store className="size-5 text-white" />
             </div>
             <div>
-              <div className="text-[15px] font-bold text-slate-900">Dashboard Guru</div>
-              <div className="text-[11px] text-slate-500">Website Pribadi Guru</div>
+              <div className="text-[15px] font-bold text-slate-900">Dashboard Toko</div>
+              <div className="text-[11px] text-slate-500">Website & toko online UMKM</div>
             </div>
           </div>
 
@@ -169,7 +168,7 @@ export default function LoginPage() {
                 Selamat datang kembali
               </span>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">
-                Masuk ke Dashboard Guru
+                Masuk ke Dashboard Toko
               </h2>
               <p className="mt-1.5 text-sm text-slate-500">
                 Gunakan akun Anda untuk melanjutkan.
@@ -195,7 +194,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    placeholder="nama@sekolah.id"
+                    placeholder="nama@tokoanda.id"
                     className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                   />
                 </div>

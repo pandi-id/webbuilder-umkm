@@ -91,12 +91,12 @@ func Promos(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-// Templates re-upserts the 15 built-in templates.
+// Templates re-upserts the built-in templates.
 func Templates(ctx context.Context, r *templates.Repo) error {
 	if err := r.Seed(ctx); err != nil {
 		return err
 	}
-	slog.Info("seed: templates upserted", "count", 15)
+	slog.Info("seed: templates upserted", "count", len(templates.BuiltinTemplates()))
 	return nil
 }
 

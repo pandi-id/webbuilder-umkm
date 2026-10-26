@@ -13,11 +13,9 @@ import (
 
 	"github.com/webbuilder/api/internal/admin"
 	"github.com/webbuilder/api/internal/analytics"
-	"github.com/webbuilder/api/internal/articles"
 	"github.com/webbuilder/api/internal/assets"
 	"github.com/webbuilder/api/internal/audit"
 	"github.com/webbuilder/api/internal/auth"
-	"github.com/webbuilder/api/internal/banners"
 	"github.com/webbuilder/api/internal/blog"
 	"github.com/webbuilder/api/internal/cachepurge"
 	"github.com/webbuilder/api/internal/caddy"
@@ -33,8 +31,6 @@ import (
 	"github.com/webbuilder/api/internal/exports"
 	"github.com/webbuilder/api/internal/forms"
 	"github.com/webbuilder/api/internal/invoices"
-	"github.com/webbuilder/api/internal/learning"
-	"github.com/webbuilder/api/internal/litera"
 	"github.com/webbuilder/api/internal/logging"
 	"github.com/webbuilder/api/internal/mail"
 	"github.com/webbuilder/api/internal/metrics"
@@ -50,7 +46,6 @@ import (
 	"github.com/webbuilder/api/internal/public"
 	"github.com/webbuilder/api/internal/registrar"
 	"github.com/webbuilder/api/internal/reseller"
-	"github.com/webbuilder/api/internal/responses"
 	"github.com/webbuilder/api/internal/router"
 	"github.com/webbuilder/api/internal/seed"
 	"github.com/webbuilder/api/internal/settings"
@@ -145,17 +140,6 @@ func main() {
 	assetRepo := assets.NewRepo(pool)
 	productRepo := products.NewRepo(pool)
 	blogRepo := blog.NewRepo(pool)
-	articlesRepo := articles.NewRepo(pool)
-	learningRepo := learning.NewRepo(pool)
-	literaConfigRepo := litera.NewConfigRepo(pool)
-	literaDomainRepo := litera.NewDomainRepo(pool)
-	literaClient := litera.NewClient(literaConfigRepo, literaDomainRepo)
-	literaHandler := litera.NewHandler(literaConfigRepo, literaClient)
-	articlesHandler := articles.NewHandler(articlesRepo, siteRepo)
-	articlesHandler.SetLitera(literaClient)
-	// SetPurchases di-wire setelah purchaseRepo diinisialisasi (block di bawah).
-	responsesRepo := responses.NewRepo(pool)
-	bannersRepo := banners.NewRepo(pool)
 	platformArticlesRepo := platform_articles.NewRepo(pool)
 	snippetRepo := snippets.NewRepo(pool)
 	adminRepo := admin.NewRepo(pool)
@@ -332,19 +316,9 @@ func main() {
 	// inject lewat SetTemplates (nil-safe).
 	publicHandler := public.NewHandler(siteRepo, pageRepo, productRepo, blogRepo)
 	publicHandler.SetTemplates(templateRepo)
-	publicGuruHandler := public.NewGuruHandler(pool, articlesRepo, learningRepo, responsesRepo)
 
-	// Templates handler — extract ke variabel supaya bisa inject guru seeders.
-	// Setelah CreateSiteFromTemplate untuk `guru-pandi-upi`, seeder ini
-	// otomatis populate articles/materials/banners sample.
 	templatesHandler := templates.NewHandler(templateRepo, siteRepo, pageRepo, productRepo, blogRepo, purchaseRepo)
-	templatesHandler.SetGuruSeeders(articlesRepo, learningRepo, bannersRepo, authRepo)
-
-	// Banners handler — extract ke var supaya audit repo bisa di-inject
-	// setelah audit dibangun (spec §27: track admin banner override).
-	bannersHandler := banners.NewHandler(bannersRepo, siteRepo)
 	if purchaseRepo != nil {
-		articlesHandler.SetPurchases(purchaseRepo)
 		adminHandler.SetPurchases(purchaseRepo)
 	}
 
@@ -376,11 +350,9 @@ func main() {
 	auditHandler := audit.NewHandler(auditRepo)
 	adminHandler.SetAudit(auditRepo)
 	resellerHandler.SetAudit(auditRepo)
-	literaHandler.SetAudit(auditRepo)
 	if purchaseHandler != nil {
 		purchaseHandler.SetAudit(auditRepo)
 	}
-	bannersHandler.SetAuditRepo(auditRepo)
 
 	// Pricing — Phase 3.10+ 3-tier pricing model.
 	pricingRepo := pricing.NewRepo(pool)
@@ -566,14 +538,10 @@ func main() {
 		Domains:        domains.NewHandler(domainRepo, siteRepo, cfg.PlatformIPs),
 		Templates:      templatesHandler,
 		Export: exports.NewHandler(&exports.Builder{
-			Sites:     siteRepo,
-			Pages:     pageRepo,
-			Products:  productRepo,
-			Blog:      blogRepo,
-			Articles:  articlesRepo,
-			Learning:  learningRepo,
-			Banners:   bannersRepo,
-			Responses: responsesRepo,
+			Sites:    siteRepo,
+			Pages:    pageRepo,
+			Products: productRepo,
+			Blog:     blogRepo,
 
 			StoragePublicURL: storagePublicURL(cfg),
 		}),
@@ -601,12 +569,6 @@ func main() {
 		Documents:        documentsHandler,
 		Promos:           promosHandler,
 		SiteBYODomains:   byoHandler,
-		Articles:         articlesHandler,
-		Learning:         learning.NewHandler(learningRepo, siteRepo),
-		Litera:           literaHandler,
-		Responses:        responses.NewHandler(responsesRepo, siteRepo, articlesRepo, learningRepo),
-		Banners:          bannersHandler,
-		PublicGuru:       publicGuruHandler,
 		PlatformArticles: platform_articles.NewHandler(platformArticlesRepo),
 		AssetStorage:     assetStorage,
 		ErrorTracker:     tracker,

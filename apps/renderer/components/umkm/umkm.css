@@ -1,0 +1,364 @@
+/* UMKM block family (.wb-umkm-*). Byte-identical copies live in
+   apps/web/components/umkm/umkm.css, apps/renderer/components/umkm/umkm.css and
+   apps/api/internal/exports/umkm.css (go:embed) — edit all three together.
+   Theme comes only from --color-*, --radius and --font-* variables. Layout uses
+   container queries so the editor's device preview matches real breakpoints. */
+
+.wb-umkm {
+  --u-fg: var(--color-fg, #0f172a);
+  --u-bg: var(--color-bg, #ffffff);
+  --u-primary: var(--color-primary, #2563eb);
+  --u-secondary: var(--color-secondary, var(--u-primary));
+  --u-radius: var(--radius, 0.75rem);
+  --u-muted: color-mix(in srgb, var(--u-fg) 64%, var(--u-bg));
+  --u-line: color-mix(in srgb, var(--u-fg) 11%, var(--u-bg));
+  --u-surface: color-mix(in srgb, var(--u-fg) 3%, var(--u-bg));
+  --u-tint: color-mix(in srgb, var(--u-primary) 10%, var(--u-bg));
+  --u-shadow: 0 1px 2px color-mix(in srgb, var(--u-fg) 6%, transparent), 0 8px 24px -12px color-mix(in srgb, var(--u-fg) 18%, transparent);
+  --u-shadow-lg: 0 2px 4px color-mix(in srgb, var(--u-fg) 6%, transparent), 0 24px 48px -20px color-mix(in srgb, var(--u-fg) 28%, transparent);
+  container-type: inline-size;
+  padding: 3.5rem 0;
+  color: var(--u-fg);
+  font-family: var(--wb-font-body, var(--font-body, inherit));
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+/* :where() keeps resets at element specificity so every .wb-umkm-* class wins. */
+:where(.wb-umkm, .wb-umkm-wa-float) *, :where(.wb-umkm, .wb-umkm-wa-float) *::before, :where(.wb-umkm, .wb-umkm-wa-float) *::after { box-sizing: border-box; }
+:where(.wb-umkm) :where(h1, h2, h3, p, ul, figure) { margin: 0; }
+:where(.wb-umkm) ul { padding: 0; list-style: none; }
+:where(.wb-umkm, .wb-umkm-wa-float) a { color: inherit; text-decoration: none; }
+:where(.wb-umkm) img { display: block; max-width: 100%; }
+:where(.wb-umkm) :where(h1, h2, h3) {
+  font-family: var(--wb-font-heading, var(--font-heading, inherit));
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.wb-umkm-wrap { width: 100%; max-width: 1140px; margin: 0 auto; padding: 0 1rem; }
+@container (min-width: 640px) {
+  .wb-umkm-wrap { padding: 0 1.5rem; }
+}
+
+.wb-umkm-ic { width: 1.1em; height: 1.1em; flex: none; }
+.wb-umkm-ic--sm { width: 0.95em; height: 0.95em; }
+
+/* ---------- Shared: section heading ---------- */
+.wb-umkm-head { max-width: 40rem; margin: 0 auto 2rem; text-align: center; }
+.wb-umkm-head--left { margin-left: 0; text-align: left; }
+.wb-umkm-title { font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem); font-weight: 800; }
+.wb-umkm-sub { margin-top: 0.6rem; color: var(--u-muted); font-size: 1rem; }
+
+/* ---------- Shared: buttons ---------- */
+.wb-umkm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 2.75rem; padding: 0.65rem 1.15rem;
+  border: 1px solid transparent; border-radius: var(--u-radius);
+  font-weight: 600; font-size: 0.95rem; line-height: 1.2; text-align: center;
+  cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease, border-color .15s ease;
+}
+.wb-umkm-btn--primary { background: var(--u-primary); color: #fff; box-shadow: 0 8px 20px -10px var(--u-primary); }
+.wb-umkm-btn--primary:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--u-primary) 88%, #000); }
+.wb-umkm-btn--ghost { background: var(--u-bg); border-color: var(--u-line); color: var(--u-fg); }
+.wb-umkm-btn--ghost:hover { border-color: color-mix(in srgb, var(--u-primary) 45%, var(--u-bg)); color: var(--u-primary); }
+.wb-umkm-btn--lg { min-height: 3.1rem; padding: 0.8rem 1.4rem; font-size: 1rem; }
+.wb-umkm-btn--sm { min-height: 2.35rem; padding: 0.45rem 0.8rem; font-size: 0.85rem; }
+.wb-umkm-btn--block { display: flex; width: 100%; }
+.wb-umkm-btn.is-disabled { background: var(--u-surface); color: var(--u-muted); border-color: var(--u-line); box-shadow: none; cursor: not-allowed; transform: none; }
+
+/* ---------- Shared: image placeholder + stars ---------- */
+.wb-umkm-ph {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--u-primary) 22%, transparent), transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--u-primary) 14%, var(--u-bg)), color-mix(in srgb, var(--u-secondary) 6%, var(--u-bg)));
+  color: color-mix(in srgb, var(--u-primary) 55%, var(--u-bg));
+}
+.wb-umkm-ph .wb-umkm-ic { width: 2.25rem; height: 2.25rem; }
+.wb-umkm-stars { display: inline-flex; gap: 0.1rem; color: #f59e0b; }
+.wb-umkm-star { width: 1rem; height: 1rem; fill: currentColor; }
+.wb-umkm-star.is-off { color: var(--u-line); }
+
+/* =============================== UmkmHero =============================== */
+.wb-umkm-hero {
+  padding: 3rem 0 3.5rem;
+  background:
+    radial-gradient(60rem 30rem at 100% 0%, color-mix(in srgb, var(--u-primary) 9%, transparent), transparent 60%),
+    var(--u-bg);
+}
+.wb-umkm-hero-grid { display: grid; gap: 2.25rem; align-items: center; }
+.wb-umkm-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.5rem; max-width: 100%;
+  padding: 0.35rem 0.8rem; border-radius: 999px;
+  background: var(--u-tint); color: color-mix(in srgb, var(--u-primary) 80%, var(--u-fg));
+  font-size: 0.8rem; font-weight: 600;
+}
+.wb-umkm-eyebrow-dot { width: 0.5rem; height: 0.5rem; flex: none; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 3px color-mix(in srgb, #22c55e 25%, transparent); }
+.wb-umkm-hero-title { margin-top: 1rem; font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.08; }
+.wb-umkm-hero-sub { margin-top: 1rem; max-width: 36rem; color: var(--u-muted); font-size: 1.05rem; }
+.wb-umkm-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+.wb-umkm-actions .wb-umkm-btn { flex: 1 1 13rem; }
+.wb-umkm-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+.wb-umkm-chip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.75rem; border: 1px solid var(--u-line); border-radius: 999px;
+  background: var(--u-bg); font-size: 0.82rem; font-weight: 500;
+}
+.wb-umkm-chip .wb-umkm-ic { color: var(--u-primary); }
+.wb-umkm-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.25rem; color: var(--u-muted); font-size: 0.9rem; }
+.wb-umkm-hero-media { position: relative; isolation: isolate; }
+.wb-umkm-hero-frame {
+  position: relative; overflow: hidden; aspect-ratio: 4 / 3;
+  border-radius: calc(var(--u-radius) * 2); box-shadow: var(--u-shadow-lg);
+  background: var(--u-surface);
+}
+.wb-umkm-hero-frame img { width: 100%; height: 100%; object-fit: cover; }
+.wb-umkm-hero-media::before {
+  content: ""; position: absolute; inset: 8% -4% -5% 8%; z-index: -1;
+  border-radius: calc(var(--u-radius) * 2);
+  background: color-mix(in srgb, var(--u-primary) 14%, var(--u-bg));
+}
+@container (min-width: 820px) {
+  .wb-umkm-hero { padding: 5rem 0; }
+  .wb-umkm-hero-grid { grid-template-columns: 1.05fr 0.95fr; gap: 3.5rem; }
+  .wb-umkm-actions .wb-umkm-btn { flex: 0 0 auto; }
+  .wb-umkm-hero-frame { aspect-ratio: 5 / 6; }
+}
+
+/* ============================ Product cards ============================ */
+.wb-umkm-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 720px) {
+  .wb-umkm-grid { gap: 1.25rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (min-width: 1000px) {
+  .wb-umkm-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.wb-umkm-card {
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--u-line); border-radius: calc(var(--u-radius) * 1.25);
+  background: var(--u-bg); box-shadow: var(--u-shadow);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.wb-umkm-card:hover { transform: translateY(-3px); box-shadow: var(--u-shadow-lg); border-color: color-mix(in srgb, var(--u-primary) 30%, var(--u-line)); }
+.wb-umkm-card-media { position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: var(--u-surface); }
+.wb-umkm-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.wb-umkm-card:hover .wb-umkm-card-media img { transform: scale(1.04); }
+.wb-umkm-badge {
+  position: absolute; top: 0.6rem; left: 0.6rem;
+  padding: 0.2rem 0.55rem; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
+  background: var(--u-primary); color: #fff;
+}
+.wb-umkm-badge--baru { background: var(--u-secondary); }
+.wb-umkm-badge--promo { background: var(--u-fg); color: var(--u-bg); }
+.wb-umkm-badge--habis { background: color-mix(in srgb, var(--u-fg) 55%, var(--u-bg)); }
+.wb-umkm-disc {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  padding: 0.2rem 0.5rem; border-radius: 999px;
+  background: var(--u-bg); color: var(--u-primary);
+  font-size: 0.72rem; font-weight: 800; box-shadow: var(--u-shadow);
+}
+.wb-umkm-card-body { display: flex; flex: 1; flex-direction: column; gap: 0.35rem; padding: 0.8rem; }
+.wb-umkm-card-name { font-size: 0.95rem; font-weight: 700; line-height: 1.3; }
+.wb-umkm-card-name a:hover { color: var(--u-primary); }
+.wb-umkm-card-desc {
+  color: var(--u-muted); font-size: 0.8rem; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wb-umkm-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.5rem; margin-top: auto; padding-top: 0.35rem; }
+.wb-umkm-price-now { font-size: 1.05rem; font-weight: 800; color: var(--u-fg); }
+.wb-umkm-price-was { font-size: 0.8rem; color: var(--u-muted); text-decoration: line-through; }
+.wb-umkm-card-cta { margin-top: 0.5rem; }
+.wb-umkm-card.is-soldout .wb-umkm-card-media img, .wb-umkm-card.is-soldout .wb-umkm-ph { filter: grayscale(1); opacity: 0.6; }
+.wb-umkm-empty { padding: 2.5rem 1rem; border: 1px dashed var(--u-line); border-radius: var(--u-radius); text-align: center; color: var(--u-muted); }
+.wb-umkm-note {
+  margin-bottom: 1rem; padding: 0.6rem 0.9rem; border: 1px dashed color-mix(in srgb, var(--u-primary) 40%, var(--u-bg));
+  border-radius: var(--u-radius); background: var(--u-tint); color: color-mix(in srgb, var(--u-primary) 75%, var(--u-fg));
+  font-size: 0.82rem; text-align: center;
+}
+@container (min-width: 720px) {
+  .wb-umkm-card-body { padding: 1rem; }
+  .wb-umkm-card-name { font-size: 1rem; }
+  .wb-umkm-card-desc { font-size: 0.85rem; }
+  .wb-umkm-price-now { font-size: 1.15rem; }
+}
+
+/* ============================ UmkmPromoBanner ============================ */
+.wb-umkm-promo-card {
+  position: relative; overflow: hidden; display: grid; gap: 1.5rem;
+  padding: 1.75rem 1.25rem; border-radius: calc(var(--u-radius) * 2);
+  background: linear-gradient(135deg, var(--u-primary), color-mix(in srgb, var(--u-secondary) 70%, var(--u-primary)));
+  color: #fff; box-shadow: var(--u-shadow-lg);
+}
+.wb-umkm-promo-card::before, .wb-umkm-promo-card::after {
+  content: ""; position: absolute; border-radius: 999px; pointer-events: none;
+  background: rgba(255, 255, 255, 0.1);
+}
+.wb-umkm-promo-card::before { width: 16rem; height: 16rem; right: -5rem; top: -7rem; }
+.wb-umkm-promo-card::after { width: 9rem; height: 9rem; left: -3rem; bottom: -4rem; }
+.wb-umkm-promo-main, .wb-umkm-promo-side { position: relative; }
+.wb-umkm-promo-tag {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.8rem; border-radius: 999px;
+  background: #fff; color: var(--u-primary);
+  font-size: 0.85rem; font-weight: 800;
+}
+.wb-umkm-promo-title { margin-top: 0.9rem; font-size: clamp(1.4rem, 1.1rem + 1.5vw, 2rem); font-weight: 800; color: #fff; }
+.wb-umkm-promo-desc { margin-top: 0.5rem; max-width: 34rem; opacity: 0.92; }
+.wb-umkm-promo-valid { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.9rem; font-size: 0.85rem; opacity: 0.85; }
+.wb-umkm-promo-side { display: flex; flex-direction: column; gap: 0.75rem; }
+.wb-umkm-voucher {
+  padding: 0.8rem 0.9rem; border: 1.5px dashed rgba(255, 255, 255, 0.65);
+  border-radius: var(--u-radius); background: rgba(255, 255, 255, 0.12);
+}
+.wb-umkm-voucher-label { display: block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.wb-umkm-voucher-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.3rem; }
+.wb-umkm-voucher-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.3rem; font-weight: 800; letter-spacing: 0.08em; }
+.wb-umkm-copy {
+  flex: none; display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.75rem; border: 0; border-radius: 999px;
+  background: #fff; color: var(--u-primary); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}
+.wb-umkm-copy:hover { background: color-mix(in srgb, #fff 88%, var(--u-primary)); }
+.wb-umkm-btn--light { background: #fff; color: var(--u-primary); }
+.wb-umkm-btn--light:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.45); }
+@container (min-width: 760px) {
+  .wb-umkm-promo-card { grid-template-columns: 1.4fr 1fr; align-items: center; gap: 2.5rem; padding: 2.5rem 2.75rem; }
+}
+
+/* ============================ UmkmStoreInfo ============================ */
+.wb-umkm-store-grid { display: grid; gap: 1.25rem; }
+.wb-umkm-store-info {
+  display: grid; gap: 1.25rem; padding: 1.25rem;
+  border: 1px solid var(--u-line); border-radius: calc(var(--u-radius) * 1.5); background: var(--u-bg); box-shadow: var(--u-shadow);
+}
+.wb-umkm-info-row { display: flex; gap: 0.85rem; }
+.wb-umkm-info-ic {
+  display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem;
+  border-radius: var(--u-radius); background: var(--u-tint); color: var(--u-primary);
+}
+.wb-umkm-info-body { min-width: 0; flex: 1; }
+.wb-umkm-info-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-muted); }
+.wb-umkm-info-text { margin-top: 0.15rem; font-weight: 500; }
+.wb-umkm-link { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.35rem; color: var(--u-primary); font-size: 0.9rem; font-weight: 600; }
+.wb-umkm-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.wb-umkm-hours { margin-top: 0.35rem; display: grid; gap: 0.3rem; }
+.wb-umkm-hours li { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 0.3rem; border-bottom: 1px dashed var(--u-line); font-size: 0.92rem; }
+.wb-umkm-hours li:last-child { border-bottom: 0; padding-bottom: 0; }
+.wb-umkm-hours-time { font-weight: 600; white-space: nowrap; }
+.wb-umkm-contact-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.wb-umkm-areas { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.45rem; }
+.wb-umkm-area { padding: 0.25rem 0.65rem; border-radius: 999px; background: var(--u-surface); border: 1px solid var(--u-line); font-size: 0.82rem; }
+.wb-umkm-store-map {
+  position: relative; overflow: hidden; min-height: 18rem;
+  border: 1px solid var(--u-line); border-radius: calc(var(--u-radius) * 1.5); background: var(--u-surface); box-shadow: var(--u-shadow);
+}
+.wb-umkm-store-map iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.wb-umkm-map-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; padding: 1.5rem; text-align: center; }
+.wb-umkm-map-ph .wb-umkm-ic { width: 2.5rem; height: 2.5rem; color: var(--u-primary); }
+@container (min-width: 820px) {
+  .wb-umkm-store-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1.5rem; }
+  .wb-umkm-store-info { padding: 1.75rem; }
+  .wb-umkm-store-map { min-height: 100%; }
+}
+
+/* ========================= UmkmMarketplaceLinks ========================= */
+.wb-umkm-mp-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+.wb-umkm-mp-pill {
+  display: inline-flex; align-items: center; gap: 0.7rem; max-width: 100%;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem; border: 1px solid var(--u-line); border-radius: 999px;
+  background: var(--u-bg); box-shadow: var(--u-shadow);
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.wb-umkm-mp-pill:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--u-primary) 40%, var(--u-line)); box-shadow: var(--u-shadow-lg); }
+.wb-umkm-mp-dot {
+  display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; border-radius: 999px;
+  color: #fff; font-size: 0.78rem; font-weight: 800; letter-spacing: -0.02em;
+}
+.wb-umkm-mp-text { display: flex; min-width: 0; flex-direction: column; line-height: 1.2; }
+.wb-umkm-mp-name { font-weight: 700; font-size: 0.92rem; }
+.wb-umkm-mp-label { color: var(--u-muted); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-umkm-mp-pill > .wb-umkm-ic { color: var(--u-muted); }
+
+/* =========================== UmkmTrustBadges =========================== */
+.wb-umkm-trust-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); }
+.wb-umkm-trust-item {
+  padding: 1.1rem 1rem; border: 1px solid var(--u-line); border-radius: calc(var(--u-radius) * 1.25);
+  background: var(--u-bg); text-align: center;
+}
+.wb-umkm-trust-ic {
+  display: grid; place-items: center; width: 3rem; height: 3rem; margin: 0 auto 0.75rem;
+  border-radius: 999px; background: var(--u-tint); color: var(--u-primary);
+}
+.wb-umkm-trust-ic .wb-umkm-ic { width: 1.4rem; height: 1.4rem; }
+.wb-umkm-trust-title { font-size: 0.95rem; font-weight: 700; }
+.wb-umkm-trust-desc { margin-top: 0.3rem; color: var(--u-muted); font-size: 0.82rem; line-height: 1.45; }
+@container (min-width: 900px) {
+  .wb-umkm-trust-grid { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1rem; }
+}
+
+/* ============================= UmkmReviews ============================= */
+.wb-umkm-rev-summary {
+  display: inline-flex; align-items: center; gap: 0.85rem; margin-top: 1rem;
+  padding: 0.6rem 1rem; border: 1px solid var(--u-line); border-radius: 999px; background: var(--u-bg);
+}
+.wb-umkm-rev-avg { font-family: var(--wb-font-heading, var(--font-heading, inherit)); font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.wb-umkm-rev-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; font-size: 0.8rem; color: var(--u-muted); text-align: left; }
+.wb-umkm-rev-list {
+  display: flex; gap: 0.85rem; overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 0.25rem 0.1rem 0.75rem; scrollbar-width: thin;
+}
+.wb-umkm-rev {
+  display: flex; flex: 0 0 min(85%, 20rem); flex-direction: column; gap: 0.75rem; scroll-snap-align: start;
+  padding: 1.25rem; border: 1px solid var(--u-line); border-radius: calc(var(--u-radius) * 1.25);
+  background: var(--u-bg); box-shadow: var(--u-shadow);
+}
+.wb-umkm-rev-text { flex: 1; font-size: 0.95rem; line-height: 1.6; }
+.wb-umkm-rev-author { display: flex; align-items: center; gap: 0.7rem; padding-top: 0.75rem; border-top: 1px solid var(--u-line); }
+.wb-umkm-avatar {
+  display: grid; place-items: center; flex: none; overflow: hidden; width: 2.5rem; height: 2.5rem; border-radius: 999px;
+  background: var(--u-tint); color: var(--u-primary); font-weight: 800;
+}
+.wb-umkm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.wb-umkm-rev-name { font-weight: 700; font-size: 0.92rem; line-height: 1.25; }
+.wb-umkm-rev-loc { color: var(--u-muted); font-size: 0.8rem; line-height: 1.3; }
+@container (min-width: 760px) {
+  .wb-umkm-rev-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; overflow: visible; padding: 0; }
+}
+
+/* ========================== UmkmWhatsAppFloat ========================== */
+.wb-umkm-wa-float {
+  --u-wa: #25d366;
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 60;
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: var(--wb-font-body, var(--font-body, inherit));
+}
+.wb-umkm-wa-float--left { right: auto; left: 1rem; flex-direction: row-reverse; }
+.wb-umkm-wa-float--theme { --u-wa: var(--color-primary, #2563eb); }
+.wb-umkm-wa-bubble {
+  padding: 0.45rem 0.8rem; border-radius: 999px;
+  background: var(--color-bg, #fff); color: var(--color-fg, #0f172a);
+  font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.3);
+}
+.wb-umkm-wa-fab {
+  position: relative; display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 999px;
+  background: var(--u-wa); color: #fff; text-decoration: none;
+  box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--u-wa) 70%, #000);
+  transition: transform .15s ease;
+}
+.wb-umkm-wa-fab:hover { transform: scale(1.06); }
+.wb-umkm-wa-fab::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--u-wa);
+  animation: wb-umkm-wa-ping 2.4s ease-out infinite; z-index: -1;
+}
+.wb-umkm-wa-fab svg { width: 1.75rem; height: 1.75rem; fill: currentColor; }
+@keyframes wb-umkm-wa-ping { 0% { transform: scale(1); opacity: 0.5; } 80%, 100% { transform: scale(1.6); opacity: 0; } }
+.wb-umkm-wa-float.is-inline { position: relative; right: auto; left: auto; bottom: auto; z-index: auto; justify-content: flex-end; }
+.wb-umkm-wa-float--left.is-inline { justify-content: flex-end; }
+.wb-umkm-wa-section { padding: 1rem 0; }
+.wb-umkm-wa-preview { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1rem; border: 1px dashed var(--u-line); border-radius: var(--u-radius); }
+.wb-umkm-wa-note { color: var(--u-muted); font-size: 0.85rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-umkm *, .wb-umkm-wa-fab, .wb-umkm-wa-fab::before { transition: none !important; animation: none !important; }
+}

@@ -35,21 +35,6 @@ func MountAdmin(app *fiber.App, deps Deps) {
 		g.Delete("/assets/:id", deps.Assets.AdminDelete)
 	}
 
-	// Litera NFT publishing config — singleton DB-backed, admin edit via
-	// /admin/settings/litera. Nil-safe (handler mounted conditionally).
-	if deps.Litera != nil {
-		g.Get("/litera/config", deps.Litera.GetConfig)
-		g.Patch("/litera/config", deps.Litera.UpdateConfig)
-	}
-	// Litera intents dashboard — list artikel yang Litera-enabled + status
-	// (registered/pending/failed) + retry endpoint untuk soft-failed.
-	// Hidup di articles.Handler karena akses articles repo.
-	if deps.Articles != nil {
-		g.Get("/litera/intents", deps.Articles.LiteraAdminList)
-		g.Get("/articles/:id/litera-preview", deps.Articles.LiteraAdminPreview)
-		g.Post("/articles/:id/litera-retry", deps.Articles.LiteraAdminRetry)
-	}
-
 	// Reseller management — approve/suspend applications + tabbed detail view.
 	// Handler cek `authRepo == nil` → return 503 kalau feature belum di-wire.
 	g.Get("/resellers", deps.Admin.ListResellers)
@@ -193,12 +178,6 @@ func MountAdmin(app *fiber.App, deps Deps) {
 		g.Get("/wallet/topups/:id/proof", deps.WalletLocal.AdminGetProof)
 		g.Post("/wallet/topups/:id/approve", deps.WalletLocal.AdminApprove)
 		g.Post("/wallet/topups/:id/reject", deps.WalletLocal.AdminReject)
-	}
-
-	// Guru — promotion banner moderation cross-site (Ruang Promosi override).
-	if deps.Banners != nil {
-		g.Get("/banners", deps.Banners.AdminList)
-		g.Post("/banners/:id/set-enabled", deps.Banners.AdminSetEnabled)
 	}
 
 	// Cloudflare configs — CRUD untuk auto-attach domain baru ke akun CF

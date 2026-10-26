@@ -6,7 +6,6 @@ import { googleFontsUrl, themeToCss } from "@/lib/theme";
 import { buildArticle, wrap } from "@/lib/schema";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
-import { GuruStyles } from "@/components/GuruBlocks";
 import { SiteFooterBlocks, SiteHeaderBlocks } from "@/components/SiteLayout";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +41,6 @@ export default async function BlogPostDetail(props: { params: Promise<{ slug: st
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLD }} />
-      <GuruStyles />
       <SiteHeadCode site={site} />
       <PageViewBeacon siteId={site.id} pageSlug={`/blog/${params.slug}`} />
       <SiteHeaderBlocks site={site} />

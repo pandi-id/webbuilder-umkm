@@ -9,14 +9,7 @@
 	}
 }
 
-# Snippet CSP header untuk renderer (host user-facing).
-# Mengizinkan widget Literaa NFT (cdn.literaa.xyz) + Polygon RPC + Privy/WalletConnect
-# untuk login wallet. Snippet dipakai via `import` di tiap host renderer.
-(renderer_csp) {
-	header Content-Security-Policy "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.literaa.xyz; connect-src 'self' https://literaa.xyz https://cdn.literaa.xyz https://polygon-bor-rpc.publicnode.com https://1rpc.io wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.web3modal.org; img-src 'self' data: blob: https: https://cdn.literaa.xyz https://*.ipfs.dweb.link https://ipfs.io; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org https://*.privy.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-}
-
-# Dashboard / editor — tidak perlu CSP Litera (dashboard tidak embed widget).
+# Dashboard / editor.
 app.localhost {
 	reverse_proxy web:3000
 }
@@ -31,7 +24,6 @@ api.localhost {
 
 # Default localhost = renderer (so http://localhost works in dev)
 localhost {
-	import renderer_csp
 	reverse_proxy renderer:3000
 }
 
@@ -41,11 +33,9 @@ localhost {
 	tls {
 		on_demand
 	}
-	import renderer_csp
 	reverse_proxy renderer:3000
 }
 
 :80 {
-	import renderer_csp
 	reverse_proxy renderer:3000
 }

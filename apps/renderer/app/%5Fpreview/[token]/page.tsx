@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { RenderBlocks } from "@/components/Blocks";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
-import { GuruStyles } from "@/components/GuruBlocks";
 import { composePageWithLayout } from "@/components/SiteLayout";
 import { getPagePreview } from "@/lib/api";
 import { googleFontsUrl, themeToCss } from "@/lib/theme";
@@ -62,7 +61,6 @@ export default async function PreviewPage(
         🔍 PRATINJAU DRAFT — bukan versi live · link kadaluarsa otomatis dalam 1 jam
       </div>
 
-      <GuruStyles />
       <SiteHeadCode site={site} />
       <RenderBlocks blocks={blocks} siteId={site.id} />
       <SiteBodyEndCode site={site} />

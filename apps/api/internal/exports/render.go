@@ -90,7 +90,6 @@ func parseTree(raw json.RawMessage) Tree {
 type siteData struct {
 	products []products.Product
 	posts    []blog.Post
-	guru     *guruData
 }
 
 // renderTree writes block HTML mirroring apps/renderer/components/Blocks.tsx output,
@@ -765,16 +764,14 @@ func renderBlock(b *strings.Builder, blk Block, d *siteData) {
 		renderBlogListDynamic(b, blk, d.postList())
 
 	default:
-		if renderGuruDynamicBlock(b, blk, d.guruContent()) {
-			return
-		}
-		if renderGuruBlock(b, blk) {
-			return
-		}
 		if renderProBlock(b, blk) {
 			return
 		}
-		// Unknown block: render comment marker, don't fail.
+		if renderUmkmBlock(b, blk, d) {
+			return
+		}
+		// Unknown block (incl. retired Guru* blocks on old sites): emit only a
+		// comment marker so the page still renders and the warning file lists it.
 		fmt.Fprintf(b, `<!-- block:%s -->`, esc(blk.Type))
 	}
 }
@@ -791,13 +788,6 @@ func (d *siteData) postList() []blog.Post {
 		return nil
 	}
 	return d.posts
-}
-
-func (d *siteData) guruContent() *guruData {
-	if d == nil {
-		return nil
-	}
-	return d.guru
 }
 
 // ---- helpers ----

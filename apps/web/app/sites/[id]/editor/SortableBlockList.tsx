@@ -64,7 +64,7 @@ export function SortableBlockList({
   // konsisten dengan blocks array.
   hiddenIndices?: Set<number>;
 }) {
-  // Pointer sensor 8px activation — kurangi false positive drag saat guru
+  // Pointer sensor 8px activation — kurangi false positive drag saat user
   // click cepat untuk select (sebelumnya 4px terasa terlalu sensitif). Touch
   // pakai delay 250ms + tolerance 5px supaya scroll native smooth di mobile.
   const sensors = useSensors(

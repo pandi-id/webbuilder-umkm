@@ -147,41 +147,6 @@ export function buildLayoutStyle(meta?: LayoutMeta): React.CSSProperties {
       // win via specificity if the block uses them.
       out.color = O.fg;
     }
-
-    // 4) Guru template vars — block Guru pakai var(--guru-navy/red/cream/ink/
-    //    muted/paper/line/blue-soft/red-soft/sage/gold). Nilai di-inject
-    //    static di canvasStyle (editor) + themeToCss (renderer). Kalau cuma
-    //    override --color-* di wrapper, --guru-* tetap pakai nilai canvas
-    //    → block override tidak kelihatan untuk Guru block. Set --guru-*
-    //    dengan nilai override + color-mix derivation yang sinkron.
-    //    Field yang tidak di-override fall back ke var yang di-inherit dari
-    //    canvas (sehingga user hanya ganti field tertentu tetap konsisten).
-    const primaryVal = O.primary ?? "var(--guru-navy)";
-    const secondaryVal = O.secondary ?? "var(--guru-red)";
-    const bgVal = O.bg ?? "var(--guru-cream)";
-    const fgVal = O.fg ?? "var(--guru-ink)";
-    if (O.primary) out["--guru-navy"] = O.primary;
-    if (O.secondary) out["--guru-red"] = O.secondary;
-    if (O.bg) out["--guru-cream"] = O.bg;
-    if (O.fg) out["--guru-ink"] = O.fg;
-    if (O.primary || O.bg) {
-      out["--guru-navy-2"] = `color-mix(in srgb, ${primaryVal} 70%, #ffffff)`;
-      out["--guru-blue-soft"] = `color-mix(in srgb, ${primaryVal} 10%, ${bgVal})`;
-      out["--guru-sage"] = `color-mix(in srgb, ${primaryVal} 6%, ${bgVal})`;
-      out["--guru-shadow"] = `0 20px 60px color-mix(in srgb, ${primaryVal} 20%, transparent)`;
-      out["--guru-shadow-sm"] = `0 10px 30px color-mix(in srgb, ${primaryVal} 15%, transparent)`;
-    }
-    if (O.fg || O.bg) {
-      out["--guru-muted"] = `color-mix(in srgb, ${fgVal} 55%, ${bgVal})`;
-      out["--guru-line"] = `color-mix(in srgb, ${fgVal} 10%, ${bgVal})`;
-    }
-    if (O.bg) {
-      out["--guru-paper"] = `color-mix(in srgb, ${bgVal} 30%, #ffffff)`;
-    }
-    if (O.secondary || O.bg) {
-      out["--guru-red-soft"] = `color-mix(in srgb, ${secondaryVal} 15%, ${bgVal})`;
-      out["--guru-gold"] = `color-mix(in srgb, ${secondaryVal} 60%, #d6a84d)`;
-    }
   }
   return out as React.CSSProperties;
 }

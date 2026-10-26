@@ -149,9 +149,7 @@ func TestListAll_PropagatesError(t *testing.T) {
 }
 
 // Blok yang tidak punya case di renderBlock jatuh ke placeholder komentar dan
-// hilang dari hasil export tanpa error apa pun. Semua situs guru sempat ter-export
-// kosong karena 16 tipe Guru* tidak pernah ditambahkan. Test ini mengunci
-// invariant: setiap tipe blok yang dipakai template bawaan harus menghasilkan
+// hilang dari hasil export tanpa error apa pun. Test ini mengunci invariant: setiap tipe blok yang dipakai template bawaan harus menghasilkan
 // markup nyata.
 func TestRenderBlock_CoversEveryBuiltinTemplateBlock(t *testing.T) {
 	seen := map[string]bool{}
@@ -197,6 +195,16 @@ func TestRenderBlock_CoversEveryBuiltinTemplateBlock(t *testing.T) {
 	}
 }
 
+// Situs lama masih bisa menyimpan blok Guru* yang sudah dipensiunkan; export
+// harus tetap jalan dan blok itu tidak boleh menghasilkan markup terlihat.
+func TestRenderBlock_RetiredBlockRendersNothingVisible(t *testing.T) {
+	var b strings.Builder
+	renderBlock(&b, Block{Type: "GuruBannerCarousel", Props: map[string]any{"title": "x"}}, nil)
+	if got := b.String(); got != "<!-- block:GuruBannerCarousel -->" {
+		t.Errorf("mau hanya marker komentar, dapat %q", got)
+	}
+}
+
 func TestCollectImageSrcs_SkipsIframeAndData(t *testing.T) {
 	docs := []exportDoc{{html: `<img src="https://cdn.test/a.png"><iframe src="https://maps.test/x"></iframe>` +
 		`<img src="data:image/png;base64,AAA"><img src="https://cdn.test/a.png"><a href="https://cdn.test/b.png">b</a>`}}
@@ -222,57 +230,6 @@ func TestResolveAssetURL(t *testing.T) {
 			t.Errorf("resolveAssetURL(%q) = %q,%v mau %q,%v", c.src, got, ok, c.want, c.ok)
 		}
 	}
-}
-
-// Aset template harus dilayani dari binary. Kalau ini regresi, setiap export
-// template guru kehilangan gambarnya tanpa cara memperbaiki lewat konfigurasi.
-func TestBuiltinAsset_ServesTemplateImagesFromBinary(t *testing.T) {
-	body, ctype, ok := builtinAsset("/templates/guru-pandi-upi/teacher.png")
-	if !ok {
-		t.Fatal("aset template bawaan tidak ter-embed")
-	}
-	if len(body) == 0 {
-		t.Error("isi aset kosong")
-	}
-	if !strings.HasPrefix(ctype, "image/") {
-		t.Errorf("content-type %q bukan gambar", ctype)
-	}
-
-	for _, bad := range []string{"/uploads/a.png", "/templates/../secret", "relatif.png"} {
-		if _, _, ok := builtinAsset(bad); ok {
-			t.Errorf("builtinAsset(%q) seharusnya ditolak", bad)
-		}
-	}
-}
-
-// Gambar template tidak boleh menyentuh jaringan sama sekali: client yang
-// selalu gagal pun harus tetap menghasilkan file di dalam ZIP.
-func TestDownloadImages_BundlesTemplateAssetsWithoutNetwork(t *testing.T) {
-	var buf bytes.Buffer
-	z := zip.NewWriter(&buf)
-	got, failed := downloadImages(context.Background(), z,
-		[]string{"/templates/guru-pandi-upi/teacher.png"}, newAssetClient(nil))
-	if err := z.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if len(failed) != 0 {
-		t.Fatalf("aset bawaan seharusnya tidak gagal, dapat %v", failed)
-	}
-	zp, ok := got["/templates/guru-pandi-upi/teacher.png"]
-	if !ok || !strings.HasPrefix(zp, "/assets/img/") {
-		t.Fatalf("mau path assets/img/, dapat %q", zp)
-	}
-
-	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, f := range zr.File {
-		if "/"+f.Name == zp {
-			return
-		}
-	}
-	t.Errorf("file %q tidak ada di dalam ZIP", zp)
 }
 
 // Rewrite hanya boleh menyentuh <img src>. URL yang sama di <a href> atau

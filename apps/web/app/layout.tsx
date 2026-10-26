@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Web Builder — Buat website tanpa coding",
+  title: "Website & Toko Online UMKM — Buat tanpa coding",
   description:
-    "Buat website sekolah, UMKM, portofolio, atau blog dengan editor visual. Custom domain, SSL otomatis, dan export ke HTML/CSS/JS.",
+    "Buat website dan toko online untuk UMKM dengan editor visual. Katalog produk, domain .id sendiri, SSL otomatis, dan siap dipakai jualan.",
 };
 
 // Force dynamic rendering app-wide — dashboard is per-user auth, zero SSG

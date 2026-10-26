@@ -47,7 +47,6 @@ var validCategories = map[string]bool{
 	"school":    true,
 	"umkm":      true,
 	"portfolio": true,
-	"teacher":   true,
 	"blog":      true,
 	"landing":   true,
 	"other":     true,
@@ -545,8 +544,8 @@ func itoa(n int) string {
 	return string(rune('0'+n/100)) + string(rune('0'+(n/10)%10)) + string(rune('0'+n%10))
 }
 
-// Seed populates the built-in templates: 15 dari matrix (5 categories × 3
-// variants) + 1 standalone co-branded (guru-pandi-upi) = 16 total.
+// Seed populates the built-in templates: 12 dari matrix (4 categories × 3
+// variants).
 // Idempotent: re-running upserts by slug.
 func (r *Repo) Seed(ctx context.Context) error {
 	for _, t := range BuiltinTemplates() {

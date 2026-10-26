@@ -692,9 +692,8 @@ function TemplatePicker({
 
   useEffect(() => {
     api<Template[]>("/api/v1/templates", { auth: false })
-      // Filter — untuk sekarang tampilkan hanya template co-branded PANDI × UPI.
-      // Template kategori lain di-hide dulu; toggle di sini kalau mau expose lagi.
-      .then((all) => setTemplates(all.filter((t) => t.category === "guru-pandi")))
+      // Product focus is UMKM shops; other categories stay hidden from the picker.
+      .then((all) => setTemplates(all.filter((t) => t.category === "umkm")))
       .catch(() => {});
   }, []);
 

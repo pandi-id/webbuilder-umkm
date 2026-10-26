@@ -211,45 +211,6 @@ func MountUser(app *fiber.App, deps Deps) {
 	authed.Post("/blog-posts/:id/publish", mutateLimit, deps.Blog.Publish)
 	authed.Delete("/blog-posts/:id", mutateLimit, deps.Blog.Delete)
 
-	// Guru — 6-rubric articles (Ceritaku/Bacaanku/Inspirasiku/Bangsaku/Peradaban/Forum Diskusi)
-	if deps.Articles != nil {
-		authed.Get("/sites/:id/articles", deps.Articles.ListBySite)
-		authed.Post("/sites/:id/articles", mutateLimit, deps.Articles.Create)
-		authed.Get("/sites/:id/site-stats", deps.Articles.Stats)
-		authed.Get("/articles/:id", deps.Articles.Get)
-		authed.Patch("/articles/:id", mutateLimit, deps.Articles.Update)
-		authed.Post("/articles/:id/publish", mutateLimit, deps.Articles.Publish)
-		authed.Delete("/articles/:id", mutateLimit, deps.Articles.Delete)
-	}
-
-	// Guru — learning materials (Pembelajaran, no comments/views per spec §19)
-	if deps.Learning != nil {
-		authed.Get("/sites/:id/learning-materials", deps.Learning.ListBySite)
-		authed.Get("/sites/:id/learning-materials/parents", deps.Learning.ListParents)
-		authed.Post("/sites/:id/learning-materials", mutateLimit, deps.Learning.Create)
-		authed.Get("/learning-materials/:id", deps.Learning.Get)
-		authed.Patch("/learning-materials/:id", mutateLimit, deps.Learning.Update)
-		authed.Post("/learning-materials/:id/publish", mutateLimit, deps.Learning.Publish)
-		authed.Post("/learning-materials/:id/reorder", mutateLimit, deps.Learning.Reorder)
-		authed.Delete("/learning-materials/:id", mutateLimit, deps.Learning.Delete)
-	}
-
-	// Guru — response moderation (Tanggapan). Only guru pemilik site.
-	if deps.Responses != nil {
-		authed.Get("/sites/:id/responses", deps.Responses.ListBySite)
-		authed.Post("/responses/:id/approve", mutateLimit, deps.Responses.Approve)
-		authed.Post("/responses/:id/reject", mutateLimit, deps.Responses.Reject)
-		authed.Delete("/responses/:id", mutateLimit, deps.Responses.Delete)
-	}
-
-	// Guru — promotion banners CRUD (teacher-side). Cannot touch admin_enabled.
-	if deps.Banners != nil {
-		authed.Get("/sites/:id/banners", deps.Banners.ListBySite)
-		authed.Post("/sites/:id/banners", mutateLimit, deps.Banners.Create)
-		authed.Patch("/banners/:id", mutateLimit, deps.Banners.Update)
-		authed.Delete("/banners/:id", mutateLimit, deps.Banners.Delete)
-	}
-
 	// Analytics summary — read-only, no rate limit. Public beacon di global.go.
 	if deps.Analytics != nil {
 		authed.Get("/sites/:id/analytics", deps.Analytics.GetSummary)
