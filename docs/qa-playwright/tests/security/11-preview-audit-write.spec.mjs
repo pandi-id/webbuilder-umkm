@@ -33,7 +33,7 @@ test.describe("A01 — Preview HMAC token isolation", () => {
       testInfo,
       "Setup: create site + 2 pages (A, B). Issue preview token untuk page A. GET /public/preview/:tokenA → return page A (bukan B). Kalau backend cuma validate signature tanpa cek PageID di claims → attacker punya token 1 page bisa akses semua page site tsb (data leak).",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const siteRes = await api("POST", accessToken, "/api/v1/sites", {
       name: `QA Preview HMAC ${Date.now()}`,
       theme: {},

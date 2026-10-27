@@ -245,7 +245,7 @@ Ketika menambah tipe blok baru, sentuh 4 tempat: (1) schema di `apps/web/lib/blo
 
 ## Domain Purchase Flow (self-sufficient)
 
-**Konsep produk**: **1 domain = 1 situs**. User HARUS beli domain dulu sebelum bisa create situs — tidak ada free subdomain flow. `POST /sites/from-template/:slug` wajib `job_id` di body; atomic create + attach. Pengecualian: BYO domain `.id` yang sudah dimiliki user di-attach lewat tab Domain (`internal/site_byo_domains`, delegasi NS ke Cloudflare via `dnsprovider`).
+**Konsep produk**: **1 domain = 1 situs**. User HARUS beli domain dulu sebelum bisa create situs — tidak ada free subdomain flow. `POST /sites/from-template/:slug` wajib `job_id` di body; atomic create + attach. Tidak ada batas jumlah situs per user. `POST /sites` (tanpa domain) **admin-only** untuk QA/support — jangan dibuka untuk role lain. Pengecualian: BYO domain `.id` yang sudah dimiliki user di-attach lewat tab Domain (`internal/site_byo_domains`, delegasi NS ke Cloudflare via `dnsprovider`).
 
 **Arsitektur** (Phase 3 self-sufficient):
 - Web builder = authoritative source untuk **invoice + payment + wallet + document + promo**.

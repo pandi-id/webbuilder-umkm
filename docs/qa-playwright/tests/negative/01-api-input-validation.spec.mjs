@@ -27,6 +27,23 @@ async function api(method, accessToken, path, opts = {}) {
   });
 }
 
+test.describe("Negative — Domain-less site create is admin-only", () => {
+  test("POST /sites sebagai client → 403 (situs wajib lewat beli domain)", async ({
+    context,
+  }, testInfo) => {
+    req(
+      testInfo,
+      "POST /api/v1/sites membuat situs TANPA domain — hanya untuk admin (QA/support). Client wajib lewat POST /sites/from-template/:slug dengan job_id domain yang sudah dibayar (1 domain = 1 situs). Client → HTTP 403, tidak ada situs dibuat.",
+    );
+    const { accessToken } = await loginAs(context, "client");
+    const res = await api("POST", accessToken, "/api/v1/sites", {
+      body: JSON.stringify({ name: `client-bypass-${Date.now()}` }),
+    });
+    expect(res.status).toBe(403);
+    act(testInfo, `HTTP ${res.status} — client tidak bisa membuat situs tanpa domain`);
+  });
+});
+
 test.describe("Negative — Malformed request body", () => {
   test("POST /sites dengan JSON syntax rusak → 400 'invalid json'", async ({
     context,
@@ -35,7 +52,7 @@ test.describe("Negative — Malformed request body", () => {
       testInfo,
       "POST /api/v1/sites body='{invalid json' → HTTP 400 error.code='bad_request' message='invalid json'. Backend BodyParser fail-safe reject sebelum handler execute. Kalau lolos → panic/500 = leak stack.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       body: "{invalid json syntax here",
     });
@@ -56,7 +73,7 @@ test.describe("Negative — Malformed request body", () => {
       testInfo,
       "POST /api/v1/sites body='' (empty) → HTTP 400 message='name required'. Backend parse empty ke struct default → validation kick 'name required'. Bukan 500 / panic.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       body: "",
     });
@@ -73,7 +90,7 @@ test.describe("Negative — Malformed request body", () => {
       testInfo,
       "POST /api/v1/sites Content-Type=text/plain + valid JSON body → HTTP 400. Backend enforce Content-Type match sebelum parse. Cegah content-type confusion attack (upload polyglot dengan multipart).",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ name: "test", theme: {} }),
@@ -91,7 +108,7 @@ test.describe("Negative — Missing required fields", () => {
       testInfo,
       "POST /api/v1/sites body={theme:{}} — omit required 'name' → HTTP 400 error.code='bad_request' message match 'name required'.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       body: JSON.stringify({ theme: {} }),
     });
@@ -108,7 +125,7 @@ test.describe("Negative — Missing required fields", () => {
       testInfo,
       "Setup site dulu, POST /sites/:id/pages body={title, tree, is_home:true} tanpa 'slug' → HTTP 400. Slug adalah URL segment, mandatory untuk routing.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     // Create site first
     const siteRes = await api("POST", accessToken, "/api/v1/sites", {
       body: JSON.stringify({ name: `Negative Slug Test ${Date.now()}`, theme: {} }),
@@ -143,7 +160,7 @@ test.describe("Negative — Wrong field types", () => {
       testInfo,
       "POST /api/v1/sites body={name: 123, theme: {}} → HTTP 400 'invalid json'. Go BodyParser strict typing: field declared string tapi input number → decode fail. Cegah type-juggling attack.",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       body: JSON.stringify({ name: 123, theme: {} }),
     });
@@ -160,7 +177,7 @@ test.describe("Negative — Wrong field types", () => {
       testInfo,
       "POST /api/v1/sites body={name:'test', theme:'not-object'} → dokumentasi. Backend field theme=json.RawMessage (no schema enforcement) → accept apa saja. FINDING: schema drift risk kalau renderer expect object. Ideal: validate theme.shape (colors, font, radius).",
     );
-    const { accessToken } = await loginAs(context, "client");
+    const { accessToken } = await loginAs(context, "admin");
     const res = await api("POST", accessToken, "/api/v1/sites", {
       body: JSON.stringify({ name: `theme-str-${Date.now()}`, theme: "should-be-object" }),
     });

@@ -72,7 +72,9 @@ func MountUser(app *fiber.App, deps Deps) {
 
 	// Sites
 	authed.Get("/sites", deps.Sites.List)
-	authed.Post("/sites", mutateLimit, deps.Sites.Create)
+	// Domain-less create is admin-only (QA/support). Customers create sites via
+	// POST /sites/from-template/:slug, which requires a paid domain (1 domain = 1 site).
+	authed.Post("/sites", auth.RequireAdmin(), mutateLimit, deps.Sites.Create)
 	authed.Get("/sites/:id", deps.Sites.Get)
 	authed.Patch("/sites/:id", mutateLimit, deps.Sites.Update)
 	authed.Delete("/sites/:id", mutateLimit, deps.Sites.Delete)
