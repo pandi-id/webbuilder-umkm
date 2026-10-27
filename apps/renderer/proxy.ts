@@ -12,6 +12,16 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
+// Browser-side API origin (FormBlock, PageViewBeacon, form blocks posting to
+// the API). Derived from env so the CSP follows the deployment's API domain.
+const API_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_BASE ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
+
 export function proxy(req: NextRequest) {
   // Nonce — 16 bytes base64 ≈ 22 char, 128-bit entropy. Fresh per request.
   const nonce = btoa(
@@ -34,12 +44,12 @@ export function proxy(req: NextRequest) {
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data: https://fonts.gstatic.com`,
-    `connect-src 'self' https://api.kubaca.id https:`,
+    `connect-src 'self' ${API_ORIGIN} https:`.replace(/\s+/g, " "),
     `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com`,
     `media-src 'self' blob: https:`,
     `frame-ancestors *`,
     `base-uri 'self'`,
-    `form-action 'self' https://api.kubaca.id`,
+    `form-action 'self' ${API_ORIGIN}`.trim(),
     `object-src 'none'`,
     `upgrade-insecure-requests`,
   ].join("; ");
