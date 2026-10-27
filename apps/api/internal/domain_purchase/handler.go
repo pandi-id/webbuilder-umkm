@@ -754,6 +754,10 @@ func (h *Handler) UpdateNameservers(c *fiber.Ctx) error {
 //
 // Return zone_id + client siap pakai, atau error yang sudah ter-write ke
 // response (caller cukup return err).
+// dnsPrecheck writes the error response itself and returns a nil client on
+// failure. Callers must test `client == nil`, not the error: httpx.Err returns
+// nil once the JSON is written, so checking the error let handlers run on with
+// a nil client and panic.
 func (h *Handler) dnsPrecheck(c *fiber.Ctx, name string) (string, *cloudflare.Client, error) {
 	if h.cloudflare == nil {
 		return "", nil, httpx.Err(c, fiber.StatusServiceUnavailable, "cloudflare_disabled",
@@ -803,7 +807,7 @@ func (h *Handler) dnsPrecheck(c *fiber.Ctx, name string) (string, *cloudflare.Cl
 // langsung render icon ✅/⚠️ tanpa parse ulang.
 func (h *Handler) CloudflareInfo(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheck(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	name := strings.ToLower(strings.TrimSpace(c.Params("name")))
@@ -896,7 +900,7 @@ func nsListsEqual(a, b []string) bool {
 // priority, comment) — frontend bebas render tabel + filter.
 func (h *Handler) ListDNSRecords(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheck(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	records, err := client.ListDNSRecords(c.Context(), zoneID)
@@ -966,7 +970,7 @@ func (r *dnsRecordReq) validate() error {
 // Body: dnsRecordReq
 func (h *Handler) CreateDNSRecord(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheck(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	var req dnsRecordReq
@@ -990,7 +994,7 @@ func (h *Handler) CreateDNSRecord(c *fiber.Ctx) error {
 // UpdateDNSRecord — PATCH /api/v1/domains/:name/dns/:record_id
 func (h *Handler) UpdateDNSRecord(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheck(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	recordID := strings.TrimSpace(c.Params("record_id"))
@@ -1018,7 +1022,7 @@ func (h *Handler) UpdateDNSRecord(c *fiber.Ctx) error {
 // DeleteDNSRecord — DELETE /api/v1/domains/:name/dns/:record_id
 func (h *Handler) DeleteDNSRecord(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheck(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	recordID := strings.TrimSpace(c.Params("record_id"))
@@ -1815,7 +1819,7 @@ func (h *Handler) dnsPrecheckAdmin(c *fiber.Ctx, name string) (string, *cloudfla
 // AdminListDNSRecords — GET /api/v1/admin/domains/:name/dns (read-only).
 func (h *Handler) AdminListDNSRecords(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheckAdmin(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	records, err := client.ListDNSRecords(c.Context(), zoneID)
@@ -1829,7 +1833,7 @@ func (h *Handler) AdminListDNSRecords(c *fiber.Ctx) error {
 // Sama seperti CloudflareInfo user-facing tapi bypass ownership.
 func (h *Handler) AdminCloudflareInfo(c *fiber.Ctx) error {
 	zoneID, client, errResp := h.dnsPrecheckAdmin(c, c.Params("name"))
-	if errResp != nil {
+	if client == nil {
 		return errResp
 	}
 	name := strings.ToLower(strings.TrimSpace(c.Params("name")))
