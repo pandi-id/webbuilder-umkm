@@ -139,9 +139,6 @@ func (h *Handler) createWithSlugRetry(c *fiber.Ctx, uid uuid.UUID, req createReq
 			req.Slug = base + "-" + randomSuffix()
 			continue
 		}
-		if errors.Is(err, ErrLimitReached) {
-			return nil, httpx.Forbidden(c, "site limit reached")
-		}
 		return nil, httpx.Internal(c, "create failed")
 	}
 	return nil, httpx.Internal(c, "gagal generate slug unik setelah 5 percobaan")

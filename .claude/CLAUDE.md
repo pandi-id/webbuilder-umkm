@@ -89,7 +89,7 @@ ecosystem.config.js  PM2 — cara prod jalan (bukan Docker)
 ## Konvensi Go
 
 - **Layered**: repo punya SQL, handler punya validasi + auth + dispatch. Handler TIDAK menulis SQL.
-- **Sentinel errors** per package: `ErrNotFound`, `ErrSlugTaken`, `ErrLimitReached`. Bandingkan dengan `errors.Is`.
+- **Sentinel errors** per package: `ErrNotFound`, `ErrSlugTaken`, `ErrJobTaken`. Bandingkan dengan `errors.Is`.
 - **Constructor**: `NewRepo(pool)` / `NewHandler(repo, ...)` — injected, tanpa global state.
 - **Pgx**: selalu `defer rows.Close()` setelah `pool.Query`, dan return `rows.Err()` di akhir loop.
 - **Generics** untuk shared types: `Paginated[T]`, `MakePaginated[T]`.

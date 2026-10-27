@@ -192,9 +192,6 @@ func (h *Handler) CreateSiteFromTemplate(c *fiber.Ctx) error {
 	if errors.Is(err, sites.ErrSlugTaken) {
 		return httpx.Conflict(c, "slug already taken")
 	}
-	if errors.Is(err, sites.ErrLimitReached) {
-		return httpx.Forbidden(c, "site limit reached")
-	}
 	if err != nil {
 		return httpx.Internal(c, "create failed")
 	}

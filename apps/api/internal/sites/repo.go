@@ -11,8 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const MaxSitesPerUser = 5
-
 type Site struct {
 	ID                   uuid.UUID       `json:"id"`
 	UserID               uuid.UUID       `json:"user_id"`
@@ -56,27 +54,14 @@ func NewRepo(p *pgxpool.Pool) *Repo { return &Repo{pool: p} }
 
 var ErrNotFound = errors.New("not found")
 var ErrSlugTaken = errors.New("slug taken")
-var ErrLimitReached = errors.New("site limit reached")
-
-func (r *Repo) CountByUser(ctx context.Context, userID uuid.UUID) (int, error) {
-	var n int
-	err := r.pool.QueryRow(ctx, `SELECT count(*) FROM sites WHERE user_id = $1`, userID).Scan(&n)
-	return n, err
-}
-
 func (r *Repo) Create(ctx context.Context, userID uuid.UUID, slug, name string, templateID *uuid.UUID, theme json.RawMessage) (*Site, error) {
-	n, err := r.CountByUser(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if n >= MaxSitesPerUser {
-		return nil, ErrLimitReached
-	}
+	// No per-user site cap: each site is paid for by its own domain purchase
+	// (1 domain = 1 site, enforced in templates.CreateSiteFromTemplate).
 	if theme == nil {
 		theme = json.RawMessage(`{}`)
 	}
 	var s Site
-	err = r.pool.QueryRow(ctx, `
+	err := r.pool.QueryRow(ctx, `
 		INSERT INTO sites (user_id, slug, name, template_id, theme_json)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING `+siteCols+`
