@@ -264,6 +264,15 @@ func (c Config) Validate() error {
 			fmt.Sprintf("PUBLIC_API_HOST still dev value %q", c.PublicAPIHost))
 	}
 
+	// The browser is sent to these after Google sign-in and from emails; a
+	// localhost value silently breaks login for every real user.
+	if isLocalURL(c.AppBaseURL) {
+		errs = append(errs, fmt.Sprintf("APP_BASE_URL still dev value %q", c.AppBaseURL))
+	}
+	if c.GoogleOAuthClientID != "" && (c.GoogleOAuthRedirectURL == "" || isLocalURL(c.GoogleOAuthRedirectURL)) {
+		errs = append(errs, fmt.Sprintf("GOOGLE_OAUTH_REDIRECT_URL must be the public API callback URL, got %q", c.GoogleOAuthRedirectURL))
+	}
+
 	// SMTP: if mail driver is "smtp", host+from required.
 	if c.MailDriver == "smtp" {
 		if c.SMTPHost == "" || c.SMTPFrom == "" {
@@ -359,4 +368,8 @@ func isLoopbackDSN(dsn string) bool {
 		return true
 	}
 	return false
+}
+
+func isLocalURL(s string) bool {
+	return s == "" || strings.Contains(s, "localhost") || strings.Contains(s, "127.0.0.1")
 }

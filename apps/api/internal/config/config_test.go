@@ -16,6 +16,7 @@ func validProdConfig() Config {
 		CORSOrigins:   []string{"https://app.example.com"},
 		PublicAppHost: "app.example.com",
 		PublicAPIHost: "api.example.com",
+		AppBaseURL:    "https://app.example.com",
 		StorageDriver: "local",
 		AdminPassword: "supersecret-1234567",
 		MailDriver:    "log",
@@ -105,5 +106,26 @@ func TestValidate_RejectsSmtpWithoutHost(t *testing.T) {
 	err := c.Validate()
 	if err == nil || !strings.Contains(err.Error(), "SMTP_HOST") {
 		t.Fatalf("expected SMTP_HOST error, got %v", err)
+	}
+}
+
+func TestValidate_RejectsLocalAppAndOAuthURLs(t *testing.T) {
+	c := validProdConfig()
+	c.AppBaseURL = "http://localhost:4000"
+	c.GoogleOAuthClientID = "id.apps.googleusercontent.com"
+	c.GoogleOAuthRedirectURL = "http://localhost:4011/api/v1/auth/google/callback"
+	err := c.Validate()
+	if err == nil {
+		t.Fatal("expected localhost APP_BASE_URL / GOOGLE_OAUTH_REDIRECT_URL to be rejected")
+	}
+	for _, want := range []string{"APP_BASE_URL", "GOOGLE_OAUTH_REDIRECT_URL"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %s", err, want)
+		}
+	}
+
+	c = validProdConfig() // Google OAuth disabled: redirect URL not required
+	if err := c.Validate(); err != nil {
+		t.Fatalf("prod config without Google OAuth rejected: %v", err)
 	}
 }
