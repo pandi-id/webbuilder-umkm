@@ -89,7 +89,7 @@ export default function RegisterPage() {
               Web<span className="text-primary">Builder</span>
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Buat akun gratis, tidak perlu kartu kredit
+              Buat akun gratis, lalu buka toko online di domain .id Anda
             </p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export default function RegisterPage() {
 
           {/* Benefits */}
           <div className="mt-5 space-y-1.5">
-            {["Gratis selamanya untuk 1 situs", "Tidak perlu kartu kredit", "Setup dalam 2 menit"].map((item) => (
+            {["Daftar akun gratis — bayar hanya untuk domain toko", "Pesanan langsung masuk lewat WhatsApp", "Toko siap tayang dalam 5 menit"].map((item) => (
               <div key={item} className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
                 {item}

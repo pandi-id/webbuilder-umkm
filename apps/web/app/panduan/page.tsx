@@ -16,11 +16,12 @@ export const metadata = {
     "Panduan lengkap membuat toko online UMKM: daftar akun, beli domain .id, pilih template toko, kelola produk, dan publikasikan.",
 };
 
+const GUIDE_DIR = path.join(process.cwd(), "..", "..", "docs", "user-guide");
+
 function loadGuideMarkdown(): string {
-  const file = path.join(process.cwd(), "..", "..", "docs", "user-guide", "10-panduan-client.md");
   let md: string;
   try {
-    md = fs.readFileSync(file, "utf-8");
+    md = fs.readFileSync(path.join(GUIDE_DIR, "10-panduan-client.md"), "utf-8");
   } catch {
     return "Panduan belum tersedia.";
   }
@@ -28,8 +29,13 @@ function loadGuideMarkdown(): string {
     md
       // The page hero already carries the title.
       .replace(/^# .*\n/, "")
-      // Screenshots predate the UMKM UI; hide them until they are recaptured.
-      .replace(/^!\[[^\]]*\]\([^)]*\)\s*\n/gm, "")
+      // Screenshots are served via the public/panduan-screenshots symlink; drop
+      // references whose file hasn't been captured yet instead of showing a broken image.
+      .replace(/^!\[([^\]]*)\]\(screenshots\/([\w-]+\.png)\)\s*\n/gm, (_m, alt: string, file: string) =>
+        fs.existsSync(path.join(GUIDE_DIR, "screenshots", file))
+          ? `![${alt}](/panduan-screenshots/${file})\n\n`
+          : "",
+      )
   );
 }
 
@@ -44,11 +50,19 @@ function slugifyHeading(text: string): string {
 // Own instance so heading ids don't leak into other pages that use `marked`.
 const guideMarked = new Marked({ gfm: true, breaks: false });
 guideMarked.use({
+  // Required on marked v13: without it custom renderers get the legacy
+  // positional args and `tokens` is undefined.
+  useNewRenderer: true,
   renderer: {
-    heading({ tokens, depth }) {
-      const text = this.parser.parseInline(tokens);
-      const plain = tokens.map((t) => ("text" in t ? t.text : "")).join("");
-      return `<h${depth} id="${slugifyHeading(plain)}">${text}</h${depth}>`;
+    // Slug from the raw heading text, same as extractTOC, so TOC anchors match
+    // even for headings with entities like "&".
+    heading({ tokens, depth, text }) {
+      const html = this.parser.parseInline(tokens);
+      const id = slugifyHeading(text.replace(/[*_`]/g, "").trim());
+      return `<h${depth} id="${id}">${html}</h${depth}>`;
+    },
+    image({ href, text }) {
+      return `<figure class="panduan-figure"><img src="${href}" alt="${text ?? ""}" loading="lazy" decoding="async" /></figure>`;
     },
   },
 });
@@ -198,6 +212,8 @@ export default function PanduanPage() {
 .wb-guide ul { list-style: disc; }
 .wb-guide ol { list-style: decimal; }
 .wb-guide li { margin: .35em 0; }
+.wb-guide .panduan-figure { margin: 1.4em 0; border: 1px solid #ece6dc; border-radius: 12px; overflow: hidden; background: #fbf8f3; }
+.wb-guide .panduan-figure img { display: block; width: 100%; height: auto; }
 .wb-guide hr { border: none; border-top: 1px solid #ece6dc; margin: 2em 0; }
 `,
         }}
