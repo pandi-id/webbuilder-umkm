@@ -11,9 +11,9 @@
 
 export const config = {
   // Base URL platform Anda. Ganti sesuai deployment:
-  //   Dev:  http://localhost:3000
+  //   Dev:  http://localhost:4000
   //   Prod: https://kubaca.id
-  baseUrl: process.env.BASE_URL || "http://localhost:3000",
+  baseUrl: process.env.BASE_URL || "http://localhost:4000",
 
   // Akun test per role. Wajib pre-existing di DB dengan role yang benar.
   // Buat 4 akun ini di admin panel dulu sebelum jalanin script.
@@ -43,6 +43,10 @@ export const config = {
     domain: process.env.SAMPLE_DOMAIN || "",
     clientId: process.env.SAMPLE_CLIENT_ID || "",
     resellerId: process.env.SAMPLE_RESELLER_ID || "",
+    // Job ID purchase berstatus active → halaman pending menampilkan template picker.
+    jobId: process.env.SAMPLE_JOB_ID || "",
+    // Blog post ID → capture editor artikel dalam mode edit (autosave badge).
+    postId: process.env.SAMPLE_POST_ID || "",
   },
 
   // Viewport untuk screenshot. 1440x900 = MacBook standard, cover >90% users.
@@ -123,9 +127,10 @@ export const captures = {
     },
     {
       name: "client-template-picker",
-      // Halaman template picker muncul di flow pending → active → picker.
-      // Untuk demo, buka dashboard templates (kalau ada) atau fallback.
-      path: "/templates",
+      // Picker hanya muncul di halaman pending saat purchase sudah active;
+      // tanpa SAMPLE_JOB_ID fallback ke halaman Tampilan (tombol Ganti Template).
+      path: (ids) => ids.jobId ? `/sites/pending/${ids.jobId}` : `/sites/${ids.siteId}/theme`,
+      requiresSiteId: true,
       waitFor: 'main',
     },
     {
@@ -230,10 +235,10 @@ export const captures = {
       preScreenshotDelay: 3000,
     },
     {
-      // Rich editor toolbar full — capture form tulisan/new supaya toolbar
+      // Rich editor toolbar full — capture form artikel baru supaya toolbar
       // muncul di context editor.
       name: "client-richeditor-toolbar",
-      path: (ids) => `/sites/${ids.siteId}/tulisan/new?rubric=ceritaku`,
+      path: (ids) => `/sites/${ids.siteId}/blog/new`,
       requiresSiteId: true,
       waitFor: 'main, button',
       preScreenshotDelay: 2000,
@@ -242,7 +247,7 @@ export const captures = {
       // Drop image demo — placeholder capture editor form. Actual drop
       // interaction cross-window susah di-automate.
       name: "client-richeditor-drop-image",
-      path: (ids) => `/sites/${ids.siteId}/tulisan/new?rubric=ceritaku`,
+      path: (ids) => `/sites/${ids.siteId}/blog/new`,
       requiresSiteId: true,
       waitFor: 'main',
       preScreenshotDelay: 2000,
@@ -251,7 +256,7 @@ export const captures = {
       // YouTube selected state — capture placeholder default. Perlu manual
       // capture setelah insert + select YouTube node.
       name: "client-richeditor-youtube-selected",
-      path: (ids) => `/sites/${ids.siteId}/tulisan/new?rubric=ceritaku`,
+      path: (ids) => `/sites/${ids.siteId}/blog/new`,
       requiresSiteId: true,
       waitFor: 'main',
       preScreenshotDelay: 2000,
@@ -260,9 +265,9 @@ export const captures = {
       // Badge "Tersimpan · baru saja" — muncul setelah autosave sukses di
       // edit mode. Placeholder capture default form state.
       name: "client-richeditor-autosave-badge",
-      path: (ids) => ids.articleId
-        ? `/sites/${ids.siteId}/tulisan/${ids.articleId}/edit`
-        : `/sites/${ids.siteId}/tulisan`,
+      path: (ids) => ids.postId
+        ? `/sites/${ids.siteId}/blog/${ids.postId}/edit`
+        : `/sites/${ids.siteId}/blog/new`,
       requiresSiteId: true,
       waitFor: 'main',
       preScreenshotDelay: 2000,
@@ -270,10 +275,10 @@ export const captures = {
     {
       // Badge amber "Belum disimpan" — muncul saat user ketik + belum autosave.
       // Sama route seperti autosave-badge; capture default state placeholder.
-      name: "client-tulisan-unsaved-badge",
-      path: (ids) => ids.articleId
-        ? `/sites/${ids.siteId}/tulisan/${ids.articleId}/edit`
-        : `/sites/${ids.siteId}/tulisan`,
+      name: "client-blog-unsaved-badge",
+      path: (ids) => ids.postId
+        ? `/sites/${ids.siteId}/blog/${ids.postId}/edit`
+        : `/sites/${ids.siteId}/blog/new`,
       requiresSiteId: true,
       waitFor: 'main',
       preScreenshotDelay: 2000,
@@ -283,11 +288,6 @@ export const captures = {
       path: (ids) => `/settings/domains/${ids.domain}`,
       requiresDomain: true,
       waitFor: 'main, h1',
-    },
-    {
-      name: "client-settings-wallet",
-      path: "/settings/wallet",
-      waitFor: 'main',
     },
     {
       name: "client-settings-invoices",
@@ -307,11 +307,6 @@ export const captures = {
       name: "agent-clients-list",
       path: "/agent/clients",
       waitFor: 'main, table',
-    },
-    {
-      name: "agent-stats",
-      path: "/agent/stats",
-      waitFor: 'main',
     },
     {
       name: "agent-buy-domain-obo",
@@ -363,7 +358,7 @@ export const captures = {
     },
     {
       name: "reseller-purchases",
-      path: "/reseller/purchases",
+      path: "/reseller/domains",
       waitFor: 'main, table',
     },
   ],
