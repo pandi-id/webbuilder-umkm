@@ -311,6 +311,7 @@ dibiarkan di DB (migration lama tidak diedit; `0069` hanya menghapus baris templ
 
 - **Artikel** = blog per situs (`internal/blog`, dashboard `sites/[id]/blog`, renderer `blog/[slug]`) + artikel platform `/artikel`.
 - **Template picker** (wizard `sites/pending/[jobId]`) hanya menampilkan kategori `umkm`.
+- **Dokumentasi publik** `/panduan` (`apps/web/app/panduan/page.tsx`) membaca `docs/user-guide/10-panduan-client.md` saat runtime (path `../../docs` dari cwd `apps/web`) — folder `docs/` wajib ikut ter-deploy. Gambar screenshot sengaja disembunyikan sampai di-capture ulang untuk UI UMKM.
 - **Landing** (`apps/web/app/page.tsx`) satu-satunya tempat yang memakai `motion` (`motion/react`), di client island `components/landing/*`. Jangan pakai motion di dashboard/renderer.
 - **Dashboard situs** komponennya di `components/site-dashboard/`; checklist onboarding memakai `PLACEHOLDER_BRANDS` di `app/sites/[id]/page.tsx` — tambah brand Navbar default template baru ke situ.
 - **Blok UMKM** (`Umkm*`, kategori "UmkmPro") dipakai bersama editor + renderer + export. File berikut **harus byte-identik**: `components/umkm/{UmkmBlocks.tsx,UmkmCopyCode.tsx,umkm.css}` dan `lib/umkm.ts` di `apps/web` dan `apps/renderer`, plus `apps/api/internal/exports/umkm.css` (di-`go:embed`). Ubah satu → salin ke semua, cek dengan `diff`. Markup Go ada di `exports/render_umkm.go`; CSS hanya class `.wb-umkm-*` + theme vars (tanpa Tailwind) supaya port ke Go mekanis.

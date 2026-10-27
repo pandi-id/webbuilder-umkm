@@ -22,6 +22,7 @@ const LINKS: NavLink[] = [
   { href: "#contoh", label: "Contoh Toko" },
   { href: "#faq", label: "FAQ" },
   { href: "/artikel", label: "Artikel" },
+  { href: "/panduan", label: "Dokumentasi" },
   { href: "/register", label: "Daftar" },
 ];
 

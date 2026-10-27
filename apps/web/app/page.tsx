@@ -39,6 +39,7 @@ const navLinks = [
   { href: "#contoh", label: "Contoh Toko" },
   { href: "#faq", label: "FAQ" },
   { href: "/artikel", label: "Artikel" },
+  { href: "/panduan", label: "Dokumentasi" },
 ];
 
 // Illustrative personas only — not real customers, and labelled as such.
@@ -156,7 +157,7 @@ export default function Home() {
                 <span className="hidden text-[11px] font-semibold text-[#5b6577] sm:block">Toko online .id untuk UMKM</span>
               </span>
             </Link>
-            <nav className="hidden items-center gap-7 lg:flex" aria-label="Navigasi utama">
+            <nav className="hidden items-center gap-5 lg:flex xl:gap-7" aria-label="Navigasi utama">
               {navLinks.map((l) => (
                 <Link key={l.href} href={l.href} className="text-sm font-bold text-[#3a4558] transition hover:text-[#d73f45]">
                   {l.label}
@@ -352,16 +353,25 @@ export default function Home() {
               <SectionHeading
                 eyebrow="FAQ"
                 title="Pertanyaan yang sering diajukan"
-                desc="Belum menemukan jawabannya? Baca panduan dan tips lengkap di halaman artikel."
+                desc="Belum menemukan jawabannya? Baca dokumentasi langkah demi langkah atau tips di halaman artikel."
               />
               <Reveal delay={0.1}>
-                <Link
-                  href="/artikel"
-                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-extrabold text-[#d73f45] transition hover:gap-2.5"
-                >
-                  Buka artikel &amp; panduan
-                  <ArrowRight className="size-4" />
-                </Link>
+                <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+                  <Link
+                    href="/panduan"
+                    className="inline-flex items-center gap-1.5 text-sm font-extrabold text-[#d73f45] transition hover:gap-2.5"
+                  >
+                    Buka dokumentasi
+                    <ArrowRight className="size-4" />
+                  </Link>
+                  <Link
+                    href="/artikel"
+                    className="inline-flex items-center gap-1.5 text-sm font-extrabold text-[#3a4558] transition hover:gap-2.5 hover:text-[#d73f45]"
+                  >
+                    Baca artikel
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
               </Reveal>
             </div>
             <Reveal delay={0.1}>
@@ -454,7 +464,8 @@ export default function Home() {
                 <h4 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-white/50">Bantuan</h4>
                 <ul className="space-y-2 text-sm">
                   <li><Link href="#faq" className="hover:text-white">FAQ</Link></li>
-                  <li><Link href="/artikel" className="hover:text-white">Artikel &amp; Panduan</Link></li>
+                  <li><Link href="/panduan" className="hover:text-white">Dokumentasi</Link></li>
+                  <li><Link href="/artikel" className="hover:text-white">Artikel</Link></li>
                 </ul>
               </div>
               <div>
