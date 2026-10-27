@@ -14,6 +14,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
+// The browser calls the API at NEXT_PUBLIC_API_BASE (lib/api.ts, GoogleButton),
+// so connect-src must allow that exact origin. Hardcoding a domain blocked every
+// API call — and with it email + Google login — on any other deployment.
+const API_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_BASE ?? "http://api.localhost").origin;
+  } catch {
+    return "";
+  }
+})();
+
 export function proxy(req: NextRequest) {
   // Generate nonce — 16 bytes = 128 bit entropy, base64 ~22 char.
   // Crypto.randomUUID juga OK (36 char) tapi UUID visual terkesan "ID",
@@ -29,7 +40,7 @@ export function proxy(req: NextRequest) {
   //   <style>, susah di-nonce semuanya. CSP3 anggap style inline lebih
   //   rendah risk daripada script (tidak eksekusi code). securityheaders.com
   //   TIDAK deduct kalau style-src pakai unsafe-inline.
-  // - connect-src: eksplisit ke API + same-origin
+  // - connect-src: same-origin + origin API dari NEXT_PUBLIC_API_BASE
   // - font/style: Google Fonts allowed
   // - frame-ancestors 'self': dashboard tidak boleh di-embed di site lain
   const prodCsp = [
@@ -38,7 +49,7 @@ export function proxy(req: NextRequest) {
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data: https://fonts.gstatic.com`,
-    `connect-src 'self' https://api.kubaca.id https://*.kubaca.id`,
+    `connect-src 'self' ${API_ORIGIN}`.trim(),
     `frame-src 'self' https://*.kubaca.id https:`,
     `frame-ancestors 'self'`,
     `base-uri 'self'`,
