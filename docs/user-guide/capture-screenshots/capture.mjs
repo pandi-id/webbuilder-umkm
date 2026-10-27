@@ -8,13 +8,14 @@
 //   VERBOSE=1 node capture.mjs      # print detailed logs
 //
 // Environment:
-//   BASE_URL          — frontend URL (default http://localhost:3000)
+//   BASE_URL          — frontend URL (default http://localhost:4000)
 //   API_BASE          — API URL (auto-derived kalau kosong)
 //   {ROLE}_EMAIL      — override email per role
 //   {ROLE}_PASSWORD   — override password per role
 //   SAMPLE_SITE_ID    — pakai site ID spesifik (bukan auto-pick)
 //   SAMPLE_DOMAIN     — pakai domain spesifik
 //   SAMPLE_CLIENT_ID  — pakai client ID spesifik untuk OBO flow
+//   SAMPLE_JOB_ID / SAMPLE_PENDING_JOB_ID / SAMPLE_POST_ID — lihat .env.example
 
 import { chromium } from "playwright";
 import { mkdir, writeFile, access } from "fs/promises";
@@ -199,12 +200,26 @@ async function capturePage(context, entry, ids, stats) {
     stats.skipped++;
     return;
   }
+  if (entry.requiresJobId && !ids.jobId) {
+    console.log(`  − ${name}: skip (butuh SAMPLE_JOB_ID purchase aktif, tidak ada)`);
+    stats.skipped++;
+    return;
+  }
+  if (entry.requiresPendingJobId && !ids.pendingJobId) {
+    console.log(`  − ${name}: skip (butuh SAMPLE_PENDING_JOB_ID, tidak ada)`);
+    stats.skipped++;
+    return;
+  }
 
   // Resolve path
   const path = typeof entry.path === "function" ? entry.path(ids) : entry.path;
   const url = `${config.baseUrl}${path}`;
 
-  const page = await context.newPage();
+  // Logged-out pages need their own context; the role context carries tokens.
+  const publicCtx = entry.public
+    ? await context.browser().newContext({ viewport: config.viewport, ignoreHTTPSErrors: true, locale: "id-ID" })
+    : null;
+  const page = await (publicCtx ?? context).newPage();
   try {
     if (VERBOSE) console.log(`  → ${name}: navigating to ${url}`);
 
@@ -244,6 +259,9 @@ async function capturePage(context, entry, ids, stats) {
       await page.waitForTimeout(config.delays.beforeScreenshot);
     }
 
+    // Hide the Next.js dev-mode indicator so docs never show dev chrome.
+    await page.addStyleTag({ content: "nextjs-portal{display:none!important}" }).catch(() => {});
+
     // Screenshot
     await page.screenshot({
       path: outputPath,
@@ -267,6 +285,7 @@ async function capturePage(context, entry, ids, stats) {
     }
   } finally {
     await page.close();
+    if (publicCtx) await publicCtx.close();
   }
 }
 

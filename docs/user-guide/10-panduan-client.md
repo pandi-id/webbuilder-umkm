@@ -38,6 +38,8 @@ Kalau tidak menerima email dalam 5 menit:
 
 ### Login
 
+![Halaman login](screenshots/client-login.png)
+
 1. `https://kubaca.id/login`
 2. Email + password
 3. Kalau lupa password → klik "Lupa Password" → email reset
@@ -96,6 +98,8 @@ Setelah pilih domain:
 
 ### Langkah 3 — Bayar
 
+![Status pembelian menunggu pembayaran](screenshots/client-pending-status.png)
+
 Berdasarkan metode:
 
 **Gateway (Midtrans/Paylabs):**
@@ -138,6 +142,8 @@ Setelah status **aktif**:
 5. Klik **Buat Situs** → sistem create site + attach ke domain → redirect ke editor
 
 ### Dashboard Toko
+
+![Ringkasan toko](screenshots/client-site-overview.png)
 
 Setiap situs punya dashboard sendiri dengan menu di sidebar:
 
@@ -204,6 +210,8 @@ Tampilan editor terbagi 3 kolom (desktop):
 3. Block baru ditambahkan ke posisi
 
 ### Blok UMKM Pro
+
+![Galeri blok dengan kategori UMKM Pro](screenshots/client-editor-block-add.png)
 
 Blok siap pakai untuk toko online. Semua otomatis mengikuti warna & font tema.
 
@@ -343,6 +351,8 @@ Klik **Ganti Template** untuk switch ke template lain:
 
 ## 1.7 Produk (E-commerce)
 
+![Daftar produk](screenshots/client-products.png)
+
 Kalau situs Anda toko:
 
 1. Menu **Produk** → **+ Produk Baru**
@@ -363,6 +373,8 @@ Kalau situs Anda toko:
 - **Hapus** — permanent
 
 ## 1.8 Artikel (Blog)
+
+![Editor artikel](screenshots/client-richeditor-toolbar.png)
 
 Untuk kabar toko, promo, atau tips seputar produk Anda:
 

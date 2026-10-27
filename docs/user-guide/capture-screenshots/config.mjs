@@ -45,6 +45,8 @@ export const config = {
     resellerId: process.env.SAMPLE_RESELLER_ID || "",
     // Job ID purchase berstatus active → halaman pending menampilkan template picker.
     jobId: process.env.SAMPLE_JOB_ID || "",
+    // Job ID purchase yang masih pending (mis. menunggu bayar) → status page.
+    pendingJobId: process.env.SAMPLE_PENDING_JOB_ID || "",
     // Blog post ID → capture editor artikel dalam mode edit (autosave badge).
     postId: process.env.SAMPLE_POST_ID || "",
   },
@@ -85,15 +87,17 @@ export const captures = {
   // ==================== CLIENT ====================
   client: [
     {
-      // Register page — public, tanpa auth. Capture via role client tapi
-      // navigate ke /register (auth session tetap loaded, tidak masalah).
+      // Public pages: `public: true` captures in a fresh logged-out context —
+      // with the role session loaded, /login and /register redirect to /dashboard.
       name: "client-daftar",
       path: "/register",
+      public: true,
       waitFor: 'input[type="email"], form',
     },
     {
       name: "client-login",
       path: "/login",
+      public: true,
       waitFor: 'input[type="email"], form',
     },
     {
@@ -121,17 +125,33 @@ export const captures = {
     },
     {
       name: "client-pending-status",
-      // Butuh sampleIds.jobId — kalau kosong, script akan skip.
-      path: (ids) => ids.jobId ? `/sites/pending/${ids.jobId}` : "/sites/pending/demo",
+      // SAMPLE_PENDING_JOB_ID kosong → skip, daripada capture "Job tidak ditemukan".
+      path: (ids) => `/sites/pending/${ids.pendingJobId}`,
+      requiresPendingJobId: true,
       waitFor: 'main, h1',
     },
     {
       name: "client-template-picker",
-      // Picker hanya muncul di halaman pending saat purchase sudah active;
-      // tanpa SAMPLE_JOB_ID fallback ke halaman Tampilan (tombol Ganti Template).
-      path: (ids) => ids.jobId ? `/sites/pending/${ids.jobId}` : `/sites/${ids.siteId}/theme`,
+      // Picker only shows on the pending page for an active, unattached
+      // purchase (SAMPLE_JOB_ID); skip otherwise instead of capturing a stand-in.
+      path: (ids) => `/sites/pending/${ids.jobId}`,
+      requiresJobId: true,
+      waitFor: 'main',
+      preScreenshotDelay: 1500,
+    },
+    {
+      name: "client-site-overview",
+      path: (ids) => `/sites/${ids.siteId}`,
       requiresSiteId: true,
       waitFor: 'main',
+      preScreenshotDelay: 2000,
+    },
+    {
+      name: "client-products",
+      path: (ids) => `/sites/${ids.siteId}/products`,
+      requiresSiteId: true,
+      waitFor: 'main, table',
+      preScreenshotDelay: 1500,
     },
     {
       name: "client-theme-page",
