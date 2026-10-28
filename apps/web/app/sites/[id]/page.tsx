@@ -14,21 +14,29 @@ import {
   Globe2,
   ImageIcon,
   Inbox,
-  Newspaper,
   Package,
   Palette,
   PenLine,
   Plus,
+  Receipt,
   SquarePen,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, errMessage } from "@/lib/api";
+import {
+  api,
+  errMessage,
+  hasRealWhatsapp,
+  type OrderPage,
+  type OrderSummary,
+} from "@/lib/api";
 import type { PaginatedResult } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/site-dashboard/StatCard";
+import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
+import { fmtOrderTotal, itemsSummary } from "@/components/orders/utils";
 import {
   OnboardingChecklist,
   type ChecklistItem,
@@ -53,6 +61,7 @@ type SiteDetail = {
   status: string;
   theme: ThemeJson | null;
   layout: { header?: Block[]; footer?: Block[] } | null;
+  whatsapp_number?: string;
 };
 
 type PageItem = { id: string; slug: string; is_home: boolean; tree: unknown };
@@ -138,13 +147,6 @@ function findBrand(site: SiteDetail | null, pages: PageItem[] | null): string | 
   return null;
 }
 
-function hasContactBlock(site: SiteDetail | null, pages: PageItem[] | null): boolean {
-  const visit = (b: Block) => /contact|kontak|whatsapp/i.test(b.type ?? "");
-  if (site?.layout && (walkBlocks(site.layout.header, visit) || walkBlocks(site.layout.footer, visit)))
-    return true;
-  return (pages ?? []).some((p) => walkBlocks(parseTree(p.tree), visit));
-}
-
 // Submission data is free-form JSON; pick the most likely sender + message fields.
 function pickField(data: Record<string, unknown> | null, keys: string[]): string {
   if (!data) return "";
@@ -218,7 +220,8 @@ export default function SiteOverviewPage() {
   const [pages, setPages] = useState<PageItem[] | null>(null);
   const [domain, setDomain] = useState<string | null>(null);
   const [products, setProducts] = useState<PaginatedResult<Product> | null>(null);
-  const [articleTotal, setArticleTotal] = useState<number | null>(null);
+  const [orders, setOrders] = useState<OrderPage | null>(null);
+  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [messages, setMessages] = useState<{ total: number; recent: Message[] } | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -227,26 +230,34 @@ export default function SiteOverviewPage() {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [siteRes, pagesRes, domainRes, productsRes, blogRes, analyticsRes, messagesRes] =
-        await Promise.all([
-          api<SiteDetail>(`/api/v1/sites/${sid}`).catch(() => null),
-          api<PageItem[]>(`/api/v1/sites/${sid}/pages`).catch(() => null),
-          resolvePrimaryDomain(sid).catch(() => null),
-          api<PaginatedResult<Product>>(
-            `/api/v1/sites/${sid}/products?page_size=4&sort=newest`,
-          ).catch(() => null),
-          api<PaginatedResult<unknown>>(`/api/v1/sites/${sid}/blog-posts?page_size=1`).catch(
-            () => null,
-          ),
-          api<AnalyticsSummary>(`/api/v1/sites/${sid}/analytics?days=7`).catch(() => null),
-          loadMessages(sid).catch(() => null),
-        ]);
+      const [
+        siteRes,
+        pagesRes,
+        domainRes,
+        productsRes,
+        ordersRes,
+        orderSummaryRes,
+        analyticsRes,
+        messagesRes,
+      ] = await Promise.all([
+        api<SiteDetail>(`/api/v1/sites/${sid}`).catch(() => null),
+        api<PageItem[]>(`/api/v1/sites/${sid}/pages`).catch(() => null),
+        resolvePrimaryDomain(sid).catch(() => null),
+        api<PaginatedResult<Product>>(
+          `/api/v1/sites/${sid}/products?page_size=4&sort=newest`,
+        ).catch(() => null),
+        api<OrderPage>(`/api/v1/sites/${sid}/orders?page_size=4&sort=newest`).catch(() => null),
+        api<OrderSummary>(`/api/v1/sites/${sid}/orders/summary`).catch(() => null),
+        api<AnalyticsSummary>(`/api/v1/sites/${sid}/analytics?days=7`).catch(() => null),
+        loadMessages(sid).catch(() => null),
+      ]);
       if (cancelled) return;
       setSite(siteRes);
       setPages(pagesRes);
       setDomain(domainRes);
       setProducts(productsRes);
-      setArticleTotal(blogRes ? blogRes.total : null);
+      setOrders(ordersRes);
+      setOrderSummary(orderSummaryRes);
       setAnalytics(analyticsRes);
       setMessages(messagesRes);
       setLoading(false);
@@ -312,12 +323,12 @@ export default function SiteOverviewPage() {
       href: `/sites/${sid}/products`,
     },
     {
-      key: "contact",
-      title: "Tambah blok kontak",
-      description: "Tambah blok kontak di editor supaya pembeli mudah menghubungi Anda.",
-      done: hasContactBlock(site, pages),
-      cta: "Tambah Kontak",
-      href: `/sites/${sid}/editor`,
+      key: "whatsapp",
+      title: "Isi nomor WhatsApp toko",
+      description: "Pesanan dari keranjang belanja dikirim ke nomor ini supaya bisa langsung Anda balas.",
+      done: hasRealWhatsapp(site?.whatsapp_number),
+      cta: "Isi Nomor",
+      href: `/sites/${sid}/orders`,
     },
     {
       key: "publish",
@@ -409,6 +420,21 @@ export default function SiteOverviewPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
+          label="Pesanan baru"
+          value={orderSummary ? orderSummary.new : null}
+          hint={
+            orderSummary
+              ? orderSummary.processing > 0
+                ? `${fmtNumber(orderSummary.processing)} sedang diproses`
+                : "Menunggu diproses"
+              : undefined
+          }
+          icon={Receipt}
+          tint="bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300"
+          href={`/sites/${sid}/orders`}
+          loading={loading}
+        />
+        <StatCard
           label="Jumlah produk"
           value={productTotal}
           hint="Di katalog toko"
@@ -435,20 +461,12 @@ export default function SiteOverviewPage() {
           href={`/sites/${sid}/forms`}
           loading={loading}
         />
-        <StatCard
-          label="Artikel"
-          value={articleTotal}
-          hint="Kabar & promo toko"
-          icon={Newspaper}
-          tint="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300"
-          href={`/sites/${sid}/blog`}
-          loading={loading}
-        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <OnboardingChecklist items={checklist} loading={loading} />
+          <RecentOrders sid={sid} orders={orders} loading={loading} />
           <RecentProducts sid={sid} products={products} loading={loading} />
         </div>
         <div className="space-y-6">
@@ -577,6 +595,76 @@ function RecentProducts({
   );
 }
 
+function RecentOrders({
+  sid,
+  orders,
+  loading,
+}: {
+  sid: string;
+  orders: OrderPage | null;
+  loading: boolean;
+}) {
+  const items = orders?.items ?? [];
+  return (
+    <Card>
+      <SectionHeader title="Pesanan Terbaru" href={`/sites/${sid}/orders`} linkLabel="Semua pesanan" />
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-1/3 animate-pulse rounded-md bg-muted/50" />
+                  <div className="h-3 w-1/2 animate-pulse rounded-md bg-muted/50" />
+                </div>
+                <div className="h-5 w-16 animate-pulse rounded-full bg-muted/50" />
+              </div>
+            ))}
+          </div>
+        ) : !orders ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Pesanan belum bisa dimuat. Coba muat ulang halaman.
+          </p>
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="Belum ada pesanan"
+            description="Pesanan dari keranjang belanja situs Anda akan muncul di sini."
+            cta="Lihat Pesanan"
+            ctaIcon={ArrowRight}
+            href={`/sites/${sid}/orders`}
+          />
+        ) : (
+          <ul className="divide-y">
+            {items.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/sites/${sid}/orders`}
+                  className="flex items-center gap-3 py-2.5 transition-colors hover:text-primary"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold tabular-nums">{o.order_no}</span>
+                      <span className="truncate text-sm">{o.customer_name || "—"}</span>
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {timeAgo(o.created_at)} · {itemsSummary(o.items)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-sm font-medium tabular-nums">{fmtOrderTotal(o)}</span>
+                    <OrderStatusBadge status={o.status} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function RecentMessages({
   sid,
   messages,
@@ -647,12 +735,14 @@ function EmptyState({
   title,
   description,
   cta,
+  ctaIcon: CtaIcon = Plus,
   href,
 }: {
   icon: React.ElementType;
   title: string;
   description: string;
   cta: string;
+  ctaIcon?: React.ElementType;
   href: string;
 }) {
   return (
@@ -664,7 +754,7 @@ function EmptyState({
       <p className="mt-1 max-w-xs text-sm text-muted-foreground">{description}</p>
       <Button size="sm" variant="outline" asChild className="mt-4">
         <Link href={href}>
-          <Plus />
+          <CtaIcon />
           {cta}
         </Link>
       </Button>

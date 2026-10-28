@@ -181,3 +181,107 @@ export async function openBlob(path: string): Promise<void> {
   // Revoke setelah 60 detik — browser sudah cache blob di tab baru.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
+
+// ---------------------------------------------------------------------------
+// Orders — UMKM cart checkout (buyer sends via WhatsApp, every order is stored)
+// ---------------------------------------------------------------------------
+
+export type OrderStatus = "new" | "processing" | "done" | "cancelled";
+export type OrderSort = "newest" | "oldest" | "total_desc";
+
+export type OrderItem = {
+  product_id: string;
+  slug: string;
+  name: string;
+  price: number;
+  qty: number;
+  subtotal: number;
+};
+
+export type Order = {
+  id: string;
+  site_id: string;
+  seq: number;
+  order_no: string;
+  status: OrderStatus;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  note: string;
+  items: OrderItem[] | null;
+  total: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderPage = {
+  items: Order[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+};
+
+export type OrderSummary = {
+  new: number;
+  processing: number;
+  done: number;
+  cancelled: number;
+  revenue_done: number;
+};
+
+// Mirrors the API state machine so the UI only offers buttons the server accepts.
+export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  new: ["processing", "done", "cancelled"],
+  processing: ["done", "cancelled"],
+  done: [],
+  cancelled: [],
+};
+
+// Number shipped by the UMKM templates; still having it means orders go nowhere real.
+export const WA_PLACEHOLDER = "6281234567890";
+
+export function hasRealWhatsapp(n: string | null | undefined): boolean {
+  const v = (n ?? "").trim();
+  return v !== "" && v !== WA_PLACEHOLDER;
+}
+
+export function listOrders(
+  siteId: string,
+  opts: { page?: number; pageSize?: number; q?: string; status?: OrderStatus | ""; sort?: OrderSort } = {},
+): Promise<OrderPage> {
+  const p = new URLSearchParams({
+    page: String(opts.page ?? 1),
+    page_size: String(opts.pageSize ?? 20),
+    sort: opts.sort ?? "newest",
+  });
+  if (opts.q) p.set("q", opts.q);
+  if (opts.status) p.set("status", opts.status);
+  return api<OrderPage>(`/api/v1/sites/${siteId}/orders?${p}`);
+}
+
+export function getOrderSummary(siteId: string): Promise<OrderSummary> {
+  return api<OrderSummary>(`/api/v1/sites/${siteId}/orders/summary`);
+}
+
+export function getOrder(id: string): Promise<Order> {
+  return api<Order>(`/api/v1/orders/${id}`);
+}
+
+export function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+  return api<Order>(`/api/v1/orders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function updateSiteWhatsapp(
+  siteId: string,
+  whatsappNumber: string,
+): Promise<{ whatsapp_number?: string }> {
+  return api<{ whatsapp_number?: string }>(`/api/v1/sites/${siteId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ whatsapp_number: whatsappNumber }),
+  });
+}

@@ -69,3 +69,15 @@ export function themeGradient(theme: ThemeJson | null | undefined): string {
   const s = safeHex(theme?.colors?.secondary, p);
   return `linear-gradient(135deg, ${p} 0%, ${s} 100%)`;
 }
+
+// Fired by the Pesanan page after it (re)loads the summary or changes a status,
+// so the sidebar "new orders" badge updates without waiting for navigation.
+export const ORDERS_SUMMARY_EVENT = "site:orders-summary";
+export type OrdersSummaryDetail = { siteId: string; newCount: number };
+
+export function emitOrdersSummary(siteId: string, newCount: number) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<OrdersSummaryDetail>(ORDERS_SUMMARY_EVENT, { detail: { siteId, newCount } }),
+  );
+}
