@@ -50,7 +50,7 @@ export function proxy(req: NextRequest) {
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data: https://fonts.gstatic.com`,
     `connect-src 'self' ${API_ORIGIN}`.trim(),
-    `frame-src 'self' https://*.kubaca.id https:`,
+    `frame-src 'self' https://*.pandi.id https:`,
     `frame-ancestors 'self'`,
     `base-uri 'self'`,
     `form-action 'self'`,
