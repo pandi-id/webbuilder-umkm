@@ -268,7 +268,7 @@ func (h *Handler) CreateSiteFromTemplate(c *fiber.Ctx) error {
 	switch tpl.Category {
 	case "umkm":
 		if h.products != nil {
-			h.seedSampleProducts(c.Context(), site.ID)
+			h.seedSampleProducts(c.Context(), site.ID, tpl.Variant)
 		}
 	case "blog":
 		if h.blog != nil {
@@ -279,9 +279,10 @@ func (h *Handler) CreateSiteFromTemplate(c *fiber.Ctx) error {
 	return httpx.Created(c, site)
 }
 
-// seedSampleProducts inserts 5 demo products. Failures are silent.
-func (h *Handler) seedSampleProducts(ctx context.Context, siteID uuid.UUID) {
-	for _, p := range sampleProducts() {
+// seedSampleProducts inserts the variant's showcase products so the Produk
+// menu, homepage and /produk start out consistent. Failures are silent.
+func (h *Handler) seedSampleProducts(ctx context.Context, siteID uuid.UUID, variant string) {
+	for _, p := range umkmSampleProducts(variant) {
 		_, _ = h.products.Create(ctx, siteID, p)
 	}
 }
@@ -293,54 +294,30 @@ func (h *Handler) seedSampleBlogPosts(ctx context.Context, siteID uuid.UUID) {
 	}
 }
 
-func sampleProducts() []products.CreateInput {
-	return []products.CreateInput{
-		{
-			Slug:        "keripik-singkong-original",
-			Name:        "Keripik Singkong Original",
-			Description: "Keripik singkong renyah dari bahan singkong pilihan petani lokal. Tanpa pengawet, hanya digoreng dengan minyak segar dan dibumbui garam laut. Cocok untuk camilan keluarga atau oleh-oleh.",
-			Price:       15000,
-			Currency:    "IDR",
-			Category:    "Snack",
-			Status:      "active",
-		},
-		{
-			Slug:        "kopi-robusta-bubuk-250g",
-			Name:        "Kopi Robusta Bubuk 250g",
-			Description: "Single origin Lampung — kopi robusta dengan body kuat, aroma kacang, dan after-taste cokelat. Sudah di-grind medium, siap diseduh manual brew maupun espresso machine.",
-			Price:       45000,
-			Currency:    "IDR",
-			Category:    "Minuman",
-			Status:      "active",
-		},
-		{
-			Slug:        "sambal-botol-pedas-manis",
-			Name:        "Sambal Botol Pedas Manis",
-			Description: "Sambal rumahan dengan cabai rawit segar, bawang putih, dan gula merah. Tanpa MSG, tanpa pengawet. Tahan 2 minggu di kulkas. Pas untuk lauk apa saja.",
-			Price:       25000,
-			Currency:    "IDR",
-			Category:    "Bumbu",
-			Status:      "active",
-		},
-		{
-			Slug:        "teh-celup-premium-25-sachet",
-			Name:        "Teh Celup Premium 25 Sachet",
-			Description: "Teh hitam pilihan dari kebun Wonosobo, dipetik tangan dan dikeringkan secara tradisional. Setiap sachet menghasilkan teh dengan aroma kuat dan rasa lembut.",
-			Price:       18000,
-			Currency:    "IDR",
-			Category:    "Minuman",
-			Status:      "active",
-		},
-		{
-			Slug:        "madu-hutan-murni-500ml",
-			Name:        "Madu Hutan Murni 500ml",
-			Description: "Madu liar dari hutan Kalimantan. Diambil langsung dari sarang lebah Apis dorsata di pepohonan tinggi. Tanpa campuran, tanpa pemanis tambahan. Tekstur kental, warna gelap.",
-			Price:       95000,
-			Currency:    "IDR",
-			Category:    "Kesehatan",
-			Status:      "active",
-		},
+// umkmSampleProducts turns the variant's showcase items ("Rp 22.000" prices)
+// into products, matching what the template's copy talks about.
+func umkmSampleProducts(variant string) []products.CreateInput {
+	items, _ := umkmBizFor(variant).Showcase["items"].([]map[string]any)
+	out := make([]products.CreateInput, 0, len(items))
+	for _, it := range items {
+		name, _ := it["name"].(string)
+		priceText, _ := it["price"].(string)
+		desc, _ := it["desc"].(string)
+		var price int64
+		for _, r := range priceText {
+			if r >= '0' && r <= '9' {
+				price = price*10 + int64(r-'0')
+			}
+		}
+		if name == "" || price == 0 {
+			continue
+		}
+		out = append(out, products.CreateInput{
+			Slug: sites.Slugify(name), Name: name, Description: desc,
+			Price: price, Currency: "IDR", Status: "active",
+		})
 	}
+	return out
 }
 
 func sampleBlogPosts() []blog.CreateInput {

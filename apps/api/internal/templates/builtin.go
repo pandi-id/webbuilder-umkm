@@ -1014,7 +1014,6 @@ func umkmPages(cv variantCopy, variant string) []map[string]any {
 	footer := block("Footer", map[string]any{"copyright": "© " + biz.Brand + " — Produk UMKM asli Indonesia"})
 	float := block("UmkmWhatsAppFloat", biz.Float)
 	hero := block("UmkmHero", biz.Hero)
-	showcase := block("UmkmProductShowcase", biz.Showcase)
 	trust := block("UmkmTrustBadges", biz.Trust)
 	promo := block("UmkmPromoBanner", biz.Promo)
 	reviews := block("UmkmReviews", biz.Reviews)
@@ -1027,16 +1026,24 @@ func umkmPages(cv variantCopy, variant string) []map[string]any {
 		})
 	}
 
+	// Home lists the shop's real products (Produk menu), seeded from the same
+	// items by umkmSampleProducts, so editing a product updates the homepage.
+	featured := block("UmkmCatalogDynamic", map[string]any{
+		"title": biz.Showcase["title"], "subtitle": biz.Showcase["subtitle"], "waNumber": umkmWA,
+		"buttonLabel": biz.Showcase["buttonLabel"], "limit": 8, "category": "", "showOutOfStock": "no",
+		"columns": biz.Showcase["columns"], "anchorId": biz.Showcase["anchorId"],
+	})
+
 	// Home arrangement differs per variant: food leads with menu + promo,
 	// fashion with the collection + marketplaces, craft with trust + projects.
 	var homeBlocks []map[string]any
 	switch variant {
 	case "clean":
-		homeBlocks = []map[string]any{nav, hero, showcase, market, reviews, trust, promo, footer, float}
+		homeBlocks = []map[string]any{nav, hero, featured, market, reviews, trust, promo, footer, float}
 	case "professional":
-		homeBlocks = []map[string]any{nav, hero, trust, showcase, reviews, promo, store, market, footer, float}
+		homeBlocks = []map[string]any{nav, hero, trust, featured, reviews, promo, store, market, footer, float}
 	default:
-		homeBlocks = []map[string]any{nav, hero, trust, showcase, promo, reviews, market, store, footer, float}
+		homeBlocks = []map[string]any{nav, hero, trust, featured, promo, reviews, market, store, footer, float}
 	}
 	home := page("home", "Beranda", true,
 		map[string]any{"title": biz.SEOTitle, "description": biz.SEODesc}, homeBlocks)
