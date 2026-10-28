@@ -2,7 +2,7 @@ import { marked } from "marked";
 import { formatPrice, getPublicForm, listBlogPosts, listProducts, type Block } from "@/lib/api";
 import { FormBlock } from "@/components/FormBlock";
 import { liveUmkmCtx, renderUmkmBlock } from "@/components/umkm/UmkmBlocks";
-import { UMKM_SAMPLE_PRODUCTS, formatRupiah, type UmkmCard } from "@/lib/umkm";
+import { UMKM_SAMPLE_PRODUCTS, catalogCards } from "@/lib/umkm";
 
 // marked configured once at module scope — strips raw HTML so a malicious
 // markdown payload (`<script>`) can't leak through. Matches the blog renderer
@@ -1871,26 +1871,10 @@ async function UmkmCatalogDynamic({ block, siteId }: { block: Block; siteId: str
       note: "Contoh tampilan — produk asli diambil otomatis dari tab Produk.",
     });
   }
-  const category = String(p.category ?? "").trim().toLowerCase();
-  const showSoldOut = p.showOutOfStock === "yes";
-  const products = await listProducts(siteId, category || !showSoldOut ? 100 : limit);
-  const cards: UmkmCard[] = products
-    .filter((pr) => !category || (pr.category ?? "").trim().toLowerCase() === category)
-    .filter((pr) => showSoldOut || pr.stock == null || pr.stock > 0)
-    .slice(0, limit)
-    .map((pr) => {
-      const soldOut = pr.stock != null && pr.stock <= 0;
-      return {
-        name: pr.name,
-        image: pr.image_url,
-        price: !pr.currency || pr.currency === "IDR" ? formatRupiah(pr.price) : formatPrice(pr.price, pr.currency),
-        originalPrice: "",
-        badge: soldOut ? "habis" : "",
-        desc: (pr.description ?? "").replace(/[#*_`>\[\]]/g, "").slice(0, 160),
-        href: `/produk/${pr.slug}`,
-        soldOut,
-      };
-    });
+  // Over-fetch when filtering so the limit applies after category/sold-out filters.
+  const filtering = String(p.category ?? "").trim() !== "" || p.showOutOfStock !== "yes";
+  const products = await listProducts(siteId, filtering ? 100 : limit);
+  const cards = catalogCards(products, p, formatPrice);
   return renderUmkmBlock(block.type, p, liveUmkmCtx, { cards });
 }
 

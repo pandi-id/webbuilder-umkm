@@ -149,6 +149,53 @@ export type UmkmCard = {
   soldOut: boolean;
 };
 
+// Product fields shared by the public API (renderer) and the dashboard API (editor).
+export type CatalogProduct = {
+  name: string;
+  slug: string;
+  image_url: string;
+  price: number;
+  currency?: string;
+  stock?: number | null;
+  category?: string;
+  description?: string;
+  status?: string;
+};
+
+export function catalogLimit(props: Record<string, unknown>): number {
+  return Math.min(48, Math.max(1, Number(props.limit ?? 8) || 8));
+}
+
+// catalogCards applies UmkmCatalogDynamic's filters (status, category, sold-out,
+// limit) so the editor canvas and the live site list exactly the same products.
+export function catalogCards(
+  products: CatalogProduct[],
+  props: Record<string, unknown>,
+  formatPrice: (amount: number, currency: string) => string = (amount) => formatRupiah(amount),
+): UmkmCard[] {
+  const category = String(props.category ?? "").trim().toLowerCase();
+  const showSoldOut = props.showOutOfStock === "yes";
+  return products
+    .filter((pr) => !pr.status || pr.status === "active")
+    .filter((pr) => !category || (pr.category ?? "").trim().toLowerCase() === category)
+    .filter((pr) => showSoldOut || pr.stock == null || pr.stock > 0)
+    .slice(0, catalogLimit(props))
+    .map((pr) => {
+      const soldOut = pr.stock != null && pr.stock <= 0;
+      const currency = pr.currency || "IDR";
+      return {
+        name: pr.name,
+        image: pr.image_url,
+        price: currency === "IDR" ? formatRupiah(pr.price) : formatPrice(pr.price, currency),
+        originalPrice: "",
+        badge: soldOut ? "habis" : "",
+        desc: (pr.description ?? "").replace(/[#*_`>\[\]]/g, "").slice(0, 160),
+        href: `/produk/${pr.slug}`,
+        soldOut,
+      };
+    });
+}
+
 // Shown in the editor canvas and template previews where no DB products exist.
 export const UMKM_SAMPLE_PRODUCTS: UmkmCard[] = [
   { name: "Kopi Susu Gula Aren", image: "", price: "Rp 22.000", originalPrice: "Rp 28.000", badge: "terlaris", desc: "Espresso, susu segar, dan gula aren asli Garut.", href: "", soldOut: false },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { createElement, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   CalendarClock,
@@ -70,7 +70,7 @@ import { PreviewShareDialog } from "./PreviewShareDialog";
 import { MiniMap } from "./MiniMap";
 import { ChildrenEditor } from "./ChildrenEditor";
 import { UMKM_BLOCK_TYPES, renderUmkmBlock, type UmkmCtx } from "@/components/umkm/UmkmBlocks";
-import { UMKM_SAMPLE_PRODUCTS } from "@/lib/umkm";
+import { UMKM_SAMPLE_PRODUCTS, catalogCards, catalogLimit, type CatalogProduct, type UmkmCard } from "@/lib/umkm";
 import {
   duplicateAtPath,
   getAt,
@@ -186,8 +186,24 @@ function ensureFontCatalogLoaded() {
   document.head.appendChild(link);
 }
 
+// Active products of the site being edited, so the catalog block previews the
+// shop's real products. null = not loaded (or failed) → sample cards.
+const SiteProductsContext = createContext<CatalogProduct[] | null>(null);
+
 export default function EditorPage() {
   const params = useParams<{ id: string }>();
+  const [siteProducts, setSiteProducts] = useState<CatalogProduct[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api<{ items: CatalogProduct[] }>(`/api/v1/sites/${params.id}/products?status=active&page_size=100`)
+      .then((r) => {
+        if (!cancelled) setSiteProducts(r.items ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
   const [pages, setPages] = useState<Page[]>([]);
   // Target = apa yang sedang di-edit. Default: home page (di-set setelah
   // pages fetched). Header/Footer layout jadi target alternatif.
@@ -1259,6 +1275,7 @@ export default function EditorPage() {
   }
 
   return (
+    <SiteProductsContext.Provider value={siteProducts}>
     <div
       className={cn(
         "flex h-[calc(100vh-140px)] flex-col gap-3",
@@ -1968,6 +1985,7 @@ export default function EditorPage() {
         onBeforeGenerate={savePreviewIfDirty}
       />
     </div>
+    </SiteProductsContext.Provider>
   );
 }
 
@@ -3018,6 +3036,7 @@ function BlockView({
   device?: "desktop" | "tablet" | "mobile";
 }) {
   const p = block.props ?? {};
+  const siteProducts = useContext(SiteProductsContext);
   // setProp commits a single field back to the block tree. Only used by the
   // inline-edit branches — most block types still read-only in the canvas and
   // are edited via the side panel.
@@ -3135,18 +3154,18 @@ function BlockView({
           createElement(as, { className }, value)
         ) : null,
     };
-    const limit = Math.min(48, Math.max(1, Number(p.limit ?? 8) || 8));
-    return renderUmkmBlock(
-      block.type,
-      p,
-      umkmCtx,
-      block.type === "UmkmCatalogDynamic"
-        ? {
-            cards: UMKM_SAMPLE_PRODUCTS.slice(0, limit),
-            note: `Contoh tampilan — situs live menampilkan maks. ${limit} produk aktif dari tab Produk.`,
-          }
-        : undefined,
-    );
+    let catalog: { cards: UmkmCard[]; note: string } | undefined;
+    if (block.type === "UmkmCatalogDynamic") {
+      const limit = catalogLimit(p);
+      const cards = siteProducts ? catalogCards(siteProducts, p) : [];
+      catalog =
+        siteProducts === null
+          ? { cards: UMKM_SAMPLE_PRODUCTS.slice(0, limit), note: "Contoh tampilan — produk dimuat dari menu Produk." }
+          : cards.length === 0
+            ? { cards, note: "Belum ada produk aktif yang cocok. Tambahkan produk di menu Produk — blok ini otomatis menampilkannya." }
+            : { cards, note: `Produk dari menu Produk (${cards.length} ditampilkan, maks. ${limit}).` };
+    }
+    return renderUmkmBlock(block.type, p, umkmCtx, catalog);
   }
   switch (block.type) {
     case "Navbar":
