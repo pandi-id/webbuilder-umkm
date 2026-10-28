@@ -372,6 +372,28 @@ Kalau situs Anda toko:
 - **Publikasikan / Tarik** — kontrol visibility di renderer
 - **Hapus** — permanent
 
+### Keranjang Belanja & Pesanan
+
+Pembeli bisa memasukkan beberapa produk ke **keranjang** lalu memesan sekaligus:
+
+1. Di situs toko, tombol **Tambah ke Keranjang** muncul di blok **Katalog Produk (DB)**,
+   **ProductGrid**, dan halaman detail produk (`/produk/<slug>`)
+2. Tombol **Keranjang** melayang di kiri bawah → pembeli atur jumlah, isi nama,
+   No. WhatsApp, alamat, dan catatan → **Pesan via WhatsApp**
+3. Pesanan tercatat dengan harga terbaru dari menu Produk, stok langsung dikurangi,
+   lalu pembeli diarahkan ke WhatsApp toko dengan rincian pesanan
+
+Kelola di menu **Pesanan**:
+
+- **Nomor WhatsApp untuk pesanan** — isi dulu nomor toko. Kosong = pesanan tetap
+  tercatat, tapi pembeli tidak diarahkan ke WhatsApp
+- Status: **Baru → Diproses → Selesai**, atau **Batalkan** (stok dikembalikan otomatis)
+- Tombol **Hubungi pembeli via WhatsApp** di detail pesanan
+- Pembayaran (transfer/QRIS/COD) diatur langsung antara toko dan pembeli
+
+Keranjang hanya aktif di situs yang sudah **dipublikasikan**. Situs hasil export
+statis tidak punya keranjang (tetap pakai tombol Pesan per produk).
+
 ## 1.8 Artikel (Blog)
 
 ![Editor artikel](screenshots/client-richeditor-toolbar.png)
