@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/webbuilder/api/internal/sites"
 )
 
 var (
@@ -102,11 +104,33 @@ type CreateResult struct {
 }
 
 type Summary struct {
-	New         int   `json:"new"`
-	Processing  int   `json:"processing"`
-	Done        int   `json:"done"`
-	Cancelled   int   `json:"cancelled"`
-	RevenueDone int64 `json:"revenue_done"`
+	New         int          `json:"new"`
+	Processing  int          `json:"processing"`
+	Done        int          `json:"done"`
+	Cancelled   int          `json:"cancelled"`
+	RevenueDone int64        `json:"revenue_done"`
+	WhatsApp    WhatsAppInfo `json:"whatsapp"`
+}
+
+// WhatsAppInfo is the number checkout actually sends buyers to.
+// Source: "site" (shop-specific number), "profile" (owner's profile phone)
+// or "" (none — orders are still recorded, buyers aren't redirected).
+type WhatsAppInfo struct {
+	Number  string `json:"number"`
+	Source  string `json:"source"`
+	Profile string `json:"profile"` // owner's profile phone (normalised), so the UI can offer it
+}
+
+// EffectiveWhatsApp prefers the shop's own number and falls back to the
+// owner's profile phone, so sellers don't have to enter the same number twice.
+func EffectiveWhatsApp(siteWA, ownerPhone string) (string, string) {
+	if n, ok := sites.NormalizePhone(siteWA); ok && siteWA != "" {
+		return n, "site"
+	}
+	if n, ok := sites.NormalizePhone(ownerPhone); ok && ownerPhone != "" {
+		return n, "profile"
+	}
+	return "", ""
 }
 
 type ListFilter struct {
@@ -166,10 +190,12 @@ func (r *Repo) Create(ctx context.Context, siteID uuid.UUID, in CreateInput) (*C
 	// Locking the site row serialises checkouts per site, which makes the
 	// MAX(seq)+1 allocation below race-free. NO KEY UPDATE keeps FK inserts
 	// from other tables (pages, products) unblocked.
-	var storeName, wa, status string
+	var storeName, siteWA, ownerPhone, status string
 	err = tx.QueryRow(ctx,
-		`SELECT name, whatsapp_number, status FROM sites WHERE id = $1 FOR NO KEY UPDATE`,
-		siteID).Scan(&storeName, &wa, &status)
+		`SELECT s.name, s.whatsapp_number, COALESCE(u.phone_number, ''), s.status
+		   FROM sites s JOIN users u ON u.id = s.user_id
+		  WHERE s.id = $1 FOR NO KEY UPDATE OF s`,
+		siteID).Scan(&storeName, &siteWA, &ownerPhone, &status)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && status != "published") {
 		return nil, ErrSiteNotFound
 	}
@@ -236,6 +262,7 @@ func (r *Repo) Create(ctx context.Context, siteID uuid.UUID, in CreateInput) (*C
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	wa, _ := EffectiveWhatsApp(siteWA, ownerPhone)
 	return &CreateResult{Order: o, StoreName: storeName, WhatsAppNumber: wa}, nil
 }
 
@@ -316,6 +343,16 @@ func (r *Repo) SummaryBySite(ctx context.Context, siteID uuid.UUID) (*Summary, e
 	if err != nil {
 		return nil, err
 	}
+	var siteWA, ownerPhone string
+	err = r.pool.QueryRow(ctx, `
+		SELECT s.whatsapp_number, COALESCE(u.phone_number, '')
+		  FROM sites s JOIN users u ON u.id = s.user_id WHERE s.id = $1`, siteID).
+		Scan(&siteWA, &ownerPhone)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	s.WhatsApp.Number, s.WhatsApp.Source = EffectiveWhatsApp(siteWA, ownerPhone)
+	s.WhatsApp.Profile, _ = EffectiveWhatsApp("", ownerPhone)
 	return &s, nil
 }
 

@@ -325,8 +325,9 @@ export default function SiteOverviewPage() {
     {
       key: "whatsapp",
       title: "Isi nomor WhatsApp toko",
-      description: "Pesanan dari keranjang belanja dikirim ke nomor ini supaya bisa langsung Anda balas.",
-      done: hasRealWhatsapp(site?.whatsapp_number),
+      description: "Pesanan dari keranjang belanja dikirim ke nomor ini. Bawaannya No. HP di profil Anda.",
+      // Profile phone counts too: checkout falls back to it when the shop has no own number.
+      done: hasRealWhatsapp(orderSummary?.whatsapp?.number ?? site?.whatsapp_number),
       cta: "Isi Nomor",
       href: `/sites/${sid}/orders`,
     },

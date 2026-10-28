@@ -229,6 +229,9 @@ export type OrderSummary = {
   done: number;
   cancelled: number;
   revenue_done: number;
+  // Number checkout sends buyers to: the shop's own number ("site"), else the
+  // owner's profile phone ("profile"), else none ("").
+  whatsapp?: { number: string; source: "site" | "profile" | ""; profile: string };
 };
 
 // Mirrors the API state machine so the UI only offers buttons the server accepts.
