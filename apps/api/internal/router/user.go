@@ -199,6 +199,14 @@ func MountUser(app *fiber.App, deps Deps) {
 	authed.Patch("/products/:id", mutateLimit, deps.Products.Update)
 	authed.Delete("/products/:id", mutateLimit, deps.Products.Delete)
 
+	// Orders (UMKM checkout inbox)
+	if deps.Orders != nil {
+		authed.Get("/sites/:id/orders", deps.Orders.ListBySite)
+		authed.Get("/sites/:id/orders/summary", deps.Orders.Summary)
+		authed.Get("/orders/:id", deps.Orders.Get)
+		authed.Patch("/orders/:id", mutateLimit, deps.Orders.Update)
+	}
+
 	// Block snippets — per-user reusable block library
 	authed.Get("/snippets", deps.Snippets.List)
 	authed.Post("/snippets", mutateLimit, deps.Snippets.Create)

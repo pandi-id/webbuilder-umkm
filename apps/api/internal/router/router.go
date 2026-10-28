@@ -28,6 +28,7 @@ import (
 	"github.com/webbuilder/api/internal/exports"
 	"github.com/webbuilder/api/internal/forms"
 	"github.com/webbuilder/api/internal/invoices"
+	"github.com/webbuilder/api/internal/orders"
 	"github.com/webbuilder/api/internal/pages"
 	"github.com/webbuilder/api/internal/payments"
 	"github.com/webbuilder/api/internal/paymentwh"
@@ -106,6 +107,10 @@ type Deps struct {
 	// Forms — user CRUD form + submissions inbox + public submit endpoint.
 	// Mount di user.go (JWT) + global.go (public POST /public/forms/:id/submit).
 	Forms *forms.Handler
+
+	// Orders — UMKM checkout. Public POST (renderer cart) + dashboard
+	// list/summary/status. Nil-safe.
+	Orders *orders.Handler
 
 	// Analytics — page view counter. Public POST (renderer beacon) + authed
 	// GET (dashboard summary). Nil-safe.
@@ -328,18 +333,12 @@ func publicCORS(cfg config.Config) fiber.Handler {
 			if strings.HasPrefix(origin, "https://") {
 				return true
 			}
-			// Dev/staging: allow http origin dengan hostname localhost /
-			// *.localhost / 127.0.0.1. Parse URL supaya port + subdomain
-			// tidak bikin false-negative (contoh: http://myshop.localhost:3001).
+			// Dev/staging: any http origin. The dev renderer serves real tenant
+			// hostnames over http (e.g. http://toko.biz.id:4001), so a
+			// localhost-only rule broke form submit + checkout locally.
 			if !isProd {
 				u, err := url.Parse(origin)
-				if err == nil && u.Scheme == "http" {
-					h := u.Hostname()
-					if h == "localhost" || strings.HasSuffix(h, ".localhost") ||
-						h == "127.0.0.1" {
-						return true
-					}
-				}
+				return err == nil && u.Scheme == "http" && u.Hostname() != ""
 			}
 			return false
 		},

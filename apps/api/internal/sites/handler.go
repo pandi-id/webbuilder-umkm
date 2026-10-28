@@ -77,6 +77,7 @@ type updateReq struct {
 	Status            *string         `json:"status"`
 	CustomHeadCode    *string         `json:"custom_head_code"`
 	CustomBodyEndCode *string         `json:"custom_body_end_code"`
+	WhatsAppNumber    *string         `json:"whatsapp_number"`
 }
 
 func (h *Handler) List(c *fiber.Ctx) error {
@@ -231,6 +232,17 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	if req.CustomBodyEndCode != nil && len(*req.CustomBodyEndCode) > MaxCustomCodeBytes {
 		return httpx.BadRequest(c, "custom body-end code melebihi 16 KB")
 	}
+	if req.WhatsAppNumber != nil && strings.TrimSpace(*req.WhatsAppNumber) != "" {
+		wa, ok := NormalizePhone(*req.WhatsAppNumber)
+		if !ok {
+			return httpx.Err(c, fiber.StatusBadRequest, "invalid_whatsapp_number",
+				"Nomor WhatsApp tidak valid. Contoh: 0812-3456-7890")
+		}
+		req.WhatsAppNumber = &wa
+	} else if req.WhatsAppNumber != nil {
+		empty := ""
+		req.WhatsAppNumber = &empty
+	}
 	s, err := h.repo.UpdateOrAdmin(c.Context(), id, uid, UpdateFields{
 		Name:              req.Name,
 		Theme:             req.Theme,
@@ -238,6 +250,7 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		Status:            req.Status,
 		CustomHeadCode:    req.CustomHeadCode,
 		CustomBodyEndCode: req.CustomBodyEndCode,
+		WhatsAppNumber:    req.WhatsAppNumber,
 	}, auth.IsAdminFrom(c))
 	if errors.Is(err, ErrNotFound) {
 		return httpx.NotFound(c, "site not found")

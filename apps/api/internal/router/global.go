@@ -92,6 +92,16 @@ func MountGlobal(app *fiber.App, deps Deps) {
 		app.Get("/public/forms/:id", pubCORS, deps.Forms.GetPublic)
 	}
 
+	// Public checkout — no JWT (anonymous buyer). Same anti-spam as form
+	// submit: per-IP rate limit + "_hp" honeypot in the handler.
+	if deps.Orders != nil {
+		app.Post("/public/sites/:id/orders",
+			pubCORS,
+			RateLimitIP(orderCreatePerWindow, orderCreateWindow),
+			deps.Orders.CreatePublic,
+		)
+	}
+
 	// Public analytics beacon — renderer POST hit setiap page render.
 	// Rate-limit per IP (200/menit) supaya bot spam tidak bloat counter.
 	if deps.Analytics != nil {

@@ -35,6 +35,7 @@ import (
 	"github.com/webbuilder/api/internal/mail"
 	"github.com/webbuilder/api/internal/metrics"
 	"github.com/webbuilder/api/internal/notifier"
+	"github.com/webbuilder/api/internal/orders"
 	"github.com/webbuilder/api/internal/pages"
 	"github.com/webbuilder/api/internal/paymentgw"
 	"github.com/webbuilder/api/internal/payments"
@@ -148,6 +149,7 @@ func main() {
 	byoRepo := site_byo_domains.NewRepo(pool)
 	formsRepo := forms.NewRepo(pool)
 	analyticsRepo := analytics.NewRepo(pool)
+	ordersRepo := orders.NewRepo(pool)
 
 	if err := seed.Run(ctx, seed.Deps{
 		Pool:      pool,
@@ -350,6 +352,8 @@ func main() {
 	auditHandler := audit.NewHandler(auditRepo)
 	adminHandler.SetAudit(auditRepo)
 	resellerHandler.SetAudit(auditRepo)
+	ordersHandler := orders.NewHandler(ordersRepo, siteRepo)
+	ordersHandler.SetAudit(auditRepo)
 	if purchaseHandler != nil {
 		purchaseHandler.SetAudit(auditRepo)
 	}
@@ -554,6 +558,7 @@ func main() {
 		Forms:            forms.NewHandler(formsRepo, siteRepo, mailer),
 		Analytics:        analytics.NewHandler(analyticsRepo, siteRepo),
 		Products:         products.NewHandler(productRepo, siteRepo),
+		Orders:           ordersHandler,
 		Blog:             blog.NewHandler(blogRepo, siteRepo),
 		Snippets:         snippets.NewHandler(snippetRepo),
 		Reseller:         resellerHandler,

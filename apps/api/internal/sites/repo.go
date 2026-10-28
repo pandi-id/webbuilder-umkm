@@ -34,6 +34,8 @@ type Site struct {
 	// (MaxCustomCodeBytes) supaya tidak abuse storage / render payload.
 	CustomHeadCode    string    `json:"custom_head_code"`
 	CustomBodyEndCode string    `json:"custom_body_end_code"`
+	// WhatsAppNumber — seller's number in 62… form; checkout opens wa.me with it.
+	WhatsAppNumber    string    `json:"whatsapp_number"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -45,7 +47,7 @@ const MaxCustomCodeBytes = 16 * 1024
 // siteCols is the SELECT column list, kept in sync with scanArgs.
 const siteCols = `id, user_id, slug, name, template_id, theme_json, layout_json, status,
     quota_max_pages, quota_max_storage_bytes, quota_max_products, quota_max_blog_posts,
-    custom_head_code, custom_body_end_code,
+    custom_head_code, custom_body_end_code, whatsapp_number,
     created_at, updated_at`
 
 type Repo struct{ pool *pgxpool.Pool }
@@ -85,7 +87,7 @@ func scanArgs(s *Site) []any {
 	return []any{
 		&s.ID, &s.UserID, &s.Slug, &s.Name, &s.TemplateID, &s.Theme, &s.Layout, &s.Status,
 		&s.QuotaMaxPages, &s.QuotaMaxStorageBytes, &s.QuotaMaxProducts, &s.QuotaMaxBlogPosts,
-		&s.CustomHeadCode, &s.CustomBodyEndCode,
+		&s.CustomHeadCode, &s.CustomBodyEndCode, &s.WhatsAppNumber,
 		&s.CreatedAt, &s.UpdatedAt,
 	}
 }
@@ -184,6 +186,7 @@ type UpdateFields struct {
 	Status            *string
 	CustomHeadCode    *string
 	CustomBodyEndCode *string
+	WhatsAppNumber    *string // already normalised by the handler; "" clears
 }
 
 func (r *Repo) Update(ctx context.Context, id, userID uuid.UUID, f UpdateFields) (*Site, error) {
@@ -219,10 +222,11 @@ func (r *Repo) updateInternal(ctx context.Context, id, userID uuid.UUID, f Updat
 			status               = COALESCE($6, status),
 			custom_head_code     = COALESCE($7, custom_head_code),
 			custom_body_end_code = COALESCE($8, custom_body_end_code),
+			whatsapp_number      = COALESCE($9, whatsapp_number),
 			updated_at           = now()
 		WHERE id = $1`+memberCheck+`
 		RETURNING `+siteCols+`
-	`, id, userID, f.Name, f.Theme, f.Layout, f.Status, f.CustomHeadCode, f.CustomBodyEndCode).Scan(scanArgs(&s)...)
+	`, id, userID, f.Name, f.Theme, f.Layout, f.Status, f.CustomHeadCode, f.CustomBodyEndCode, f.WhatsAppNumber).Scan(scanArgs(&s)...)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -408,7 +412,7 @@ func sitePrefixedCols(alias string) string {
 	cols := []string{
 		"id", "user_id", "slug", "name", "template_id", "theme_json", "layout_json", "status",
 		"quota_max_pages", "quota_max_storage_bytes", "quota_max_products", "quota_max_blog_posts",
-		"custom_head_code", "custom_body_end_code",
+		"custom_head_code", "custom_body_end_code", "whatsapp_number",
 		"created_at", "updated_at",
 	}
 	out := ""

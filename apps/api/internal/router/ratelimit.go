@@ -85,6 +85,11 @@ const (
 	// tetap kena; user asli tidak).
 	analyticsPerWindow = 200
 	analyticsWindow    = 60 * time.Second
+
+	// Public checkout — per-IP. A real buyer places a handful of orders at
+	// most; each one reserves stock, so keep spam from draining inventory.
+	orderCreatePerWindow = 10
+	orderCreateWindow    = 10 * time.Minute
 )
 
 // RateLimitIP keys by client IP. Use for unauthenticated endpoints (login,
