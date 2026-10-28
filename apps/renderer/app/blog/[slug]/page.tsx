@@ -7,6 +7,7 @@ import { buildArticle, wrap } from "@/lib/schema";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
 import { SiteFooterBlocks, SiteHeaderBlocks } from "@/components/SiteLayout";
+import { SiteCart } from "@/components/cart/SiteCart";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function BlogPostDetail(props: { params: Promise<{ slug: st
   const articleLD = wrap([buildArticle(post, site, baseURL)]);
 
   return (
-    <>
+    <SiteCart siteId={site.id}>
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLD }} />
@@ -95,7 +96,7 @@ export default async function BlogPostDetail(props: { params: Promise<{ slug: st
       </main>
       <SiteFooterBlocks site={site} />
       <SiteBodyEndCode site={site} />
-    </>
+    </SiteCart>
   );
 }
 

@@ -4,6 +4,7 @@ import { RenderBlocks } from "@/components/Blocks";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
 import { composePageWithLayout } from "@/components/SiteLayout";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
+import { SiteCart } from "@/components/cart/SiteCart";
 import { getPage, getSiteByHost } from "@/lib/api";
 import { googleFontsUrl, themeToCss } from "@/lib/theme";
 import { buildOrganization, buildWebSite, wrap } from "@/lib/schema";
@@ -31,7 +32,7 @@ export default async function CatchAll(props: { params: Promise<{ slug: string[]
     ? [buildWebSite(site, baseURL), buildOrganization(site, baseURL)]
     : [buildOrganization(site, baseURL)];
   return (
-    <>
+    <SiteCart siteId={site.id}>
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
       <script
@@ -42,7 +43,7 @@ export default async function CatchAll(props: { params: Promise<{ slug: string[]
       <RenderBlocks blocks={blocks} siteId={site.id} />
       <PageViewBeacon siteId={site.id} pageSlug={page.is_home ? "" : slug} />
       <SiteBodyEndCode site={site} />
-    </>
+    </SiteCart>
   );
 }
 

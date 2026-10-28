@@ -147,6 +147,9 @@ export type UmkmCard = {
   desc: string;
   href: string;
   soldOut: boolean;
+  // Set only for DB products (catalogCards): lets the live site add the card to a cart.
+  slug?: string;
+  amount?: number;
 };
 
 // Product fields shared by the public API (renderer) and the dashboard API (editor).
@@ -192,6 +195,8 @@ export function catalogCards(
         desc: (pr.description ?? "").replace(/[#*_`>\[\]]/g, "").slice(0, 160),
         href: `/produk/${pr.slug}`,
         soldOut,
+        slug: pr.slug,
+        amount: pr.price,
       };
     });
 }

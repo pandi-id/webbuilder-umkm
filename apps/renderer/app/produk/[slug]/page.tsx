@@ -5,6 +5,8 @@ import { googleFontsUrl, themeToCss } from "@/lib/theme";
 import { buildProduct, wrap } from "@/lib/schema";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
+import { SiteCart } from "@/components/cart/SiteCart";
+import { ProductPurchase } from "@/components/cart/ProductPurchase";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
   const productLD = wrap([buildProduct(product, baseURL)]);
 
   return (
-    <>
+    <SiteCart siteId={site.id}>
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productLD }} />
@@ -84,6 +86,14 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
               </p>
             )}
 
+            <ProductPurchase
+              slug={product.slug}
+              name={product.name}
+              price={product.price}
+              image={product.image_url}
+              stock={product.stock}
+            />
+
             {product.description && (
               <div className="mt-6 whitespace-pre-line opacity-90">{product.description}</div>
             )}
@@ -91,7 +101,7 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
         </div>
       </main>
       <SiteBodyEndCode site={site} />
-    </>
+    </SiteCart>
   );
 }
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { RenderBlocks } from "@/components/Blocks";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
 import { composePageWithLayout } from "@/components/SiteLayout";
+import { SiteCart } from "@/components/cart/SiteCart";
 import { getPagePreview } from "@/lib/api";
 import { googleFontsUrl, themeToCss } from "@/lib/theme";
 
@@ -35,7 +36,7 @@ export default async function PreviewPage(
   const blocks = composePageWithLayout(site, page.tree?.blocks ?? []);
   const fontHref = googleFontsUrl(site.theme);
   return (
-    <>
+    <SiteCart siteId={site.id}>
       <style dangerouslySetInnerHTML={{ __html: themeToCss(site.theme) }} />
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
 
@@ -64,6 +65,6 @@ export default async function PreviewPage(
       <SiteHeadCode site={site} />
       <RenderBlocks blocks={blocks} siteId={site.id} />
       <SiteBodyEndCode site={site} />
-    </>
+    </SiteCart>
   );
 }

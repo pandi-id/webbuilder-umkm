@@ -42,6 +42,9 @@ export type UmkmCtx = {
   // editable: render empty optional fields so they can be filled inline.
   editable: boolean;
   text: (o: UmkmTextOpts) => ReactNode;
+  // Renderer-only: replaces the WhatsApp CTA on cards that carry a product slug.
+  // Optional so the editor and static export keep the plain WhatsApp button.
+  cartButton?: (card: UmkmCard) => ReactNode;
 };
 
 export const liveUmkmCtx: UmkmCtx = {
@@ -282,6 +285,8 @@ function ProductCard({
         </div>
         {soldOut ? (
           <span className="wb-umkm-btn wb-umkm-btn--sm wb-umkm-btn--block wb-umkm-card-cta is-disabled">Stok habis</span>
+        ) : ctx.cartButton && card.slug ? (
+          ctx.cartButton(card)
         ) : (
           <a
             className="wb-umkm-btn wb-umkm-btn--primary wb-umkm-btn--sm wb-umkm-btn--block wb-umkm-card-cta"

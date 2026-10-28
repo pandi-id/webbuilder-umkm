@@ -1,7 +1,8 @@
 import { marked } from "marked";
 import { formatPrice, getPublicForm, listBlogPosts, listProducts, type Block } from "@/lib/api";
 import { FormBlock } from "@/components/FormBlock";
-import { liveUmkmCtx, renderUmkmBlock } from "@/components/umkm/UmkmBlocks";
+import { liveUmkmCtx, renderUmkmBlock, type UmkmCtx } from "@/components/umkm/UmkmBlocks";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { UMKM_SAMPLE_PRODUCTS, catalogCards } from "@/lib/umkm";
 
 // marked configured once at module scope — strips raw HTML so a malicious
@@ -1830,28 +1831,32 @@ async function ProductGridDynamic({ block, siteId }: { block: Block; siteId: str
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((pr) => (
-            <a
-              key={pr.id}
-              href={`/produk/${pr.slug}`}
-              className="overflow-hidden rounded-xl border transition hover:shadow-md"
-            >
-              {pr.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={pr.image_url}
-                  alt={pr.name}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-square w-full object-cover"
-                />
-              ) : (
-                <div className="aspect-square bg-slate-100" />
-              )}
-              <div className="p-4">
-                <div className="font-medium">{pr.name}</div>
-                <div className="mt-1 text-sm opacity-80">{formatPrice(pr.price, pr.currency)}</div>
-              </div>
-            </a>
+            // Card is a div (not one big <a>) so the cart button isn't nested inside a link.
+            <div key={pr.id} className="flex flex-col overflow-hidden rounded-xl border transition hover:shadow-md">
+              <a href={`/produk/${pr.slug}`} className="block">
+                {pr.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pr.image_url}
+                    alt={pr.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full object-cover"
+                  />
+                ) : (
+                  <div className="aspect-square bg-slate-100" />
+                )}
+                <div className="p-4">
+                  <div className="font-medium">{pr.name}</div>
+                  <div className="mt-1 text-sm opacity-80">{formatPrice(pr.price, pr.currency)}</div>
+                </div>
+              </a>
+              {pr.stock == null || pr.stock > 0 ? (
+                <div className="mt-auto px-4 pb-4">
+                  <AddToCartButton slug={pr.slug} name={pr.name} price={pr.price} image={pr.image_url} label="Tambah ke Keranjang" />
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       )}
@@ -1875,8 +1880,23 @@ async function UmkmCatalogDynamic({ block, siteId }: { block: Block; siteId: str
   const filtering = String(p.category ?? "").trim() !== "" || p.showOutOfStock !== "yes";
   const products = await listProducts(siteId, filtering ? 100 : limit);
   const cards = catalogCards(products, p, formatPrice);
-  return renderUmkmBlock(block.type, p, liveUmkmCtx, { cards });
+  return renderUmkmBlock(block.type, p, shopUmkmCtx, { cards });
 }
+
+// Live ctx + cart button; kept out of the shared module so the editor never
+// imports renderer-only cart code.
+const shopUmkmCtx: UmkmCtx = {
+  ...liveUmkmCtx,
+  cartButton: (card) => (
+    <AddToCartButton
+      slug={card.slug ?? ""}
+      name={card.name}
+      price={card.amount ?? 0}
+      image={card.image}
+      className="wb-umkm-btn wb-umkm-btn--primary wb-umkm-btn--sm wb-umkm-btn--block wb-umkm-card-cta"
+    />
+  ),
+};
 
 // FormBlockAsync — server component yang fetch definisi form (fields, kind)
 // via /public/forms/:id, lalu render FormBlock client component untuk submit
