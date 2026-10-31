@@ -37,6 +37,14 @@ import {
   ProvinceSelect,
 } from "@/components/WilayahSelect";
 
+type CreateClientResult = {
+  client_id: string;
+  assignment_id: string;
+  is_new_user: boolean;
+  invite_sent: boolean;
+  email_sent: boolean;
+};
+
 type Form = {
   email: string;
   name: string;
@@ -123,11 +131,19 @@ export function ClientForm({ basePath }: { basePath: "/agent" | "/reseller" }) {
     setSaving(true);
     try {
       // One endpoint for reseller and agent alike (RequireResellerOrAgent).
-      await api("/api/v1/reseller/clients", {
+      const res = await api<CreateClientResult>("/api/v1/reseller/clients", {
         method: "POST",
         body: JSON.stringify({ ...form, email: form.email.toLowerCase().trim() }),
       });
-      toast.success("Klien ditambahkan, email undangan terkirim");
+      // Report what the server actually did: an existing account gets a
+      // heads-up, not a set-password invite, and claiming otherwise sends the
+      // reseller chasing an email that was never meant to arrive.
+      toast.success(
+        res.is_new_user
+          ? "Klien ditambahkan, email undangan terkirim"
+          : "Klien ditambahkan — akun sudah terdaftar, jadi mereka memakai password yang lama" +
+            (res.email_sent ? " dan kami kirim pemberitahuan" : ""),
+      );
       router.push(`${basePath}/clients`);
     } catch (e) {
       setErr((e as Error).message);
@@ -153,7 +169,8 @@ export function ClientForm({ basePath }: { basePath: "/agent" | "/reseller" }) {
               Tambah Klien
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Klien menerima email undangan untuk mengatur password sendiri.
+              Email baru akan menerima undangan untuk mengatur password. Email yang
+              sudah punya akun langsung terhubung dan diberi pemberitahuan.
             </p>
           </div>
         </div>

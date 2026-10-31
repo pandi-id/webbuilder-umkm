@@ -538,18 +538,28 @@ func (h *Handler) CreateClient(c *fiber.Ctx) error {
 		return httpx.Internal(c, "create assignment failed")
 	}
 
-	// Kirim invite email supaya client bisa set password + login.
-	// Kalau existing user (sudah pernah signup), skip password reset (mereka
-	// pakai password existing). Kalau baru → butuh set password.
+	// A brand-new account needs an invite to set a password. An existing user
+	// already has one, so they get a heads-up instead — being attached to a
+	// manager means that manager can now see and act on their sites, and they
+	// should not find that out by accident.
+	emailed := false
 	if existing == nil {
 		raw, _, invErr := h.authRepo.CreateInvitation(
 			c.Context(), req.Email, auth.RoleClient, caller.User.ID, &clientID, 7*24*time.Hour,
 		)
 		if invErr == nil {
+			emailed = true
 			go h.sendInviteEmail(caller.User, req.Email, req.Name, auth.RoleClient, raw)
 		} else {
 			slog.Warn("reseller: create client invitation failed", "err", invErr)
 		}
+	} else {
+		name := existing.Name
+		if name == "" {
+			name = req.Name
+		}
+		emailed = h.mailer != nil
+		go h.sendClientLinkedEmail(caller.User, req.Email, name)
 	}
 
 	h.logAudit(c.Context(), caller.User.ID, audit.EventClientInvited, "user", clientID.String(), map[string]any{
@@ -561,7 +571,10 @@ func (h *Handler) CreateClient(c *fiber.Ctx) error {
 		"client_id":     clientID.String(),
 		"assignment_id": assignment.ID.String(),
 		"is_new_user":   existing == nil,
-		"invite_sent":   existing == nil,
+		// invite_sent stays "we sent a set-password link"; email_sent covers
+		// either mail, so the UI can report what actually happened.
+		"invite_sent": existing == nil,
+		"email_sent":  emailed,
 	})
 }
 
@@ -798,6 +811,31 @@ func (h *Handler) GetStats(c *fiber.Ctx) error {
 
 // sendInviteEmail — fire-and-forget invite email. Fail-silent kalau mailer
 // tidak configured atau send fail — log warn saja.
+// sendClientLinkedEmail tells an existing user that a reseller or agent now
+// manages their account. No link to accept: the assignment is already made,
+// and the message points at support rather than pretending otherwise.
+func (h *Handler) sendClientLinkedEmail(manager *auth.User, toEmail, toName string) {
+	if h.mailer == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	businessName := manager.ResellerDisplayName
+	if businessName == "" {
+		businessName = manager.Name
+	}
+	subject := businessName + " kini mengelola akun Web Builder Anda"
+	body := "Halo " + toName + ",\n\n" +
+		businessName + " menambahkan Anda sebagai klien di platform Web Builder.\n\n" +
+		"Artinya mereka dapat membantu mendaftarkan domain dan mengelola situs atas nama Anda.\n" +
+		"Akun dan password Anda tidak berubah — login seperti biasa di " + h.appBaseURL + "\n\n" +
+		"Kalau Anda tidak mengenal " + businessName + ", balas email ini supaya kami tinjau.\n\n" +
+		"Best regards,\nTim Web Builder"
+	if err := h.mailer.Send(ctx, mail.Message{To: toEmail, Subject: subject, Body: body}); err != nil {
+		slog.Warn("reseller: client linked email failed", "to", toEmail, "err", err)
+	}
+}
+
 func (h *Handler) sendInviteEmail(inviter *auth.User, toEmail, toName, role, rawToken string) {
 	if h.mailer == nil {
 		return

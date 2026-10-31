@@ -65,6 +65,14 @@ Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"
 Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
 agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
+**Tambah klien dengan email yang sudah terdaftar**: `POST /reseller/clients` TIDAK mengirim
+undangan set-password untuk user existing (mereka sudah punya password) — hanya email
+pemberitahuan `sendClientLinkedEmail` bahwa akunnya kini dikelola manager tsb. Response
+membedakan `invite_sent` (link set-password) dari `email_sent` (email apa pun terkirim);
+UI wajib membaca flag itu, jangan hardcode "email terkirim". Assignment dibuat tanpa
+persetujuan klien — hanya diberitahu. Kalau nanti butuh persetujuan, ikuti pola invitation
+agent di bawah.
+
 **Promosi user lama jadi agent**: `POST /reseller/agents/invite` menerima email yang SUDAH terdaftar
 — invitation dibuat dengan `target_user_id` sehingga akun lamanya (beserta situs + domain) dinaikkan
 jadi agent, bukan bikin akun baru. Kelayakan dipusatkan di `reseller.agentInviteBlocker()`: hanya
