@@ -17,6 +17,7 @@ import {
   LogOut,
   Receipt,
   Settings,
+  Store,
   Users,
   UserSquare2,
   UsersRound,
@@ -166,6 +167,15 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
 
           <div className="flex items-center gap-1.5">
             {/* Ke situs publik — icon-only di mobile, label kelihatan di md+. */}
+            {/* Agent/reseller are promoted users: they still own sites from
+                before, so keep a way back to the client dashboard. */}
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link href="/dashboard">
+                <Store className="size-4" />
+                <span className="hidden sm:inline">Toko Saya</span>
+              </Link>
+            </Button>
+
             <Button
               variant="ghost"
               size="sm"
@@ -210,6 +220,12 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">
+                    <Store className="size-3.5" />
+                    Toko Saya
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/reseller/settings">
                     <Settings className="size-3.5" />

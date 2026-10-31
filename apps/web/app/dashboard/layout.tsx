@@ -4,16 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Settings,
   LogOut,
   Mail,
   Loader2,
   User,
-  ShieldCheck,
   ChevronDown,
   Globe2,
 } from "lucide-react";
 import { api, clearTokens, getAccessToken } from "@/lib/api";
+import { portalForRole } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,21 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
     api<Me>("/api/v1/auth/me")
-      .then((u) => {
-        // Reseller/agent punya portal terpisah dengan sidebar sendiri.
-        // Kalau mereka nyasar ke /dashboard (client-style), redirect balik ke
-        // portalnya supaya menu tetap terlihat. Admin dibiarkan (bisa navigate
-        // ke mana saja untuk troubleshoot).
-        if (u.role === "reseller") {
-          router.replace("/reseller/dashboard");
-          return;
-        }
-        if (u.role === "agent") {
-          router.replace("/agent/dashboard");
-          return;
-        }
-        setMe(u);
-      })
+      .then(setMe)
       .catch(() => {
         clearTokens();
         router.replace("/login");
@@ -78,6 +63,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace("/login");
   }
 
+  // Reseller/agent/admin keep a second portal; everyone else gets null here.
+  const portal = portalForRole(me?.role);
+
   return (
     <div className="min-h-screen bg-muted/30">
       {me && !me.email_verified_at && <VerifyBanner />}
@@ -87,11 +75,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Web<span className="text-primary">Builder</span>
           </Link>
           <div className="flex items-center gap-2">
-            {me?.role === "admin" && (
+            {portal && (
               <Button variant="outline" size="sm" asChild className="gap-1.5">
-                <Link href="/admin">
-                  <ShieldCheck className="size-4" />
-                  <span className="hidden sm:inline">Admin</span>
+                <Link href={portal.href}>
+                  <portal.icon className="size-4" />
+                  <span className="hidden sm:inline">{portal.short}</span>
                 </Link>
               </Button>
             )}
@@ -108,6 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 // Sengaja compact di trigger (avatar + email di sm+) supaya header tidak
 // crowded; detail (nama, role) muncul di label dropdown.
 function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const portal = portalForRole(me.role);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -131,10 +120,10 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{me.name || "Pengguna"}</div>
             <div className="truncate text-xs text-muted-foreground">{me.email}</div>
-            {me.role === "admin" && (
+            {portal && (
               <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                <ShieldCheck className="size-2.5" />
-                Admin
+                <portal.icon className="size-2.5" />
+                {me.role}
               </div>
             )}
           </div>
@@ -156,14 +145,14 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Link>
         </DropdownMenuItem>
 
-        {me.role === "admin" && (
+        {portal && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Admin</DropdownMenuLabel>
+            <DropdownMenuLabel>{portal.label}</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href="/admin">
-                <Settings className="size-4 text-muted-foreground" />
-                Admin Panel
+              <Link href={portal.href}>
+                <portal.icon className="size-4 text-muted-foreground" />
+                Buka {portal.label}
               </Link>
             </DropdownMenuItem>
           </>

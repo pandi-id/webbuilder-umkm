@@ -53,7 +53,17 @@ docs/qa-playwright/  E2E suite Playwright (smoke/regression/visual)
 ecosystem.config.js  PM2 — cara prod jalan (bukan Docker)
 ```
 
-**Role user**: `admin` → `/admin`, `reseller` → `/reseller/dashboard`, `agent` → `/agent/dashboard`, `client` (default) → `/dashboard`. Mapping di [lib/roles.ts](../apps/web/lib/roles.ts); middleware `auth.RequireAdmin/RequireReseller/RequireAgent`. Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`).
+**Role user**: login mengarah ke `/admin` untuk admin, dan `/dashboard` untuk semua role lain —
+**termasuk reseller dan agent**. Keduanya umumnya user biasa yang dipromosikan belakangan, jadi
+mereka tetap punya situs + domain lama; kalau login langsung melempar ke portal, aset itu hilang
+dari pandangan. Perpindahan ke portal lewat tombol di header (sebelah profil), balik lewat tombol
+"Toko Saya" di portal. Dua mapping-nya di [lib/roles.ts](../apps/web/lib/roles.ts):
+`defaultRouteForRole()` (tujuan login) + `portalForRole()` (tombol portal: href/short/label/icon).
+Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"` di layout.
+`dashboard/layout.tsx` **tidak boleh** redirect reseller/agent keluar. Portal `/agent/*` dan
+`/reseller/*` tetap menolak role yang tidak cocok. Middleware API: `auth.RequireAdmin/RequireReseller/RequireAgent`.
+Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
+agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
 **Next 16 `proxy.ts`**: `middleware.ts` sudah di-rename ke `proxy.ts` di kedua app Next. Isinya generate CSP nonce per request (tanpa `unsafe-inline`/`unsafe-eval` di `script-src`). Embed pihak ketiga baru (iframe/script) wajib ditambah ke CSP di sana. `Vary: Host` ditegakkan di Caddy, bukan di proxy.ts (Next 16 menimpanya).
 

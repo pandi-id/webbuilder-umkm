@@ -24,8 +24,6 @@ import {
   Palette,
   Receipt,
   Rocket,
-  Settings,
-  ShieldCheck,
   SquarePen,
   Star,
   Store,
@@ -40,6 +38,7 @@ import {
   getOrderSummary,
   getReviewSummary,
 } from "@/lib/api";
+import { portalForRole } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -422,6 +421,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 // UserMenu — sama dengan dashboard header (apps/web/app/dashboard/layout.tsx).
 // Trigger compact (avatar + email) → dropdown identitas + quick actions.
 function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const portal = portalForRole(me.role);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -444,10 +444,10 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{me.name || "Pengguna"}</div>
             <div className="truncate text-xs text-muted-foreground">{me.email}</div>
-            {me.role === "admin" && (
+            {portal && (
               <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                <ShieldCheck className="size-2.5" />
-                Admin
+                <portal.icon className="size-2.5" />
+                {me.role}
               </div>
             )}
           </div>
@@ -475,14 +475,14 @@ function UserMenu({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Link>
         </DropdownMenuItem>
 
-        {me.role === "admin" && (
+        {portal && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Admin</DropdownMenuLabel>
+            <DropdownMenuLabel>{portal.label}</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href="/admin">
-                <Settings className="size-4 text-muted-foreground" />
-                Admin Panel
+              <Link href={portal.href}>
+                <portal.icon className="size-4 text-muted-foreground" />
+                Buka {portal.label}
               </Link>
             </DropdownMenuItem>
           </>
