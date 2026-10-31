@@ -70,6 +70,16 @@ menimpa data lama; field kosong jadi `nil` → `UpdateProfile` COALESCE memperta
 tersimpan (helper `profileUpdateFrom`). Dulu semua field dibuang diam-diam, jadi form terasa
 tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa yang berubah.
 
+**Dashboard `/dashboard` hanya situs milik sendiri.** `GET /sites` default mengembalikan
+gabungan owner + kolaborator (lewat `site_members`); dashboard memanggil `?role=owner` supaya
+reseller/agent dengan banyak klien tidak bingung mana toko sendiri. Situs klien tampil di
+`MyCollaborationsList` (`GET /collaborations`) yang membawa `site_status`, `hostname`
+(domain `verified` saja, via LATERAL) dan `updated_at`. `/settings/collaborators` memuat
+KEDUA arah — kolaborator di situs saya + situs yang saya kelola — karena client biasa yang
+diberi akses editor tidak punya portal sendiri. Catatan: `sites.GetOwned` sebenarnya mengecek
+keanggotaan `site_members` (bukan `sites.user_id`), jadi kolaborator memang boleh buka
+`/sites/:id`; namanya saja yang menyesatkan.
+
 **Hapus klien = lepas penugasan, BUKAN hapus akun.** `DELETE /{reseller,agent}/clients/:id`
 set `access_status='revoked'` (`RevokeAssignment`, scoped by manager). Klien punya situs +
 domain sendiri dan banyak yang daftar sendiri sebelum dikelola — menghapus akunnya dari sini

@@ -18,12 +18,12 @@ const (
 
 // Member = 1 row site_members. Berisi user_id + role dalam site tertentu.
 type Member struct {
-	ID       uuid.UUID
-	SiteID   uuid.UUID
-	UserID   uuid.UUID
-	Role     string
-	AddedBy  *uuid.UUID
-	AddedAt  time.Time
+	ID      uuid.UUID
+	SiteID  uuid.UUID
+	UserID  uuid.UUID
+	Role    string
+	AddedBy *uuid.UUID
+	AddedAt time.Time
 }
 
 // MemberWithProfile = Member + join users untuk display di UI (nama + email).
@@ -87,9 +87,10 @@ func (r *Repo) RemoveMember(ctx context.Context, siteID, userID uuid.UUID) error
 // yang di-allow. Return role kalau match, "" + ErrNotFound kalau tidak.
 //
 // Pattern pemakaian:
-//   role, err := repo.HasAccess(ctx, siteID, userID, RoleOwner, RoleEditor)
-//   if err != nil { return 404 }
-//   // editor+owner-only endpoint
+//
+//	role, err := repo.HasAccess(ctx, siteID, userID, RoleOwner, RoleEditor)
+//	if err != nil { return 404 }
+//	// editor+owner-only endpoint
 func (r *Repo) HasAccess(ctx context.Context, siteID, userID uuid.UUID, allowed ...string) (string, error) {
 	if len(allowed) == 0 {
 		allowed = []string{RoleOwner, RoleEditor, RoleViewer}
@@ -213,6 +214,12 @@ type SiteCollaboration struct {
 	OwnerEmail string    `json:"owner_email"`
 	OwnerName  string    `json:"owner_name"`
 	Role       string    `json:"role"` // 'editor' | 'viewer'
+	// Site state, so the collaborator can tell a live shop from a draft
+	// without opening each one. Hostname is the verified custom domain, empty
+	// while none is connected.
+	SiteStatus string    `json:"site_status"`
+	Hostname   string    `json:"hostname"`
+	UpdatedAt  time.Time `json:"updated_at"`
 	AddedAt    time.Time `json:"added_at"`
 }
 
@@ -234,10 +241,18 @@ func (r *Repo) ListCollaborationsForActors(ctx context.Context, actorIDs []uuid.
 	rows, err := r.pool.Query(ctx, `
 		SELECT s.id, s.name, s.slug,
 		       s.user_id, COALESCE(ou.email, ''), COALESCE(ou.name, ''),
-		       sm.role, sm.added_at
+		       sm.role, sm.added_at,
+		       s.status, COALESCE(d.hostname, ''), s.updated_at
 		  FROM sites s
 		  JOIN site_members sm ON sm.site_id = s.id
 		  LEFT JOIN users ou ON ou.id = s.user_id
+		  -- Verified domain only; a pending one is not reachable yet. LATERAL
+		  -- keeps it to one row per site even with several hostnames.
+		  LEFT JOIN LATERAL (
+		       SELECT hostname FROM domains
+		        WHERE site_id = s.id AND status = 'verified'
+		        ORDER BY created_at ASC LIMIT 1
+		  ) d ON true
 		 WHERE sm.user_id = ANY($1) AND sm.role <> 'owner'
 		 ORDER BY s.name ASC
 	`, actorIDs)
@@ -252,6 +267,7 @@ func (r *Repo) ListCollaborationsForActors(ctx context.Context, actorIDs []uuid.
 			&c.SiteID, &c.SiteName, &c.SiteSlug,
 			&c.OwnerID, &c.OwnerEmail, &c.OwnerName,
 			&c.Role, &c.AddedAt,
+			&c.SiteStatus, &c.Hostname, &c.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -264,14 +280,14 @@ func (r *Repo) ListCollaborationsForActors(ctx context.Context, actorIDs []uuid.
 // Query: semua site yang owned by userID + semua non-owner member di dalamnya.
 // Cross-join di SQL supaya bisa render nested list (per-site → list of collabs).
 type CollaboratorAccess struct {
-	SiteID       uuid.UUID
-	SiteName     string
-	SiteSlug     string
-	MemberID     uuid.UUID
-	MemberEmail  string
-	MemberName   string
-	Role         string
-	AddedAt      time.Time
+	SiteID      uuid.UUID
+	SiteName    string
+	SiteSlug    string
+	MemberID    uuid.UUID
+	MemberEmail string
+	MemberName  string
+	Role        string
+	AddedAt     time.Time
 }
 
 // ListCollaboratorsOwnedBy — semua non-owner member di sites yang userID owns.

@@ -1,0 +1,208 @@
+package sites
+
+// Integration tests. Need TEST_DATABASE_URL; skipped otherwise.
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/webbuilder/api/internal/db"
+)
+
+var testPool *pgxpool.Pool
+
+func TestMain(m *testing.M) {
+	url := os.Getenv("TEST_DATABASE_URL")
+	if url == "" {
+		os.Exit(m.Run())
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, url)
+	if err != nil {
+		panic("connect test db: " + err.Error())
+	}
+	defer pool.Close()
+	if err := db.Migrate(ctx, pool, url); err != nil {
+		panic("migrate test db: " + err.Error())
+	}
+	testPool = pool
+	os.Exit(m.Run())
+}
+
+func needsDB(t *testing.T) *Repo {
+	t.Helper()
+	if testPool == nil {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	return NewRepo(testPool)
+}
+
+func mkUser(t *testing.T, ctx context.Context) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := testPool.QueryRow(ctx,
+		`INSERT INTO users (email, password_hash, name) VALUES ($1, 'h', 'Uji') RETURNING id`,
+		"sites-"+uuid.NewString()[:8]+"@test.local",
+	).Scan(&id); err != nil {
+		t.Fatalf("mkUser: %v", err)
+	}
+	return id
+}
+
+// mkSite creates a site owned by owner and registers the owner membership the
+// app relies on.
+func mkSite(t *testing.T, ctx context.Context, owner uuid.UUID, name, status string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	slug := "s-" + uuid.NewString()[:8]
+	if err := testPool.QueryRow(ctx,
+		`INSERT INTO sites (user_id, slug, name, status) VALUES ($1, $2, $3, $4) RETURNING id`,
+		owner, slug, name, status,
+	).Scan(&id); err != nil {
+		t.Fatalf("mkSite: %v", err)
+	}
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO site_members (site_id, user_id, role, added_by) VALUES ($1, $2, 'owner', $2)
+		 ON CONFLICT DO NOTHING`, id, owner); err != nil {
+		t.Fatalf("owner membership: %v", err)
+	}
+	return id
+}
+
+func addMember(t *testing.T, ctx context.Context, siteID, userID, by uuid.UUID, role string) {
+	t.Helper()
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO site_members (site_id, user_id, role, added_by) VALUES ($1, $2, $3, $4)`,
+		siteID, userID, role, by); err != nil {
+		t.Fatalf("addMember: %v", err)
+	}
+}
+
+// The personal dashboard asks for role=owner so a manager with many clients
+// still sees only their own shops.
+func TestListSitesAccessibleTo_OwnerFilter(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+
+	mine := mkSite(t, ctx, me, "Toko Saya", "published")
+	theirs := mkSite(t, ctx, client, "Toko Klien", "draft")
+	addMember(t, ctx, theirs, me, client, RoleEditor)
+
+	all, err := repo.ListSitesAccessibleTo(ctx, me)
+	if err != nil {
+		t.Fatalf("list all: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("unfiltered list = %d sites, want 2 (own + collaborated)", len(all))
+	}
+
+	owned, err := repo.ListSitesAccessibleTo(ctx, me, RoleOwner)
+	if err != nil {
+		t.Fatalf("list owned: %v", err)
+	}
+	if len(owned) != 1 {
+		t.Fatalf("owner-filtered list = %d sites, want 1", len(owned))
+	}
+	if owned[0].ID != mine {
+		t.Errorf("got site %s, want the caller's own %s", owned[0].ID, mine)
+	}
+	if owned[0].Role != RoleOwner {
+		t.Errorf("role = %q, want owner", owned[0].Role)
+	}
+}
+
+// The collaborations list carries enough to answer "whose site and is it live"
+// without opening each one.
+func TestListMyCollaborations_CarriesOwnerAndStatus(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+
+	site := mkSite(t, ctx, client, "Toko Klien", "published")
+	addMember(t, ctx, site, me, client, RoleEditor)
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO domains (site_id, hostname, status) VALUES ($1, $2, 'verified')`,
+		site, "klien-"+uuid.NewString()[:8]+".id"); err != nil {
+		t.Fatalf("domain: %v", err)
+	}
+	// A pending hostname must not be reported as the live one.
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO domains (site_id, hostname, status) VALUES ($1, $2, 'pending')`,
+		site, "pending-"+uuid.NewString()[:8]+".id"); err != nil {
+		t.Fatalf("pending domain: %v", err)
+	}
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("got %d collaborations, want 1", len(rows))
+	}
+	c := rows[0]
+	if c.OwnerID != client || c.OwnerEmail == "" {
+		t.Errorf("owner not resolved: id=%s email=%q", c.OwnerID, c.OwnerEmail)
+	}
+	if c.SiteStatus != "published" {
+		t.Errorf("site_status = %q, want published", c.SiteStatus)
+	}
+	if c.Role != RoleEditor {
+		t.Errorf("role = %q, want editor", c.Role)
+	}
+	if c.Hostname == "" {
+		t.Error("hostname empty although a verified domain exists")
+	}
+	if len(c.Hostname) >= 7 && c.Hostname[:7] == "pending" {
+		t.Errorf("hostname = %q, want the verified one, not the pending one", c.Hostname)
+	}
+	if c.UpdatedAt.IsZero() {
+		t.Error("updated_at is zero")
+	}
+}
+
+// Sites the caller owns must never show up as collaborations.
+func TestListMyCollaborations_ExcludesOwnSites(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	mkSite(t, ctx, me, "Toko Saya", "draft")
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("got %d collaborations for an owner-only user, want 0", len(rows))
+	}
+}
+
+// A site with no verified domain yields an empty hostname, not a scan error.
+func TestListMyCollaborations_NoDomain(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+	site := mkSite(t, ctx, client, "Belum Tayang", "draft")
+	addMember(t, ctx, site, me, client, RoleViewer)
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("got %d rows, want 1", len(rows))
+	}
+	if rows[0].Hostname != "" {
+		t.Errorf("hostname = %q, want empty", rows[0].Hostname)
+	}
+	if rows[0].Role != RoleViewer {
+		t.Errorf("role = %q, want viewer", rows[0].Role)
+	}
+}

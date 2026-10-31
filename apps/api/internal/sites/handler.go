@@ -85,7 +85,20 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	// Union: owned + collaborator (via site_members). Reseller/agent lihat
 	// situs klien yang di-assign ke mereka; client tetap lihat cuma milik
 	// sendiri (yang otomatis include mereka sebagai 'owner' role).
-	out, err := h.repo.ListSitesAccessibleTo(c.Context(), uid)
+	//
+	// `?role=owner` narrows it to sites the caller actually owns. The personal
+	// dashboard uses that: a reseller with a hundred clients could not tell
+	// their own shops from the ones they merely help run.
+	var roles []string
+	switch c.Query("role") {
+	case "":
+		// all roles
+	case RoleOwner:
+		roles = []string{RoleOwner}
+	default:
+		return httpx.BadRequest(c, "role filter tidak dikenal")
+	}
+	out, err := h.repo.ListSitesAccessibleTo(c.Context(), uid, roles...)
 	if err != nil {
 		return httpx.Internal(c, "list failed")
 	}

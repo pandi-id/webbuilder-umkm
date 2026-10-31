@@ -100,12 +100,16 @@ export default function DashboardPage() {
   // Missing a renewal takes the store offline, so surface ≤ 30-day expiries.
   const [expiringPurchases, setExpiringPurchases] = useState<DomainPurchase[]>([]);
   const [activeDomains, setActiveDomains] = useState<DomainPurchase[]>([]);
+  // Count only, to point at the separate page without listing them here.
+  const [collabCount, setCollabCount] = useState(0);
 
   async function refresh() {
     setLoadingSites(true);
     try {
-      // Go can marshal a nil slice to null — normalise to [].
-      const list = (await api<Site[]>("/api/v1/sites")) ?? [];
+      // Owner-only: client shops the caller merely collaborates on live under
+      // "Situs yang saya kelola". Mixing them here made it impossible to tell
+      // which shops are actually yours once you manage more than a handful.
+      const list = (await api<Site[]>("/api/v1/sites?role=owner")) ?? [];
       setSites(list);
     } catch (e) {
       setErr((e as Error).message);
@@ -119,6 +123,11 @@ export default function DashboardPage() {
     api<MeProfile>("/api/v1/auth/me")
       .then((u) => setMe(u))
       .catch(() => {});
+    api<unknown[]>("/api/v1/collaborations")
+      .then((rows) => setCollabCount(rows?.length ?? 0))
+      .catch(() => {
+        // Not every role has collaborations; the hint just stays hidden.
+      });
     // sessionStorage so the reminder returns next session if still incomplete.
     try {
       if (sessionStorage.getItem("dashboard_profile_banner_dismissed") === "1") {
@@ -194,6 +203,20 @@ export default function DashboardPage() {
                 ? "Belum ada toko — beli domain untuk mulai berjualan online."
                 : `${sites.length} toko · ${publishedCount} sudah dipublikasikan`}
           </p>
+          {/* The client shops are not gone, just listed elsewhere — say so
+              rather than letting them look missing. */}
+          {collabCount > 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Anda juga membantu mengelola{" "}
+              <Link
+                href="/settings/collaborators"
+                className="font-medium text-primary hover:underline"
+              >
+                {collabCount} situs milik klien
+              </Link>
+              .
+            </p>
+          )}
         </div>
         {/* Single create flow: buy a domain, then build the store (1 domain = 1 situs). */}
         <Button className="w-full shadow-sm sm:w-auto" asChild>
