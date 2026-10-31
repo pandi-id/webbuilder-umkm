@@ -24,6 +24,8 @@ const (
 	EventResellerSuspended   = "reseller.suspended"
 	EventAgentInvited        = "agent.invited"
 	EventClientInvited       = "client.invited"
+	EventClientReinvited     = "client.reinvited"
+	EventClientUnlinked      = "client.unlinked"
 	EventInvitationAccepted  = "invitation.accepted"
 	EventDomainPurchased     = "purchase.created"      // own-purchase
 	EventDomainPurchasedOBO  = "purchase.on_behalf_of" // reseller/agent for client

@@ -183,6 +183,38 @@ export async function openBlob(path: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Reseller/agent — managed clients
+// ---------------------------------------------------------------------------
+
+export type ManagedClient = {
+  client_id: string;
+  assignment_id: string;
+  email: string;
+  name: string;
+  access_status: "setup" | "active" | "revoked";
+  email_verified: boolean;
+  // False only while the account has no password and no Google link — i.e. an
+  // invitation that was never accepted. Drives whether a resend is offered.
+  has_login: boolean;
+  created_at: string;
+  domain_count: number;
+};
+
+// Both portals hit their own prefix; the handler is shared.
+export function unlinkClient(basePath: "/agent" | "/reseller", clientId: string) {
+  return api<{ unlinked: boolean }>(`/api/v1${basePath}/clients/${clientId}`, {
+    method: "DELETE",
+  });
+}
+
+export function resendClientInvite(basePath: "/agent" | "/reseller", clientId: string) {
+  return api<{ invite_sent: boolean; email: string }>(
+    `/api/v1${basePath}/clients/${clientId}/resend-invite`,
+    { method: "POST" },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Reseller — agent recruitment
 // ---------------------------------------------------------------------------
 

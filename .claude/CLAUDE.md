@@ -65,6 +65,20 @@ Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"
 Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
 agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
+**Hapus klien = lepas penugasan, BUKAN hapus akun.** `DELETE /{reseller,agent}/clients/:id`
+set `access_status='revoked'` (`RevokeAssignment`, scoped by manager). Klien punya situs +
+domain sendiri dan banyak yang daftar sendiri sebelum dikelola — menghapus akunnya dari sini
+merusak data milik orang lain. `CreateAssignment` pakai `ON CONFLICT … DO UPDATE … WHERE
+access_status='revoked'` supaya pelepasan bisa dibatalkan; tanpa itu unique index
+`(manager_id, client_id)` bikin klien yang dilepas tidak pernah bisa ditambah lagi.
+Penugasan yang masih aktif tetap `ErrAlreadyAssigned` (DO UPDATE ter-filter → `pgx.ErrNoRows`).
+
+**`has_login` vs `email_verified`.** Tombol "Kirim ulang undangan" HANYA untuk akun yang belum
+punya cara login (`password_hash = '' AND oauth_google_sub IS NULL`). Jangan pakai
+`email_verified` sebagai penanda "belum accept" — user yang daftar sendiri bisa punya password
+tapi email belum terverifikasi, dan mengirim ulang undangan ke mereka berarti menyerahkan link
+set-password akun orang ke managernya. `ResendClientInvite` menolak dengan 409 kalau sudah ada login.
+
 **Tambah klien dengan email yang sudah terdaftar**: `POST /reseller/clients` TIDAK mengirim
 undangan set-password untuk user existing (mereka sudah punya password) — hanya email
 pemberitahuan `sendClientLinkedEmail` bahwa akunnya kini dikelola manager tsb. Response

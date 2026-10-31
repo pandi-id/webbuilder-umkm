@@ -274,11 +274,16 @@ func MountUser(app *fiber.App, deps Deps) {
 		authed.Get("/reseller/clients", roleResellerOrAgent, deps.Reseller.ListClients)
 		authed.Get("/reseller/clients/:client_id", roleResellerOrAgent, deps.Reseller.GetClient)
 		authed.Patch("/reseller/clients/:client_id", roleResellerOrAgent, mutateLimit, deps.Reseller.UpdateClient)
+		// Unlink removes the assignment only — the client's account survives.
+		authed.Delete("/reseller/clients/:client_id", roleResellerOrAgent, mutateLimit, deps.Reseller.UnlinkClient)
+		authed.Post("/reseller/clients/:client_id/resend-invite", roleResellerOrAgent, mutateLimit, deps.Reseller.ResendClientInvite)
 
 		// Agent-only mirror (list assigned clients dari POV agent).
 		authed.Get("/agent/clients", roleAgent, deps.Reseller.ListClients)
 		authed.Get("/agent/clients/:client_id", roleAgent, deps.Reseller.GetClient)
 		authed.Patch("/agent/clients/:client_id", roleAgent, mutateLimit, deps.Reseller.UpdateClient)
+		authed.Delete("/agent/clients/:client_id", roleAgent, mutateLimit, deps.Reseller.UnlinkClient)
+		authed.Post("/agent/clients/:client_id/resend-invite", roleAgent, mutateLimit, deps.Reseller.ResendClientInvite)
 		authed.Get("/agent/stats", roleAgent, deps.Reseller.GetStats)
 
 		// Phase 3 — list domain purchase yang di-trigger on-behalf-of client.

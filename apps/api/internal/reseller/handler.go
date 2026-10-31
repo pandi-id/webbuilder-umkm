@@ -681,6 +681,77 @@ type updateClientReq struct {
 // on-behalf-of untuk isi NIK klien tanpa harus minta klien login sendiri.
 //
 // COALESCE-based UPDATE — nil pointer = tidak ubah field itu.
+// UnlinkClient — DELETE /api/v1/{reseller,agent}/clients/:client_id.
+//
+// Removes the assignment, NOT the user. Clients own their own sites and
+// domains, and many signed up themselves before a manager ever added them —
+// deleting the account from here would destroy data that is not the caller's.
+// The row simply leaves the manager's list (`access_status != 'revoked'`).
+func (h *Handler) UnlinkClient(c *fiber.Ctx) error {
+	caller, err := h.resolveCaller(c)
+	if err != nil {
+		return httpx.Forbidden(c, err.Error())
+	}
+	clientID, err := uuid.Parse(c.Params("client_id"))
+	if err != nil {
+		return httpx.BadRequest(c, "client_id bukan UUID valid")
+	}
+	if err := h.repo.RevokeAssignment(c.Context(), caller.User.ID, clientID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.NotFound(c, "klien tidak ditemukan atau bukan asuhan Anda")
+		}
+		return httpx.Internal(c, "unlink client failed")
+	}
+	h.logAudit(c.Context(), caller.User.ID, audit.EventClientUnlinked, "user", clientID.String(), nil)
+	return httpx.OK(c, fiber.Map{"unlinked": true})
+}
+
+// ResendClientInvite — POST /api/v1/{reseller,agent}/clients/:client_id/resend-invite.
+//
+// Only for an account that still cannot log in. Once the client has a password
+// (or a Google link) there is no invitation to accept, and reissuing one would
+// hand the manager a link that sets someone else's password.
+func (h *Handler) ResendClientInvite(c *fiber.Ctx) error {
+	caller, err := h.resolveCaller(c)
+	if err != nil {
+		return httpx.Forbidden(c, err.Error())
+	}
+	clientID, err := uuid.Parse(c.Params("client_id"))
+	if err != nil {
+		return httpx.BadRequest(c, "client_id bukan UUID valid")
+	}
+	if _, err := h.repo.FindActiveAssignmentBetween(c.Context(), caller.User.ID, clientID); err != nil {
+		return httpx.NotFound(c, "klien tidak ditemukan atau bukan asuhan Anda")
+	}
+	client, err := h.authRepo.GetByID(c.Context(), clientID)
+	if err != nil {
+		return httpx.NotFound(c, "klien tidak ditemukan")
+	}
+	if client.PasswordHash != "" || client.OAuthGoogleSub != nil {
+		return httpx.Conflict(c, "klien sudah punya akses login, undangan tidak perlu dikirim ulang")
+	}
+	if h.mailer == nil {
+		return httpx.Internal(c, "pengiriman email belum dikonfigurasi")
+	}
+
+	raw, _, err := h.authRepo.CreateInvitation(
+		c.Context(), client.Email, auth.RoleClient, caller.User.ID, &clientID, 7*24*time.Hour,
+	)
+	if err != nil {
+		return httpx.Internal(c, "gagal membuat undangan baru")
+	}
+	name := client.Name
+	if name == "" {
+		name = client.Email
+	}
+	go h.sendInviteEmail(caller.User, client.Email, name, auth.RoleClient, raw)
+
+	h.logAudit(c.Context(), caller.User.ID, audit.EventClientReinvited, "user", clientID.String(), map[string]any{
+		"email": client.Email,
+	})
+	return httpx.OK(c, fiber.Map{"invite_sent": true, "email": client.Email})
+}
+
 func (h *Handler) UpdateClient(c *fiber.Ctx) error {
 	caller, err := h.resolveCaller(c)
 	if err != nil {

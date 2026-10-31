@@ -33,6 +33,11 @@ type ClientRow struct {
 	Name          string           `json:"name"`
 	CreatedAt     time.Time        `json:"created_at"`
 	EmailVerified bool             `json:"email_verified"`
+	// HasLogin is false only while the account still has no password and no
+	// OAuth link — i.e. an invited placeholder that was never accepted. An
+	// existing user added as a client has a login from day one, so "belum
+	// accept" must not be inferred from EmailVerified alone.
+	HasLogin bool `json:"has_login"`
 	// DomainCount — jumlah domain aktif milik klien (semua register purchases
 	// yang status=active). Dipakai frontend untuk hide "Beli Domain" button
 	// kalau klien sudah punya domain.
@@ -67,17 +72,29 @@ const (
 )
 
 func (r *Repo) CreateAssignment(ctx context.Context, managerID, clientID uuid.UUID, managerRole string) (*ClientAssignment, error) {
+	// (manager_id, client_id) is UNIQUE, so a previously revoked pairing would
+	// collide forever and make an unlink irreversible. Reviving the row instead
+	// keeps "lepas lalu tambahkan lagi" working; an assignment that is still
+	// live is left untouched and reported as a conflict.
 	var a ClientAssignment
 	err := r.pool.QueryRow(ctx, `
 		INSERT INTO client_assignments (manager_id, client_id, manager_role, access_status)
 		VALUES ($1, $2, $3, 'setup')
+		ON CONFLICT (manager_id, client_id) DO UPDATE
+		   SET access_status = 'setup',
+		       manager_role  = EXCLUDED.manager_role,
+		       revoked_at    = NULL,
+		       created_at    = now()
+		 WHERE client_assignments.access_status = 'revoked'
 		RETURNING id, manager_id, client_id, manager_role, access_status, created_at, handed_off_at, revoked_at
 	`, managerID, clientID, managerRole).Scan(
 		&a.ID, &a.ManagerID, &a.ClientID, &a.ManagerRole, &a.AccessStatus,
 		&a.CreatedAt, &a.HandedOffAt, &a.RevokedAt,
 	)
 	if err != nil {
-		if pgErrCode(err) == "23505" {
+		// The WHERE on DO UPDATE filters out still-active pairings, so pgx sees
+		// no returned row — that is the "already assigned" case.
+		if errors.Is(err, pgx.ErrNoRows) || pgErrCode(err) == "23505" {
 			return nil, ErrAlreadyAssigned
 		}
 		return nil, err
@@ -197,6 +214,7 @@ func (r *Repo) ListClientsByManager(ctx context.Context, managerID uuid.UUID) ([
 		SELECT ca.id, ca.manager_id, ca.client_id, ca.manager_role, ca.access_status,
 		       ca.created_at, ca.handed_off_at, ca.revoked_at,
 		       u.email, u.name, u.created_at, u.email_verified_at IS NOT NULL,
+		       u.password_hash <> '' OR u.oauth_google_sub IS NOT NULL,
 		       COALESCE(dc.cnt, 0) AS domain_count
 		  FROM client_assignments ca
 		  JOIN users u ON u.id = ca.client_id
@@ -220,13 +238,32 @@ func (r *Repo) ListClientsByManager(ctx context.Context, managerID uuid.UUID) ([
 			&r.Assignment.ID, &r.Assignment.ManagerID, &r.Assignment.ClientID,
 			&r.Assignment.ManagerRole, &r.Assignment.AccessStatus,
 			&r.Assignment.CreatedAt, &r.Assignment.HandedOffAt, &r.Assignment.RevokedAt,
-			&r.Email, &r.Name, &r.CreatedAt, &r.EmailVerified, &r.DomainCount,
+			&r.Email, &r.Name, &r.CreatedAt, &r.EmailVerified, &r.HasLogin, &r.DomainCount,
 		); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// RevokeAssignment unlinks a client from one manager. The user account is left
+// alone on purpose: clients own their own sites and domains, and many signed up
+// themselves before a reseller ever added them. Scoped by manager so one
+// manager cannot drop another's client.
+func (r *Repo) RevokeAssignment(ctx context.Context, managerID, clientID uuid.UUID) error {
+	ct, err := r.pool.Exec(ctx, `
+		UPDATE client_assignments
+		   SET access_status = 'revoked', revoked_at = now()
+		 WHERE manager_id = $1 AND client_id = $2 AND access_status != 'revoked'
+	`, managerID, clientID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // ListAgentsByReseller — reseller lihat agent yang di bawah mereka.
@@ -287,6 +324,7 @@ func (r *Repo) ListClientsForReseller(ctx context.Context, resellerID uuid.UUID)
 		SELECT ca.id, ca.manager_id, ca.client_id, ca.manager_role, ca.access_status,
 		       ca.created_at, ca.handed_off_at, ca.revoked_at,
 		       u.email, u.name, u.created_at, u.email_verified_at IS NOT NULL,
+		       u.password_hash <> '' OR u.oauth_google_sub IS NOT NULL,
 		       COALESCE(dc.cnt, 0) AS domain_count
 		  FROM client_assignments ca
 		  JOIN users u ON u.id = ca.client_id
@@ -312,7 +350,7 @@ func (r *Repo) ListClientsForReseller(ctx context.Context, resellerID uuid.UUID)
 			&r.Assignment.ID, &r.Assignment.ManagerID, &r.Assignment.ClientID,
 			&r.Assignment.ManagerRole, &r.Assignment.AccessStatus,
 			&r.Assignment.CreatedAt, &r.Assignment.HandedOffAt, &r.Assignment.RevokedAt,
-			&r.Email, &r.Name, &r.CreatedAt, &r.EmailVerified, &r.DomainCount,
+			&r.Email, &r.Name, &r.CreatedAt, &r.EmailVerified, &r.HasLogin, &r.DomainCount,
 		); err != nil {
 			return nil, err
 		}
