@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { countDigits, isASCIIPrintable, nikError, postalCodeError } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -59,26 +60,6 @@ const EDITABLE = [
 ] as const;
 type EditableKey = (typeof EDITABLE)[number];
 
-// ASCII printable range — mirror auth.IsASCIIPrintable di backend. EPP
-// contact:create pakai PostalInfoInternational (RFC 5733 §2.6) yang hanya
-// terima ASCII. Preview di sini supaya user tahu sebelum submit.
-function isASCIIPrintable(s: string): boolean {
-  for (let i = 0; i < s.length; i++) {
-    const code = s.charCodeAt(i);
-    if (code < 0x20 || code > 0x7e) return false;
-  }
-  return true;
-}
-
-function countDigits(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c >= 48 && c <= 57) n++;
-  }
-  return n;
-}
-
 function fieldErrors(f: Record<EditableKey, string>): Partial<Record<EditableKey, string>> {
   const e: Partial<Record<EditableKey, string>> = {};
   if (f.name && !isASCIIPrintable(f.name)) {
@@ -97,14 +78,10 @@ function fieldErrors(f: Record<EditableKey, string>): Partial<Record<EditableKey
   if (f.state && !isASCIIPrintable(f.state)) {
     e.state = "Nama provinsi hanya boleh karakter ASCII";
   }
-  if (f.postal_code) {
-    const d = countDigits(f.postal_code);
-    const allowed = /^[0-9\s\-]+$/.test(f.postal_code);
-    if (!allowed || d < 4 || d > 10) e.postal_code = "Kode pos harus 4-10 digit angka";
-  }
-  if (f.nik && (f.nik.length !== 16 || !/^\d{16}$/.test(f.nik))) {
-    e.nik = "NIK harus 16 digit angka";
-  }
+  const postal = postalCodeError(f.postal_code);
+  if (postal) e.postal_code = postal;
+  const nik = nikError(f.nik);
+  if (nik) e.nik = nik;
   return e;
 }
 

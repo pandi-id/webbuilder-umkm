@@ -107,6 +107,17 @@ tampil "Undangan tidak berlaku".
 - **Cards**: `<Card>` + `<CardHeader>` + `<CardTitle>` + `<CardContent>`. Untuk tabel full-bleed: `<Card className="overflow-hidden p-0">`.
 - **Dialog**: `<Dialog open={open} onOpenChange={setOpen}>` + `<DialogContent>` + `<DialogHeader><DialogTitle>...<DialogDescription>` + `<DialogFooter>`. Tombol close (X) sudah included.
 - **Form**: `<Label htmlFor>` + `<Input id>` + `space-y-1.5` di wrapper. Error message: `<p className="text-sm text-destructive">`.
+- **Form kontak (profil, klien)**: field yang berakhir di EPP `contact:create` dipakai bersama —
+  aturannya ada di [lib/contact.ts](../apps/web/lib/contact.ts) (`asciiError`, `postalCodeError`,
+  `nikError`), jangan tulis ulang per form. Provinsi/kota WAJIB pakai `ProvinceSelect`/`CitySelect`
+  dari [WilayahSelect.tsx](../apps/web/components/WilayahSelect.tsx), bukan input teks bebas —
+  teks bebas menghasilkan nilai non-ASCII yang bikin EPP gagal "Transaction rolled back".
+  Negara pakai `<CountryBadge>` (Indonesia, fixed): platform ID-only dan `CountryCode: "ID"`
+  di-hardcode di `domain_purchase`, jadi dropdown negara sungguhan akan berbeda diam-diam
+  dari yang didaftarkan ke registry.
+- **Form panjang pakai halaman, bukan dialog**: produk, artikel, dan klien
+  ([components/clients/ClientForm.tsx](../apps/web/components/clients/ClientForm.tsx), dipakai
+  bersama portal agent + reseller lewat prop `basePath`). Dialog hanya untuk form 1-2 field.
 - **Tabs nav (header level)**: pakai `<Link>` dengan `border-b-2` pattern di `apps/web/app/sites/[id]/layout.tsx` (bukan Radix Tabs — untuk navigasi route).
 - **Loading**: dim tabel `className={loading ? "opacity-60" : ""}` di `<TableBody>`. Skeleton: `animate-pulse rounded-md bg-muted/50`.
 - **Empty states**: copy berbeda untuk "belum ada data" vs "tidak ada hasil untuk \"X\"".

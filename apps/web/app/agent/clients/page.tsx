@@ -21,17 +21,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -56,7 +46,6 @@ export default function AgentClientsPage() {
   const [items, setItems] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -87,9 +76,11 @@ export default function AgentClientsPage() {
             Klien yang Anda daftarkan. Reseller induk melihat daftar ini juga.
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-1.5">
-          <UserPlus className="size-4" />
-          Tambah Klien
+        <Button asChild className="gap-1.5">
+          <Link href="/agent/clients/new">
+            <UserPlus className="size-4" />
+            Tambah Klien
+          </Link>
         </Button>
       </div>
 
@@ -129,6 +120,12 @@ export default function AgentClientsPage() {
                       <p className="text-xs">
                         Tambahkan klien pertama untuk mulai kelola situs mereka.
                       </p>
+                      <Button asChild size="sm" className="mt-3 gap-1.5">
+                        <Link href="/agent/clients/new">
+                          <UserPlus className="size-4" />
+                          Tambah Klien
+                        </Link>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -197,218 +194,7 @@ export default function AgentClientsPage() {
         </div>
       </Card>
 
-      <CreateClientDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onCreated={() => {
-          setDialogOpen(false);
-          refresh();
-        }}
-      />
     </div>
-  );
-}
-
-function CreateClientDialog({
-  open,
-  onClose,
-  onCreated,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [form, setForm] = useState({
-    email: "",
-    name: "",
-    phone_number: "",
-    address: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    nik: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      setForm({
-        email: "",
-        name: "",
-        phone_number: "",
-        address: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        nik: "",
-      });
-      setErr(null);
-    }
-  }, [open]);
-
-  function set<K extends keyof typeof form>(k: K, v: string) {
-    setForm((f) => ({ ...f, [k]: v }));
-  }
-
-  async function submit() {
-    setErr(null);
-    if (!form.email.includes("@")) {
-      setErr("Email tidak valid");
-      return;
-    }
-    if (!form.name.trim()) {
-      setErr("Nama wajib diisi");
-      return;
-    }
-    setSaving(true);
-    try {
-      // Endpoint sama untuk reseller & agent (RequireResellerOrAgent).
-      await api("/api/v1/reseller/clients", {
-        method: "POST",
-        body: JSON.stringify({
-          ...form,
-          email: form.email.toLowerCase().trim(),
-        }),
-      });
-      toast.success("Klien ditambahkan, email invite terkirim");
-      onCreated();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Tambah Klien Baru</DialogTitle>
-          <DialogDescription>
-            Klien akan terima email invite untuk set password. Info alamat
-            dipakai nanti kalau register domain (Phase 3).
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="c-email">Email *</Label>
-              <Input
-                id="c-email"
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="klien@example.com"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="c-name">Nama *</Label>
-              <Input
-                id="c-name"
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                placeholder="Bu Ani Wijaya"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="c-phone">Nomor HP</Label>
-              <Input
-                id="c-phone"
-                type="tel"
-                value={form.phone_number}
-                onChange={(e) => set("phone_number", e.target.value)}
-                placeholder="+62812xxxxxxx"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="c-city">Kota</Label>
-              <Input
-                id="c-city"
-                value={form.city}
-                onChange={(e) => set("city", e.target.value)}
-                placeholder="Jakarta"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="c-address">Alamat</Label>
-            <Textarea
-              id="c-address"
-              rows={2}
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-              placeholder="Jl. Contoh No. 10..."
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="c-state">
-              Provinsi{" "}
-              <span className="text-[10px] font-normal text-muted-foreground">
-                — wajib untuk register domain
-              </span>
-            </Label>
-            <Input
-              id="c-state"
-              value={form.state}
-              onChange={(e) => set("state", e.target.value)}
-              placeholder="DKI Jakarta"
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="c-postal">Kode Pos</Label>
-              <Input
-                id="c-postal"
-                value={form.postal_code}
-                onChange={(e) => set("postal_code", e.target.value)}
-                placeholder="10110"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="c-nik">
-                NIK (KTP){" "}
-                <span className="text-[10px] font-normal text-muted-foreground">
-                  — wajib untuk .id
-                </span>
-              </Label>
-              <Input
-                id="c-nik"
-                value={form.nik}
-                onChange={(e) => set("nik", e.target.value.replace(/\D/g, "").slice(0, 16))}
-                placeholder="16 digit NIK"
-                inputMode="numeric"
-                maxLength={16}
-                className="font-mono"
-              />
-            </div>
-          </div>
-
-          {err && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              {err}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Batal
-          </Button>
-          <Button onClick={submit} disabled={saving} className="gap-1.5">
-            {saving && <Loader2 className="size-3.5 animate-spin" />}
-            Tambah Klien
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
