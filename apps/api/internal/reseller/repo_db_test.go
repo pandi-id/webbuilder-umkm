@@ -212,3 +212,88 @@ func TestListClientsByManager_HasLogin(t *testing.T) {
 		}
 	}
 }
+
+// profileUpdateFrom decides what an add-client submission does to an account
+// that already exists. Getting this wrong either discards the caller's input
+// (the old bug) or wipes data the client entered themselves.
+func TestProfileUpdateFrom(t *testing.T) {
+	t.Run("empty fields stay nil so COALESCE keeps old data", func(t *testing.T) {
+		upd, any := profileUpdateFrom(createClientReq{
+			Email: "a@b.com", Name: "Budi", City: "   ",
+		})
+		if !any {
+			t.Fatal("any = false although a name was typed")
+		}
+		if upd.Name == nil || *upd.Name != "Budi" {
+			t.Errorf("Name = %v, want Budi", upd.Name)
+		}
+		for label, got := range map[string]*string{
+			"City":        upd.City, // whitespace only
+			"PhoneNumber": upd.PhoneNumber,
+			"Address":     upd.Address,
+			"State":       upd.State,
+			"PostalCode":  upd.PostalCode,
+			"Nik":         upd.Nik,
+		} {
+			if got != nil {
+				t.Errorf("%s = %q, want nil so the stored value survives", label, *got)
+			}
+		}
+	})
+
+	t.Run("values are trimmed", func(t *testing.T) {
+		upd, _ := profileUpdateFrom(createClientReq{Name: "  Ani  ", City: " Jakarta "})
+		if upd.Name == nil || *upd.Name != "Ani" {
+			t.Errorf("Name = %v, want trimmed", upd.Name)
+		}
+		if upd.City == nil || *upd.City != "Jakarta" {
+			t.Errorf("City = %v, want trimmed", upd.City)
+		}
+	})
+
+	t.Run("nothing typed means no update at all", func(t *testing.T) {
+		if _, any := profileUpdateFrom(createClientReq{Email: "a@b.com"}); any {
+			t.Error("any = true for a request with no profile fields")
+		}
+	})
+}
+
+// End-to-end on the repo: a filled field overwrites, a blank one does not.
+func TestUpdateProfile_PartialKeepsUntouchedFields(t *testing.T) {
+	if testPool == nil {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	ctx := context.Background()
+	authRepo := auth.NewRepo(testPool)
+	client := mkUser(t, ctx, auth.RoleClient, "hash")
+
+	// The client filled these in themselves.
+	if _, err := testPool.Exec(ctx,
+		`UPDATE users SET phone_number = '0811', address = 'Alamat Lama', city = 'Bandung' WHERE id = $1`,
+		client); err != nil {
+		t.Fatalf("seed profile: %v", err)
+	}
+
+	upd, any := profileUpdateFrom(createClientReq{
+		Email: "x@y.com", Name: "Nama Baru", City: "Jakarta", // phone + address left blank
+	})
+	if !any {
+		t.Fatal("any = false")
+	}
+	if _, err := authRepo.UpdateProfile(ctx, client, upd); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	var name, phone, address, city string
+	if err := testPool.QueryRow(ctx,
+		`SELECT name, phone_number, address, city FROM users WHERE id = $1`, client,
+	).Scan(&name, &phone, &address, &city); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if name != "Nama Baru" || city != "Jakarta" {
+		t.Errorf("typed fields not applied: name=%q city=%q", name, city)
+	}
+	if phone != "0811" || address != "Alamat Lama" {
+		t.Errorf("blank fields wiped stored data: phone=%q address=%q", phone, address)
+	}
+}

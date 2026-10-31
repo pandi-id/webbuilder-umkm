@@ -43,6 +43,7 @@ type CreateClientResult = {
   is_new_user: boolean;
   invite_sent: boolean;
   email_sent: boolean;
+  profile_updated: boolean;
 };
 
 type Form = {
@@ -138,12 +139,18 @@ export function ClientForm({ basePath }: { basePath: "/agent" | "/reseller" }) {
       // Report what the server actually did: an existing account gets a
       // heads-up, not a set-password invite, and claiming otherwise sends the
       // reseller chasing an email that was never meant to arrive.
-      toast.success(
-        res.is_new_user
-          ? "Klien ditambahkan, email undangan terkirim"
-          : "Klien ditambahkan — akun sudah terdaftar, jadi mereka memakai password yang lama" +
-            (res.email_sent ? " dan kami kirim pemberitahuan" : ""),
-      );
+      if (res.is_new_user) {
+        toast.success("Klien ditambahkan, email undangan terkirim");
+      } else {
+        toast.success("Klien ditambahkan — akun sudah terdaftar sebelumnya", {
+          description:
+            (res.profile_updated
+              ? "Data yang Anda isi disimpan ke profil mereka. "
+              : "") +
+            "Mereka tetap memakai password lama" +
+            (res.email_sent ? " dan sudah kami beri tahu lewat email." : "."),
+        });
+      }
       router.push(`${basePath}/clients`);
     } catch (e) {
       setErr((e as Error).message);
@@ -170,7 +177,8 @@ export function ClientForm({ basePath }: { basePath: "/agent" | "/reseller" }) {
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               Email baru akan menerima undangan untuk mengatur password. Email yang
-              sudah punya akun langsung terhubung dan diberi pemberitahuan.
+              sudah punya akun langsung terhubung — kolom yang Anda isi akan
+              memperbarui profil mereka, yang dikosongkan dibiarkan apa adanya.
             </p>
           </div>
         </div>

@@ -467,6 +467,31 @@ type createClientReq struct {
 	Nik         string `json:"nik,omitempty"`
 }
 
+// profileUpdateFrom maps the filled-in fields of a create request onto a
+// partial profile update. Empty strings become nil so UpdateProfile's COALESCE
+// keeps whatever the client already had. Returns false when nothing was typed.
+func profileUpdateFrom(req createClientReq) (auth.ProfileUpdate, bool) {
+	set := func(v string) *string {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			return nil
+		}
+		return &v
+	}
+	upd := auth.ProfileUpdate{
+		Name:        set(req.Name),
+		PhoneNumber: set(req.PhoneNumber),
+		Address:     set(req.Address),
+		City:        set(req.City),
+		State:       set(req.State),
+		PostalCode:  set(req.PostalCode),
+		Nik:         set(req.Nik),
+	}
+	any := upd.Name != nil || upd.PhoneNumber != nil || upd.Address != nil ||
+		upd.City != nil || upd.State != nil || upd.PostalCode != nil || upd.Nik != nil
+	return upd, any
+}
+
 // CreateClient — POST /api/v1/reseller/clients (reseller atau agent).
 //
 // Untuk agent: manager_id=agent, assignment ke agent. Reseller induk
@@ -497,6 +522,7 @@ func (h *Handler) CreateClient(c *fiber.Ctx) error {
 	// Cek email exists.
 	existing, _ := h.authRepo.GetByEmail(c.Context(), req.Email)
 	var clientID uuid.UUID
+	profileUpdated := false
 	if existing != nil {
 		// Existing user — kalau bukan client, reject.
 		if existing.Role != auth.RoleClient {
@@ -508,6 +534,19 @@ func (h *Handler) CreateClient(c *fiber.Ctx) error {
 			return httpx.Conflict(c, "email sudah dikelola oleh manager lain")
 		}
 		clientID = existing.ID
+
+		// Apply what the caller typed to the existing account. Only non-empty
+		// fields are sent: an untouched box must not wipe data the client
+		// entered themselves, but a filled one is a deliberate correction and
+		// used to be discarded silently.
+		if upd, any := profileUpdateFrom(req); any {
+			if _, err := h.authRepo.UpdateProfile(c.Context(), clientID, upd); err != nil {
+				slog.Warn("reseller: update existing client profile failed",
+					"client_id", clientID, "err", err)
+			} else {
+				profileUpdated = true
+			}
+		}
 	} else {
 		// Bikin user baru (password kosong, email tidak verified, tunggu invite).
 		u, err := h.authRepo.CreateClientPlaceholder(c.Context(), auth.ClientPlaceholder{
@@ -575,6 +614,8 @@ func (h *Handler) CreateClient(c *fiber.Ctx) error {
 		// either mail, so the UI can report what actually happened.
 		"invite_sent": existing == nil,
 		"email_sent":  emailed,
+		// True when an existing account's profile was changed by this call.
+		"profile_updated": profileUpdated,
 	})
 }
 

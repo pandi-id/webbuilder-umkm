@@ -65,6 +65,11 @@ Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"
 Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
 agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
+**Tambah klien yang sudah punya akun ikut memperbarui profilnya.** Field yang diisi caller
+menimpa data lama; field kosong jadi `nil` → `UpdateProfile` COALESCE mempertahankan nilai
+tersimpan (helper `profileUpdateFrom`). Dulu semua field dibuang diam-diam, jadi form terasa
+tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa yang berubah.
+
 **Hapus klien = lepas penugasan, BUKAN hapus akun.** `DELETE /{reseller,agent}/clients/:id`
 set `access_status='revoked'` (`RevokeAssignment`, scoped by manager). Klien punya situs +
 domain sendiri dan banyak yang daftar sendiri sebelum dikelola — menghapus akunnya dari sini

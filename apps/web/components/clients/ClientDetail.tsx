@@ -27,6 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  CitySelect,
+  CountryBadge,
+  ProvinceSelect,
+} from "@/components/WilayahSelect";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -342,28 +347,30 @@ function ProfileTab({
           />
         </div>
 
+        <div className="space-y-1.5">
+          <Label>Negara</Label>
+          <CountryBadge className="max-w-md" />
+        </div>
+
+        {/* Dropdowns, not free text: EPP contact:create rejects non-ASCII and
+            typo'd region names with "Transaction rolled back". */}
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="cd-city">Kota</Label>
-            <Input
-              id="cd-city"
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-              placeholder="Jakarta"
+            <Label>
+              Provinsi{" "}
+              <span className="text-[10px] font-normal text-muted-foreground">*</span>
+            </Label>
+            <ProvinceSelect
+              value={form.state}
+              onChange={(v) => setForm((f) => ({ ...f, state: v, city: "" }))}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="cd-state">
-              Provinsi{" "}
-              <span className="text-[10px] font-normal text-muted-foreground">
-                *
-              </span>
-            </Label>
-            <Input
-              id="cd-state"
-              value={form.state}
-              onChange={(e) => set("state", e.target.value)}
-              placeholder="DKI Jakarta"
+            <Label>Kota / Kabupaten</Label>
+            <CitySelect
+              province={form.state}
+              value={form.city}
+              onChange={(v) => set("city", v)}
             />
           </div>
           <div className="space-y-1.5">
@@ -373,6 +380,8 @@ function ProfileTab({
               value={form.postal_code}
               onChange={(e) => set("postal_code", e.target.value)}
               placeholder="10110"
+              maxLength={16}
+              inputMode="numeric"
             />
           </div>
         </div>
