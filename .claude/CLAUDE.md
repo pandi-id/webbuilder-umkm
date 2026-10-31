@@ -95,6 +95,11 @@ ecosystem.config.js  PM2 — cara prod jalan (bukan Docker)
 - **Generics** untuk shared types: `Paginated[T]`, `MakePaginated[T]`.
 - **Unique violation**: cek `pgErrCode(err) == "23505"` → return sentinel `Err*Taken`.
 - **JSON null handling**: pointer field untuk optional input (`*string`, `*int`), `COALESCE($n, col)` di UPDATE.
+- **UPDATE dinamis**: kalau ada kolom kondisional (mis. `stock` yang bisa NULL/angka/tak-diubah),
+  nomori placeholder **saat argumen di-append**, jangan tulis `$2..$11` manual. Pola aman ada di
+  `products.Repo.Update` (helper `set(col, v)` yang append arg + rakit klausa sekaligus). Pernah
+  bikin bug: satu argumen kondisional disisipkan di tengah → semua kolom sesudahnya baca nilai
+  milik kolom lain → `column "stock" is of type integer but expression is of type text` (500).
 
 ## Environment Files
 

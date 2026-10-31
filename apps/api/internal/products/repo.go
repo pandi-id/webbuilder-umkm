@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -112,8 +113,8 @@ type UpdateInput struct {
 	Description *string
 	Price       *int64
 	Currency    *string
-	Stock       *int   // pointer-to-int doesn't distinguish "set to NULL" vs "unset". Use ClearStock for NULL.
-	ClearStock  bool   // if true, sets stock to NULL
+	Stock       *int // pointer-to-int doesn't distinguish "set to NULL" vs "unset". Use ClearStock for NULL.
+	ClearStock  bool // if true, sets stock to NULL
 	ImageURL    *string
 	Gallery     json.RawMessage
 	Category    *string
@@ -122,39 +123,44 @@ type UpdateInput struct {
 }
 
 func (r *Repo) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Product, error) {
-	// Build dynamic UPDATE with COALESCE for nullable scalars. Two stock cases:
-	// - ClearStock true: explicit set NULL
-	// - Stock != nil: set to value
-	// - both unset: COALESCE keeps existing
-	stockExpr := "stock"
+	// Placeholders are numbered as each argument is appended, never written by
+	// hand: the stock case inserts an extra argument in the middle, and a fixed
+	// $2..$11 list silently shifted every column after it onto the wrong value.
 	args := []any{id}
-	if in.ClearStock {
-		stockExpr = "NULL"
-	} else if in.Stock != nil {
-		args = append(args, *in.Stock)
-		stockExpr = fmt.Sprintf("$%d", len(args))
+	sets := make([]string, 0, 11)
+	// set appends an optional column: NULL input keeps the stored value.
+	set := func(col string, v any) {
+		args = append(args, v)
+		sets = append(sets, fmt.Sprintf("%s = COALESCE($%d, %s)", col, len(args), col))
 	}
 
-	args = append(args, in.Slug, in.Name, in.Description, in.Price, in.Currency,
-		in.ImageURL, jsonOrNil(in.Gallery), in.Category, in.Status, jsonOrNil(in.Metadata))
+	set("slug", in.Slug)
+	set("name", in.Name)
+	set("description", in.Description)
+	set("price", in.Price)
+	set("currency", in.Currency)
 
-	q := fmt.Sprintf(`
-		UPDATE products SET
-		    slug          = COALESCE($2, slug),
-		    name          = COALESCE($3, name),
-		    description   = COALESCE($4, description),
-		    price         = COALESCE($5, price),
-		    currency      = COALESCE($6, currency),
-		    stock         = %s,
-		    image_url     = COALESCE($7, image_url),
-		    gallery_json  = COALESCE($8, gallery_json),
-		    category      = COALESCE($9, category),
-		    status        = COALESCE($10, status),
-		    metadata_json = COALESCE($11, metadata_json),
-		    updated_at    = now()
+	// Stock has three cases, so it cannot use the COALESCE helper:
+	// - ClearStock true: explicit NULL (unlimited)
+	// - Stock != nil:    set to value
+	// - both unset:      keep what is stored
+	switch {
+	case in.ClearStock:
+		sets = append(sets, "stock = NULL")
+	case in.Stock != nil:
+		args = append(args, *in.Stock)
+		sets = append(sets, fmt.Sprintf("stock = $%d", len(args)))
+	}
+
+	set("image_url", in.ImageURL)
+	set("gallery_json", jsonOrNil(in.Gallery))
+	set("category", in.Category)
+	set("status", in.Status)
+	set("metadata_json", jsonOrNil(in.Metadata))
+
+	q := `UPDATE products SET ` + strings.Join(sets, ", ") + `, updated_at = now()
 		WHERE id = $1
-		RETURNING `+cols+`
-	`, stockExpr)
+		RETURNING ` + cols
 
 	var p Product
 	err := r.pool.QueryRow(ctx, q, args...).Scan(scan(&p)...)
