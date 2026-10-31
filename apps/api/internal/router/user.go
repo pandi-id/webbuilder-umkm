@@ -199,6 +199,14 @@ func MountUser(app *fiber.App, deps Deps) {
 	authed.Patch("/products/:id", mutateLimit, deps.Products.Update)
 	authed.Delete("/products/:id", mutateLimit, deps.Products.Delete)
 
+	// Product reviews (moderation inbox)
+	if deps.Reviews != nil {
+		authed.Get("/sites/:id/reviews", deps.Reviews.ListBySite)
+		authed.Get("/sites/:id/reviews/summary", deps.Reviews.Summary)
+		authed.Patch("/sites/:id/reviews/:reviewId", mutateLimit, deps.Reviews.Update)
+		authed.Delete("/sites/:id/reviews/:reviewId", mutateLimit, deps.Reviews.Delete)
+	}
+
 	// Orders (UMKM checkout inbox)
 	if deps.Orders != nil {
 		authed.Get("/sites/:id/orders", deps.Orders.ListBySite)

@@ -102,6 +102,17 @@ func MountGlobal(app *fiber.App, deps Deps) {
 		)
 	}
 
+	// Public product reviews — anonymous storefront visitors. Submissions
+	// land as 'pending' (owner approves in the dashboard), so the write path
+	// only costs a moderation row: per-IP limit + "_hp" honeypot like orders.
+	if deps.Reviews != nil {
+		app.Post("/public/sites/:id/products/:slug/reviews",
+			pubCORS,
+			RateLimitIP(reviewCreatePerWindow, reviewCreateWindow),
+			deps.Reviews.CreatePublic,
+		)
+	}
+
 	// Public analytics beacon — renderer POST hit setiap page render.
 	// Rate-limit per IP (200/menit) supaya bot spam tidak bloat counter.
 	if deps.Analytics != nil {
@@ -151,6 +162,11 @@ func MountGlobal(app *fiber.App, deps Deps) {
 	// Cacheable lebih lama.
 	pubBase.Get("/sites/:id/products", hostGuard, longCache, deps.Public.ListProducts)
 	pubBase.Get("/sites/:id/products/:slug", hostGuard, longCache, deps.Public.ProductBySlug)
+	if deps.Reviews != nil {
+		// Published reviews only; short cache so an approval shows up quickly.
+		pubBase.Get("/sites/:id/products/:slug/reviews", hostGuard, shortCache, deps.Reviews.ListPublic)
+		pubBase.Get("/sites/:id/review-summary", hostGuard, longCache, deps.Reviews.SummaryPublic)
+	}
 	pubBase.Get("/sites/:id/blog-posts", hostGuard, longCache, deps.Public.ListBlogPosts)
 	pubBase.Get("/sites/:id/blog-posts/:slug", hostGuard, longCache, deps.Public.BlogPostBySlug)
 

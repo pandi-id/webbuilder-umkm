@@ -8,7 +8,7 @@ Konteks ini dimuat di setiap sesi. Bekerjalah sebagai senior engineer dengan kea
 
 - **Go (Fiber) profesional** — REST API produksi, pgx/v5 dengan parameterized query, JWT, argon2id, migrations embedded, layered architecture (handler/repo per domain).
 - **UI/UX profesional** — modern, clean, professional, fully responsive. Mobile-first, breakpoints sm/md/lg konsisten, whitespace generous, microcopy ramah bahasa Indonesia.
-- **TailwindCSS + shadcn/ui** — utility-first, accessible Radix primitives, dark-on-light defaults. Komponen shadcn di-vendor di `apps/web/components/ui/` (button, card, input, label, badge, dialog, select, table, tabs, textarea, progress, separator). Helper `cn()` di `lib/utils.ts`. Pakai lucide-react untuk ikon.
+- **TailwindCSS + shadcn/ui** — utility-first, accessible Radix primitives, dark-on-light defaults. Komponen shadcn di-vendor di `apps/web/components/ui/` (accordion, badge, button, card, dialog, dropdown-menu, input, label, progress, select, separator, table, tabs, textarea). Helper `cn()` di `lib/utils.ts`. Pakai lucide-react untuk ikon. Toast pakai `sonner` (`<Toaster />` sudah dipasang di `app/layout.tsx` — cukup `import { toast } from "sonner"`).
 - **Web builder** — block-based editor (skema JSON tree), multi-tenant rendering by Host, custom domain + SSL, export ke static HTML/CSS/JS, asset library, theme tokens (CSS variables).
 - **Next.js 16 (App Router)** — RSC + client components (`"use client"`), route groups `(group)`, dynamic segments `[id]`, metadata, server-only fetch dengan `force-dynamic` untuk renderer. Request API async: `await headers()`, `await params`. React 19 gotcha: `inert` wajib boolean (`inert`, bukan `inert=""` — React 19 baca string kosong sebagai false), `useRef<T>(null)` jadi `RefObject<T | null>`, namespace `JSX` pindah ke `React.JSX`.
 - **Caddy** — reverse proxy, on-demand TLS dengan ask endpoint, multi-host routing untuk dashboard / api / renderer / custom domain user.
@@ -154,8 +154,10 @@ Next.js auto-load `.env.local` (jangan commit). API perlu `.env` di dir tempat `
 
 - Bootstrap via env: `ADMIN_EMAIL` + `ADMIN_PASSWORD` (+ optional `ADMIN_NAME`) → `EnsureAdmin` saat startup (idempotent; password tidak diubah kalau user sudah ada).
 - Tombol **⚙ Admin Panel** muncul di dashboard header kalau `role === "admin"`.
-- Admin sidebar: Overview (stats), User, Situs.
 - Admin bisa edit quota per situs (`PATCH /admin/sites/:id/quota`), promote/demote user, hapus user/situs.
+- Sidebar ([app/admin/layout.tsx](../apps/web/app/admin/layout.tsx)) — satu sumber nav, tambah menu baru di situ:
+  Overview, Pengguna, Reseller, Situs, Aset, Artikel Platform, Template, Pricing, Promo,
+  Zones, Payment, Invoices, Wallet Top-up, Settings, Domain, DNS Provider, Audit Log, Email Log.
 
 ## Quota & Usage
 
@@ -210,7 +212,7 @@ cd apps/api-registry && go vet ./... && go test -race ./...
 ```bash
 cd docs/qa-playwright
 npm run test:smoke                       # @smoke, dipakai di PR
-npm run test:regression                  # semua
+npm run test:regression                  # semua (tests/ + functional/ negative/ security/ visual/)
 npm run test:client                      # per role: client|agent|reseller|admin|auth|security
 npx playwright test tests/10-client.spec.mjs -g "nama test"   # single test
 ```
@@ -285,7 +287,7 @@ Ketika menambah tipe blok baru, sentuh 4 tempat: (1) schema di `apps/web/lib/blo
 - **Promos**: [/admin/promos](../apps/web/app/admin/promos/) — admin CRUD kupon (percent/fixed, applies_to register|renew|both, TLD whitelist, min subtotal, max cap, valid window, max uses total + per-user). User apply via wizard: input code → validate preview → submit purchase with `promo_code`. Redemption tracked di `promo_redemptions` (unique per invoice_id), audit event `promo.applied` fires setelah redeem sukses.
 - **Expiry email notifier**: [internal/notifier/expiry.go](../apps/api/internal/notifier/expiry.go) — background goroutine, scan tiap 24 jam. Kirim email peringatan per user (Bahasa Indonesia + deep-link `/settings/domains/<domain>`) untuk domain aktif expire ≤ 30 hari, dedup via kolom `expiry_notice_sent_at` + resend 7 hari.
 - **Dashboard banner**: 2 kartu — "Domain sedang diproses" (pending states) + "Domain akan segera expire" (< 30 hari). Filter dedupe per-domain (`latestActivePerDomain`) supaya post-renewal user tidak lihat tanggal lama.
-- **Admin observability**: [/admin/registrar/purchases](../apps/web/app/admin/registrar/purchases/) — paginated + filter status/kind/search, join users untuk email. `GET /api/v1/admin/registrar/purchases` pakai `AdminList` repo method dengan whitelist sort preset.
+- **Admin observability**: [/admin/domain/purchases](../apps/web/app/admin/domain/purchases/) — paginated + filter status/kind/search, join users untuk email. `GET /api/v1/admin/registrar/purchases` pakai `AdminList` repo method dengan whitelist sort preset.
 - **Hardening**:
   - Payment webhook rate-limit 600/60s per source IP (defence in depth di atas gateway HMAC verify).
   - Idempotency-Key WAJIB di `POST /domains/purchase` + `/renew` (frontend generate `useMemo` UUID) — cegah double-charge.
@@ -315,6 +317,17 @@ dibiarkan di DB (migration lama tidak diedit; `0069` hanya menghapus baris templ
 - **Landing** (`apps/web/app/page.tsx`) satu-satunya tempat yang memakai `motion` (`motion/react`), di client island `components/landing/*`. Jangan pakai motion di dashboard/renderer.
 - **Dashboard situs** komponennya di `components/site-dashboard/`; checklist onboarding memakai `PLACEHOLDER_BRANDS` di `app/sites/[id]/page.tsx` — tambah brand Navbar default template baru ke situ.
 - **Keranjang & Pesanan**: keranjang di browser (`apps/renderer/components/cart/`, `lib/cart.ts`, localStorage `wb-cart:v1:<siteId>`) → `POST /public/sites/:id/orders` (`internal/orders`). API re-price dari DB (jangan percaya harga client), potong stok di transaksi yang sama (`stock IS NULL` = tak terbatas), `seq` per situs → `#0042`; batal mengembalikan stok. Hanya situs **published**. Checkout via WhatsApp ke `sites.whatsapp_number` — tidak ada payment gateway untuk toko (Midtrans/Paylabs yang ada = akun platform untuk domain). Dashboard: `sites/[id]/orders`. Tombol keranjang masuk ke `UmkmBlocks` lewat hook opsional `ctx.cartButton` (editor tidak set → tetap tombol WA).
+- **Produk & Ulasan**: form produk adalah **halaman penuh** (`products/new`, `products/[productId]/edit`
+  + `ProductForm.tsx`), bukan dialog — pola sama dengan `BlogForm` (sticky toolbar, autosave 3 detik
+  di mode edit, dirty guard). `products.description` berisi **Markdown** dari `<RichEditor>`; renderer
+  parse lewat `marked` + class `.wb-prose`. Untuk excerpt kartu & meta SEO pakai `plainExcerpt()` di
+  `lib/umkm.ts` (jangan `.slice()` Markdown mentah). Ulasan di `internal/reviews`: pengunjung kirim via
+  `POST /public/sites/:id/products/:slug/reviews` (honeypot `_hp` + rate-limit 5/10 menit per IP),
+  masuk status `pending` → pemilik approve di `sites/[id]/reviews`. Badge "Pembeli terverifikasi"
+  di-resolve **sekali saat submit** (cocokkan `author_phone` ternormalisasi dengan `orders.customer_phone`
+  di situs yang sama, order non-`cancelled`) supaya pesanan yang dihapus belakangan tidak mengubah
+  ulasan yang sudah tayang. `author_phone` tidak pernah keluar di API publik. Breakdown bintang dihitung
+  di SQL (`COUNT(*) FILTER`) atas SELURUH ulasan published — jangan hitung dari item yang ter-`limit`.
 - **Blok UMKM** (`Umkm*`, kategori "UmkmPro") dipakai bersama editor + renderer + export. File berikut **harus byte-identik**: `components/umkm/{UmkmBlocks.tsx,UmkmCopyCode.tsx,umkm.css}` dan `lib/umkm.ts` di `apps/web` dan `apps/renderer`, plus `apps/api/internal/exports/umkm.css` (di-`go:embed`). Ubah satu → salin ke semua, cek dengan `diff`. Markup Go ada di `exports/render_umkm.go`; CSS hanya class `.wb-umkm-*` + theme vars (tanpa Tailwind) supaya port ke Go mekanis.
 
 ## Platform Articles (migration 0053)
@@ -345,10 +358,78 @@ Helper: `auth.IsAdminFrom(c)` baca `role` claim JWT. Dipakai di handler:
 `sites`, `pages`, `blog`, `products`,
 `forms`, `analytics`, `usage`, `assets`.
 
+**Kolaborator situs** (`site_members`, [sites/members.go](../apps/api/internal/sites/members.go)) —
+jalur akses ketiga di samping owner dan admin. Role: `owner` (= `sites.user_id`),
+`editor` (full edit + publish), `viewer` (read-only, untuk akses analytics saja).
+Cek pakai `repo.HasAccess(ctx, siteID, userID, RoleOwner, RoleEditor)` → return role
+atau `ErrNotFound`; jangan tulis query `site_members` sendiri di handler. UI di
+tab **Anggota** situs (`apps/web/app/sites/[id]/members/`) + [settings/collaborators](../apps/web/app/settings/collaborators/).
+
 **Bug yang pernah terjadi**: admin klik "Buka Editor" → redirect ke login. Root
 cause: `sites.Get` masih pakai `GetOwned`. Ownership check di dashboard sudah ada,
 tapi fetch pertama di editor fail. Fix: ganti ke `GetOwnedOrAdmin` di semua endpoint
 yang editor panggil (Get/Update/Publish/ListMembers).
+
+## Auth & Akun
+
+Selain email+password (argon2id), surface auth lain yang sudah live — semua di
+[internal/auth](../apps/api/internal/auth/), route di `MountUser`:
+
+- **Google OAuth** ([google.go](../apps/api/internal/auth/google.go)) — `/auth/google/authorize` set
+  state cookie http-only (CSRF + payload `next`) → consent → `/auth/google/callback` verify state,
+  upsert user (link-by-email ATAU create), redirect ke `${WEB_BASE_URL}/auth/callback#access_token=…`.
+  Token di **fragment**, bukan query, supaya tidak masuk log hop manapun. Jangan pindahkan ke query.
+- **Verifikasi email** — `POST /auth/email/resend` + `/auth/email/verify`. Token opaque, disimpan
+  sebagai hash (`HashOpaqueToken`), sekali pakai (`ConsumeEmailVerificationToken`). Kolom
+  `users.email_verified_at`.
+- **Reset password** — `/auth/password/forgot` + `/reset`, pola token sama (hash + consume).
+- **Reseller apply** — `POST /auth/reseller/apply`, approval di `/admin/resellers`.
+- **Invitation** — `/invitations/:token` + `/accept` ([invitation_repo.go](../apps/api/internal/auth/invitation_repo.go)),
+  dipakai reseller untuk undang agent/client (`parent_reseller_id`).
+
+## Background Workers
+
+Semua dijalankan sebagai goroutine dari [cmd/server/main.go](../apps/api/cmd/server/main.go) dengan
+`ctx` yang dibatalkan saat shutdown. Kalau menambah worker baru, ikuti pola yang sama
+(`go w.Run(ctx)` + `select` on `ctx.Done()`), jangan blokir startup.
+
+| Worker | Interval | Fungsi |
+|--------|----------|--------|
+| `pages.Scheduler` | 60s | Publish halaman dengan `scheduled_publish_at <= now`, lalu purge cache. Gagal = row tidak di-clear → retry tick berikutnya. |
+| `notifier.Expiry` | 24h | Email peringatan domain expire ≤30 hari, dedup `expiry_notice_sent_at`, resend 7 hari. |
+| `notifier.BYOReconciler` | 24h | Lifecycle domain BYO `.id` (drift 7d / disconnect 30d / cleanup 90d) + email. Aktif hanya kalau registrar client ada (butuh WHOIS). |
+| `platform_articles.SeedIfEmpty` | sekali | Seed 6 artikel UMKM, timeout 30s, skip kalau sudah ada artikel published. |
+| db pool snapshot | 5s | Gauge `db_pool_acquired/idle/total/max` ke `/metrics`. |
+
+## Paket API yang Belum Disebut di Atas
+
+- **[pricing](../apps/api/internal/pricing/)** — model harga 3 lapis: `platform_prices` (admin, per TLD:
+  `retail_*` untuk client, `wholesale_*` untuk debit wallet reseller/agent) → `reseller_price_lists`
+  (reseller set `agent_*` + `client_*`) → markup agent (free-form, TIDAK di-track sistem).
+  Resolve lewat `GET /pricing/resolve/:tld`.
+- **[zones](../apps/api/internal/zones/)** — katalog TLD authoritative (bukan EPP registry). Tiap zone punya
+  rules dokumen + batas periode registrasi. `active=false` → zone tidak di-expose ke user meski EPP
+  masih support. Harga direferensikan by convention (`platform_prices.tld`), bukan FK.
+- **[payments](../apps/api/internal/payments/)** vs **[paymentgw](../apps/api/internal/paymentgw/)** — `payments`
+  = CRUD `payment_methods` + validasi schema config JSONB per tipe gateway; `paymentgw` = factory +
+  implementasi Gateway yang `GetByCode(ctx, "midtrans")` lalu instansiasi. Validasi config ada di
+  `payments`, bukan di DB.
+- **[forms](../apps/api/internal/forms/)** — definisi form + submission per situs. Renderer submit ke endpoint
+  public → simpan `form_submissions` + notify owner via email.
+- **[analytics](../apps/api/internal/analytics/)** — page-view counter, UPSERT increment ke daily bucket
+  (row count tetap kecil). Belum ada unique visitor/referrer — kalau perlu, tambah tabel session baru,
+  jangan ubah struktur ini.
+- **[snippets](../apps/api/internal/snippets/)** — library blok reusable milik user (satu `BlockData` + nama),
+  muncul sebagai tab tersendiri di palette dialog editor.
+
+## Gotcha
+
+- **Nama wilayah wajib ASCII** — [lib/wilayah.ts](../apps/web/lib/wilayah.ts) (38 provinsi + kota/kabupaten)
+  sengaja tanpa aksen/em-dash supaya cocok langsung dengan EPP contact PostalInfo `type="int"`
+  (RFC 5733 §2.6). Kalau menambah entri, pakai ASCII murni.
+- **`NEXT_PUBLIC_*` butuh rebuild**, bukan cuma `pm2 restart` — nilainya di-inline saat `next build`.
+- **Blok tipe tak dikenal** (mis. `Guru*` dari situs lama) wajib render kosong di editor + renderer +
+  exporter, jangan throw.
 
 ## Don'ts
 

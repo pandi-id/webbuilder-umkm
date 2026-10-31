@@ -90,6 +90,12 @@ const (
 	// most; each one reserves stock, so keep spam from draining inventory.
 	orderCreatePerWindow = 10
 	orderCreateWindow    = 10 * time.Minute
+
+	// Public review submit — per-IP. Stricter than checkout: a buyer writes
+	// one review per purchase, and every row costs the owner a moderation
+	// decision, so make flooding the queue expensive.
+	reviewCreatePerWindow = 5
+	reviewCreateWindow    = 10 * time.Minute
 )
 
 // RateLimitIP keys by client IP. Use for unauthenticated endpoints (login,

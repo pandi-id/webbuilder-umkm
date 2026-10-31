@@ -256,17 +256,28 @@ function ProductCard({
       : value
         ? createElement(as, { className }, value)
         : null;
+  const media = card.image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={card.image} alt={card.name} loading="lazy" decoding="async" />
+  ) : (
+    <div className="wb-umkm-ph">
+      <Icon name="image" />
+    </div>
+  );
+  // Live DB products link to their detail page; the editor canvas keeps the
+  // image inert so clicking it selects the block instead of navigating away.
+  const linkedMedia =
+    card.href && ctx.live ? (
+      <a className="wb-umkm-card-link" href={safeHref(card.href)} tabIndex={-1} aria-hidden="true">
+        {media}
+      </a>
+    ) : (
+      media
+    );
   return (
     <article className={soldOut ? "wb-umkm-card is-soldout" : "wb-umkm-card"}>
       <div className="wb-umkm-card-media">
-        {card.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={card.image} alt={card.name} loading="lazy" decoding="async" />
-        ) : (
-          <div className="wb-umkm-ph">
-            <Icon name="image" />
-          </div>
-        )}
+        {linkedMedia}
         {badgeLabel ? <span className={`wb-umkm-badge wb-umkm-badge--${card.badge}`}>{badgeLabel}</span> : null}
         {disc ? <span className="wb-umkm-disc">-{disc}%</span> : null}
       </div>

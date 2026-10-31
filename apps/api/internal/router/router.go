@@ -39,6 +39,7 @@ import (
 	"github.com/webbuilder/api/internal/public"
 	"github.com/webbuilder/api/internal/registrar"
 	"github.com/webbuilder/api/internal/reseller"
+	"github.com/webbuilder/api/internal/reviews"
 	"github.com/webbuilder/api/internal/settings"
 	"github.com/webbuilder/api/internal/site_byo_domains"
 	"github.com/webbuilder/api/internal/sites"
@@ -111,6 +112,10 @@ type Deps struct {
 	// Orders — UMKM checkout. Public POST (renderer cart) + dashboard
 	// list/summary/status. Nil-safe.
 	Orders *orders.Handler
+
+	// Reviews — product ratings. Public POST+GET (storefront) + dashboard
+	// moderation. Nil-safe.
+	Reviews *reviews.Handler
 
 	// Analytics — page view counter. Public POST (renderer beacon) + authed
 	// GET (dashboard summary). Nil-safe.

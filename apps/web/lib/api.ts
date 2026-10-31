@@ -183,6 +183,73 @@ export async function openBlob(path: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Product reviews — buyers rate a product on the storefront, the owner approves
+// ---------------------------------------------------------------------------
+
+export type ReviewStatus = "pending" | "published" | "rejected";
+export type ReviewSort = "newest" | "oldest" | "rating_desc" | "rating_asc";
+
+export type ProductReview = {
+  id: string;
+  site_id: string;
+  product_id: string;
+  rating: number;
+  author_name: string;
+  body: string;
+  status: ReviewStatus;
+  verified_buyer: boolean;
+  reply: string;
+  replied_at: string | null;
+  created_at: string;
+  updated_at: string;
+  product_name?: string;
+  product_slug?: string;
+};
+
+export type ReviewPage = {
+  items: ProductReview[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+};
+
+export function listReviews(
+  siteId: string,
+  opts: { page?: number; pageSize?: number; q?: string; status?: ReviewStatus | ""; sort?: ReviewSort } = {},
+): Promise<ReviewPage> {
+  const p = new URLSearchParams({
+    page: String(opts.page ?? 1),
+    page_size: String(opts.pageSize ?? 20),
+    sort: opts.sort ?? "newest",
+  });
+  if (opts.q) p.set("q", opts.q);
+  if (opts.status) p.set("status", opts.status);
+  return api<ReviewPage>(`/api/v1/sites/${siteId}/reviews?${p}`);
+}
+
+export function getReviewSummary(siteId: string): Promise<{ pending: number }> {
+  return api<{ pending: number }>(`/api/v1/sites/${siteId}/reviews/summary`);
+}
+
+export function updateReview(
+  siteId: string,
+  reviewId: string,
+  patch: { status?: ReviewStatus; reply?: string },
+): Promise<ProductReview> {
+  return api<ProductReview>(`/api/v1/sites/${siteId}/reviews/${reviewId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteReview(siteId: string, reviewId: string): Promise<{ deleted: boolean }> {
+  return api<{ deleted: boolean }>(`/api/v1/sites/${siteId}/reviews/${reviewId}`, {
+    method: "DELETE",
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Orders — UMKM cart checkout (buyer sends via WhatsApp, every order is stored)
 // ---------------------------------------------------------------------------
 

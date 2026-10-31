@@ -459,3 +459,77 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
   .wb-pro-orbit .wb-pro-orbit-ring,
   .wb-pro-orbit .wb-pro-orbit-item { animation: none !important; }
 }
+
+/* ---- Product reviews (storefront) ----
+   Theme-driven: colours come from the site's CSS variables so a shop's palette
+   carries through. No Tailwind classes here — this block is the same shape as
+   the .wb-umkm-* system and must stay portable to the Go exporter. */
+
+.wb-rev { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.1); }
+.wb-rev-title { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; margin-bottom: 1.25rem; }
+.wb-rev-empty { opacity: 0.7; margin-bottom: 1.5rem; }
+
+.wb-rev-stars { display: inline-flex; gap: 2px; vertical-align: middle; }
+.wb-rev-star { width: var(--wb-star-size, 16px); height: var(--wb-star-size, 16px); fill: currentColor; opacity: 0.2; }
+.wb-rev-star.is-on { fill: #f5a623; opacity: 1; }
+
+.wb-rev-summary { display: flex; flex-wrap: wrap; gap: 2rem; align-items: center; padding: 1.25rem; border: 1px solid rgba(0,0,0,0.1); border-radius: var(--radius, 0.75rem); margin-bottom: 1.75rem; }
+.wb-rev-avg { display: flex; flex-direction: column; gap: 0.35rem; align-items: center; min-width: 110px; }
+.wb-rev-avg-num { font-size: 2.5rem; font-weight: 800; line-height: 1; font-family: var(--font-heading); }
+.wb-rev-avg-count { font-size: 0.875rem; opacity: 0.7; }
+
+.wb-rev-bars { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.3rem; }
+.wb-rev-bar-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; }
+.wb-rev-bar-label { width: 0.75rem; text-align: right; opacity: 0.7; }
+.wb-rev-bar-track { flex: 1; height: 6px; border-radius: 999px; background: rgba(0,0,0,0.08); overflow: hidden; }
+.wb-rev-bar-fill { display: block; height: 100%; background: #f5a623; border-radius: 999px; }
+.wb-rev-bar-n { width: 1.5rem; text-align: right; opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+.wb-rev-list { list-style: none; padding: 0; margin: 0 0 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.wb-rev-item { padding-bottom: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.07); }
+.wb-rev-item:last-child { border-bottom: none; padding-bottom: 0; }
+.wb-rev-head { display: flex; gap: 0.75rem; align-items: flex-start; }
+.wb-rev-avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: 999px; background: var(--color-primary); color: #fff; font-weight: 700; font-size: 0.9rem; }
+.wb-rev-who { display: flex; flex-direction: column; gap: 0.15rem; }
+.wb-rev-name { font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.wb-rev-verified { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.6875rem; font-weight: 600; color: #047857; background: rgba(5,150,105,0.1); padding: 0.1rem 0.4rem; border-radius: 999px; }
+.wb-rev-verified svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.wb-rev-meta { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; opacity: 0.65; }
+.wb-rev-body { margin: 0.6rem 0 0; padding-left: 3rem; white-space: pre-line; line-height: 1.65; }
+.wb-rev-reply { margin: 0.75rem 0 0 3rem; padding: 0.6rem 0.85rem; border-left: 3px solid var(--color-primary); background: rgba(0,0,0,0.035); border-radius: 0 var(--radius, 0.5rem) var(--radius, 0.5rem) 0; }
+.wb-rev-reply-label { display: block; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; margin-bottom: 0.2rem; }
+.wb-rev-reply p { margin: 0; white-space: pre-line; font-size: 0.9375rem; }
+
+.wb-rev-form { padding: 1.25rem; border: 1px solid rgba(0,0,0,0.12); border-radius: var(--radius, 0.75rem); display: flex; flex-direction: column; gap: 0.9rem; }
+.wb-rev-form-title { font-family: var(--font-heading); font-weight: 700; font-size: 1.0625rem; margin: 0; }
+.wb-rev-field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 0; }
+.wb-rev-row { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+.wb-rev-label { font-size: 0.8125rem; font-weight: 600; }
+.wb-rev-hint { font-size: 0.75rem; opacity: 0.6; font-weight: 400; }
+.wb-rev-input { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid rgba(0,0,0,0.18); border-radius: var(--radius, 0.5rem); font: inherit; font-size: 0.9375rem; background: #fff; color: inherit; }
+.wb-rev-input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; border-color: transparent; }
+.wb-rev-textarea { resize: vertical; min-height: 5.5rem; }
+
+.wb-rev-picker { display: flex; gap: 0.2rem; }
+.wb-rev-pick { background: none; border: none; padding: 0.1rem; cursor: pointer; line-height: 0; border-radius: 4px; }
+.wb-rev-pick svg { width: 28px; height: 28px; fill: currentColor; opacity: 0.2; transition: opacity 0.12s, transform 0.12s; }
+.wb-rev-pick.is-on svg { fill: #f5a623; opacity: 1; }
+.wb-rev-pick:hover svg { transform: scale(1.12); }
+.wb-rev-pick:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+
+/* Off-screen rather than display:none — some bots skip hidden inputs. */
+.wb-rev-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+.wb-rev-err { margin: 0; color: #b91c1c; font-size: 0.875rem; }
+.wb-rev-submit { align-self: flex-start; padding: 0.6rem 1.4rem; border: none; border-radius: var(--radius, 0.5rem); background: var(--color-primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.wb-rev-submit:disabled { opacity: 0.6; cursor: progress; }
+.wb-rev-submit:hover:not(:disabled) { filter: brightness(0.93); }
+
+.wb-rev-done { padding: 1.25rem; border: 1px solid rgba(5,150,105,0.3); background: rgba(5,150,105,0.07); border-radius: var(--radius, 0.75rem); }
+.wb-rev-done strong { display: block; margin-bottom: 0.25rem; }
+.wb-rev-done p { margin: 0; font-size: 0.9375rem; opacity: 0.85; }
+
+@media (max-width: 640px) {
+  .wb-rev-body, .wb-rev-reply { padding-left: 0; margin-left: 0; }
+  .wb-rev-summary { gap: 1.25rem; }
+}

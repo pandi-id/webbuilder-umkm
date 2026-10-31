@@ -1,12 +1,16 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { formatPrice, getProduct, getSiteByHost } from "@/lib/api";
+import { marked } from "@/lib/markdown";
+import { plainExcerpt } from "@/lib/umkm";
+import { formatPrice, getProduct, getProductReviews, getSiteByHost } from "@/lib/api";
 import { googleFontsUrl, themeToCss } from "@/lib/theme";
 import { buildProduct, wrap } from "@/lib/schema";
 import { PageViewBeacon } from "@/components/PageViewBeacon";
 import { SiteBodyEndCode, SiteHeadCode } from "@/components/CustomCode";
 import { SiteCart } from "@/components/cart/SiteCart";
 import { ProductPurchase } from "@/components/cart/ProductPurchase";
+import { ProductReviews } from "@/components/reviews/ProductReviews";
+import { Stars } from "@/components/reviews/Stars";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +27,10 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
 
   const fontHref = googleFontsUrl(site.theme);
   const gallery = Array.isArray(product.gallery) ? product.gallery : [];
+  // Description is authored in the dashboard's rich editor, so it is Markdown.
+  // Plain-text descriptions from before that change still parse fine.
+  const descriptionHTML = await marked.parse(product.description ?? "");
+  const reviews = await getProductReviews(site.id, params.slug);
   const baseURL = `https://${await host()}`;
   const productLD = wrap([buildProduct(product, baseURL)]);
 
@@ -76,6 +84,13 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
               <p className="text-sm uppercase tracking-wide opacity-60">{product.category}</p>
             )}
             <h1 className="mt-1 text-3xl font-bold">{product.name}</h1>
+            {reviews.summary.count > 0 && (
+              <a href="#ulasan" className="mt-2 inline-flex items-center gap-2 text-sm hover:underline">
+                <Stars rating={reviews.summary.average} size={15} />
+                <span className="font-semibold">{reviews.summary.average.toFixed(1)}</span>
+                <span className="opacity-70">({reviews.summary.count} ulasan)</span>
+              </a>
+            )}
             <p className="mt-4 text-3xl font-semibold" style={{ color: "var(--color-primary)" }}>
               {formatPrice(product.price, product.currency)}
             </p>
@@ -94,11 +109,21 @@ export default async function ProductDetail(props: { params: Promise<{ slug: str
               stock={product.stock}
             />
 
-            {product.description && (
-              <div className="mt-6 whitespace-pre-line opacity-90">{product.description}</div>
+            {descriptionHTML && (
+              <div
+                className="wb-prose mt-6 opacity-90"
+                dangerouslySetInnerHTML={{ __html: descriptionHTML }}
+              />
             )}
           </div>
         </div>
+
+        <ProductReviews
+          siteId={site.id}
+          slug={product.slug}
+          items={reviews.items}
+          summary={reviews.summary}
+        />
       </main>
       <SiteBodyEndCode site={site} />
     </SiteCart>
@@ -114,6 +139,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   return {
     title: `${product.name} — ${site.name}`,
     description:
-      product.description.slice(0, 160) || `${product.name} ${formatPrice(product.price, product.currency)}`,
+      plainExcerpt(product.description ?? "", 160) ||
+      `${product.name} ${formatPrice(product.price, product.currency)}`,
   };
 }

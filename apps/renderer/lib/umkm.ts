@@ -165,6 +165,23 @@ export type CatalogProduct = {
   status?: string;
 };
 
+// plainExcerpt flattens a Markdown description (the product editor writes
+// Markdown) into one line of prose for card blurbs and meta tags. Deliberately
+// lossy: links keep their label, images and formatting markers disappear.
+export function plainExcerpt(md: string, max: number): string {
+  const text = md
+    .replace(/```[\s\S]*?```/g, " ")       // fenced code (incl. youtube/audio)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")  // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links → label
+    .replace(/^\s{0,3}>\s?/gm, "")          // blockquote markers
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")     // headings
+    .replace(/^\s{0,3}([-*+]|\d+\.)\s+/gm, "") // list bullets
+    .replace(/[*_`~]/g, "")                // emphasis + inline code
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > max ? text.slice(0, max).trimEnd() : text;
+}
+
 export function catalogLimit(props: Record<string, unknown>): number {
   return Math.min(48, Math.max(1, Number(props.limit ?? 8) || 8));
 }
@@ -192,7 +209,7 @@ export function catalogCards(
         price: currency === "IDR" ? formatRupiah(pr.price) : formatPrice(pr.price, currency),
         originalPrice: "",
         badge: soldOut ? "habis" : "",
-        desc: (pr.description ?? "").replace(/[#*_`>\[\]]/g, "").slice(0, 160),
+        desc: plainExcerpt(pr.description ?? "", 160),
         href: `/produk/${pr.slug}`,
         soldOut,
         slug: pr.slug,

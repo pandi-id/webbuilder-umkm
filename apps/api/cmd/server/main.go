@@ -47,6 +47,7 @@ import (
 	"github.com/webbuilder/api/internal/public"
 	"github.com/webbuilder/api/internal/registrar"
 	"github.com/webbuilder/api/internal/reseller"
+	"github.com/webbuilder/api/internal/reviews"
 	"github.com/webbuilder/api/internal/router"
 	"github.com/webbuilder/api/internal/seed"
 	"github.com/webbuilder/api/internal/settings"
@@ -150,6 +151,7 @@ func main() {
 	formsRepo := forms.NewRepo(pool)
 	analyticsRepo := analytics.NewRepo(pool)
 	ordersRepo := orders.NewRepo(pool)
+	reviewsRepo := reviews.NewRepo(pool)
 
 	if err := seed.Run(ctx, seed.Deps{
 		Pool:      pool,
@@ -559,6 +561,7 @@ func main() {
 		Analytics:        analytics.NewHandler(analyticsRepo, siteRepo),
 		Products:         products.NewHandler(productRepo, siteRepo),
 		Orders:           ordersHandler,
+		Reviews:          reviews.NewHandler(reviewsRepo, siteRepo),
 		Blog:             blog.NewHandler(blogRepo, siteRepo),
 		Snippets:         snippets.NewHandler(snippetRepo),
 		Reseller:         resellerHandler,

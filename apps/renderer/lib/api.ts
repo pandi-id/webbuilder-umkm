@@ -367,6 +367,44 @@ export async function getProduct(siteId: string, slug: string): Promise<Product 
   );
 }
 
+export type ProductReview = {
+  id: string;
+  rating: number;
+  author_name: string;
+  body: string;
+  verified_buyer: boolean;
+  reply: string;
+  replied_at: string | null;
+  created_at: string;
+};
+
+// breakdown[0] = number of 1-star reviews … breakdown[4] = 5-star. Computed
+// over every published review, so it matches `count` even when the item list
+// is capped by `limit`.
+export type ReviewSummary = { average: number; count: number; breakdown: number[] };
+
+export async function getProductReviews(
+  siteId: string,
+  slug: string,
+  limit = 20,
+): Promise<{ items: ProductReview[]; summary: ReviewSummary }> {
+  const r = await fetchJson<{ items: ProductReview[]; summary: ReviewSummary }>(
+    `/public/sites/${siteId}/products/${encodeURIComponent(slug)}/reviews?limit=${limit}`,
+  );
+  // Reviews are decoration around the product: a failure here must never take
+  // the product page down with it.
+  return r.ok ? r.data : { items: [], summary: { average: 0, count: 0, breakdown: [0, 0, 0, 0, 0] } };
+}
+
+// One call for the whole catalog, keyed by product slug — a grid of cards must
+// not fan out to one request per card.
+export async function getReviewSummaries(siteId: string): Promise<Record<string, ReviewSummary>> {
+  const r = await fetchJson<Record<string, ReviewSummary>>(
+    `/public/sites/${siteId}/review-summary`,
+  );
+  return r.ok ? r.data : {};
+}
+
 export async function listBlogPosts(siteId: string, limit = 20): Promise<BlogPost[]> {
   const r = await fetchJson<BlogPost[]>(`/public/sites/${siteId}/blog-posts?limit=${limit}`);
   return r.ok ? r.data : [];

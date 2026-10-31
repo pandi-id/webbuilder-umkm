@@ -27,11 +27,19 @@ import {
   Settings,
   ShieldCheck,
   SquarePen,
+  Star,
   Store,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, clearTokens, errMessage, getAccessToken, getOrderSummary } from "@/lib/api";
+import {
+  api,
+  clearTokens,
+  errMessage,
+  getAccessToken,
+  getOrderSummary,
+  getReviewSummary,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -75,6 +83,7 @@ const NAV_SECTIONS: NavSection[] = [
       { segment: "", label: "Ringkasan", icon: LayoutDashboard },
       { segment: "products", label: "Produk", icon: Package },
       { segment: "orders", label: "Pesanan", icon: Receipt },
+      { segment: "reviews", label: "Ulasan", icon: Star },
       { segment: "forms", label: "Pesan Masuk", icon: Inbox },
       { segment: "analytics", label: "Statistik", icon: BarChart3 },
     ],
@@ -101,6 +110,7 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
   "": { title: "Ringkasan", subtitle: "Pantau toko online Anda dalam sekilas" },
   products: { title: "Produk", subtitle: "Kelola katalog, harga, dan stok produk" },
   orders: { title: "Pesanan", subtitle: "Kelola pesanan dari keranjang belanja" },
+  reviews: { title: "Ulasan", subtitle: "Setujui dan balas ulasan produk dari pembeli" },
   forms: { title: "Pesan Masuk", subtitle: "Pesan dan pertanyaan dari calon pembeli" },
   analytics: { title: "Statistik", subtitle: "Lihat jumlah pengunjung dan halaman terpopuler" },
   editor: { title: "Editor", subtitle: "Susun halaman toko dengan drag-and-drop" },
@@ -132,6 +142,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [newOrders, setNewOrders] = useState(0);
+  const [pendingReviews, setPendingReviews] = useState(0);
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -167,13 +178,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     return () => window.removeEventListener(SITE_STATUS_EVENT, onStatus);
   }, []);
 
-  // Refetch on navigation so the badge catches up after leaving the Pesanan page.
+  // Refetch on navigation so the badges catch up after leaving their page.
   useEffect(() => {
     let cancelled = false;
     getOrderSummary(params.id)
       .then((s) => !cancelled && setNewOrders(s.new ?? 0))
       .catch(() => {
         // Orders module may be unavailable; badge just stays hidden.
+      });
+    getReviewSummary(params.id)
+      .then((s) => !cancelled && setPendingReviews(s.pending ?? 0))
+      .catch(() => {
+        // Reviews module may be unavailable; badge just stays hidden.
       });
     return () => {
       cancelled = true;
@@ -276,7 +292,14 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                   const href = item.segment ? `/sites/${sid}/${item.segment}` : `/sites/${sid}`;
                   const active = segment === item.segment;
                   const Icon = item.icon;
-                  const badge = item.segment === "orders" ? newOrders : 0;
+                  const badge =
+                    item.segment === "orders"
+                      ? newOrders
+                      : item.segment === "reviews"
+                        ? pendingReviews
+                        : 0;
+                  const badgeNoun =
+                    item.segment === "orders" ? "pesanan baru" : "ulasan menunggu moderasi";
                   return (
                     <Link
                       key={item.segment || "overview"}
@@ -300,7 +323,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                               "ml-auto min-w-5 rounded-full bg-primary px-1.5 text-center text-[11px] font-semibold leading-5 tabular-nums text-primary-foreground",
                               collapsed && "lg:hidden",
                             )}
-                            aria-label={`${badge} pesanan baru`}
+                            aria-label={`${badge} ${badgeNoun}`}
                           >
                             {badge > 99 ? "99+" : badge}
                           </span>

@@ -6,6 +6,7 @@
 // `@graph` array kalau > 1 entity — best practice per Google docs.
 
 import type { BlogPost, Product, Site } from "./api";
+import { plainExcerpt } from "./umkm";
 
 type Thing = Record<string, unknown>;
 
@@ -63,7 +64,7 @@ export function buildProduct(product: Product, baseURL: string): Thing {
   const item: Thing = {
     "@type": "Product",
     name: product.name,
-    description: product.description || undefined,
+    description: plainExcerpt(product.description ?? "", 300) || undefined,
     url: `${baseURL}/produk/${product.slug}`,
     offers: {
       "@type": "Offer",

@@ -364,10 +364,17 @@ func umkmProductCard(b *strings.Builder, c umkmCard, waNumber, buttonLabel strin
 	} else {
 		b.WriteString(`<article class="wb-umkm-card"><div class="wb-umkm-card-media">`)
 	}
+	// Mirror of ProductCard in UmkmBlocks.tsx: the image links to the product
+	// page whenever the card has one, so the whole tile is clickable.
+	media := fmt.Sprintf(`<div class="wb-umkm-ph">%s</div>`, umkmIcon("image", false))
 	if c.image != "" {
-		fmt.Fprintf(b, `<img src="%s" alt="%s" loading="lazy" decoding="async" />`, escAttr(c.image), escAttr(c.name))
+		media = fmt.Sprintf(`<img src="%s" alt="%s" loading="lazy" decoding="async" />`, escAttr(c.image), escAttr(c.name))
+	}
+	if c.href != "" {
+		fmt.Fprintf(b, `<a class="wb-umkm-card-link" href="%s" tabindex="-1" aria-hidden="true">%s</a>`,
+			escAttr(umkmSafeHref(c.href, "#")), media)
 	} else {
-		fmt.Fprintf(b, `<div class="wb-umkm-ph">%s</div>`, umkmIcon("image", false))
+		b.WriteString(media)
 	}
 	if label, ok := umkmBadges[c.badge]; ok {
 		fmt.Fprintf(b, `<span class="wb-umkm-badge wb-umkm-badge--%s">%s</span>`, c.badge, label)

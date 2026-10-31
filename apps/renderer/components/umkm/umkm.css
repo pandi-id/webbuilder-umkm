@@ -141,6 +141,7 @@
 .wb-umkm-card:hover { transform: translateY(-3px); box-shadow: var(--u-shadow-lg); border-color: color-mix(in srgb, var(--u-primary) 30%, var(--u-line)); }
 .wb-umkm-card-media { position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: var(--u-surface); }
 .wb-umkm-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.wb-umkm-card-link { display: block; width: 100%; height: 100%; }
 .wb-umkm-card:hover .wb-umkm-card-media img { transform: scale(1.04); }
 .wb-umkm-badge {
   position: absolute; top: 0.6rem; left: 0.6rem;

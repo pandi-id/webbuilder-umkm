@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -46,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ProductDialog, type Product } from "./ProductDialog";
+import { type Product } from "./ProductForm";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Terbaru Dibuat" },
@@ -131,8 +132,6 @@ export default function ProductsPage() {
   const [data, setData] = useState<PaginatedResult<Product> | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Product | null>(null);
-  const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -239,9 +238,11 @@ export default function ProductsPage() {
             </>
           )}
 
-          <Button onClick={() => setCreating(true)} className="gap-2 shadow-sm">
-            <Plus className="size-4" />
-            Produk Baru
+          <Button asChild className="gap-2 shadow-sm">
+            <Link href={`/sites/${params.id}/products/new`}>
+              <Plus className="size-4" />
+              Produk Baru
+            </Link>
           </Button>
         </div>
       </div>
@@ -345,12 +346,11 @@ export default function ProductsPage() {
                         <p className="text-xs text-muted-foreground">
                           Tambah produk pertama untuk mulai berjualan.
                         </p>
-                        <Button
-                          onClick={() => setCreating(true)}
-                          className="mt-3 gap-2 shadow-sm"
-                        >
-                          <Plus className="size-4" />
-                          Tambah Produk
+                        <Button asChild className="mt-3 gap-2 shadow-sm">
+                          <Link href={`/sites/${params.id}/products/new`}>
+                            <Plus className="size-4" />
+                            Tambah Produk
+                          </Link>
                         </Button>
                       </>
                     )}
@@ -383,12 +383,12 @@ export default function ProductsPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <button
-                            onClick={() => setEditing(p)}
+                          <Link
+                            href={`/sites/${params.id}/products/${p.id}/edit`}
                             className="block truncate text-left font-medium hover:text-primary"
                           >
                             {p.name}
-                          </button>
+                          </Link>
                           {p.category ? (
                             <Badge
                               variant="secondary"
@@ -439,12 +439,14 @@ export default function ProductsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEditing(p)}
+                          asChild
                           className="h-8 gap-1.5"
                           title="Edit"
                         >
-                          <Pencil className="size-3.5" />
-                          <span className="hidden sm:inline">Edit</span>
+                          <Link href={`/sites/${params.id}/products/${p.id}/edit`}>
+                            <Pencil className="size-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Link>
                         </Button>
                         <Button
                           variant="ghost"
@@ -481,27 +483,6 @@ export default function ProductsPage() {
           </div>
         )}
       </Card>
-
-      <ProductDialog
-        open={creating}
-        onOpenChange={setCreating}
-        siteId={params.id}
-        product={null}
-        onSaved={() => {
-          setCreating(false);
-          refresh();
-        }}
-      />
-      <ProductDialog
-        open={!!editing}
-        onOpenChange={(o) => !o && setEditing(null)}
-        siteId={params.id}
-        product={editing}
-        onSaved={() => {
-          setEditing(null);
-          refresh();
-        }}
-      />
     </div>
   );
 }
