@@ -250,7 +250,7 @@
 <div class="cover">
   <div class="badge">DOKUMENTASI PENGGUNA</div>
   <h1>Panduan Web Builder</h1>
-  <p class="subtitle">Untuk Admin · Reseller · Agent · Client · Guru</p>
+  <p class="subtitle">Untuk Admin · Reseller · Agent · Client</p>
   <div class="meta">
     Web Builder Platform · Versi 1.0
   </div>
@@ -259,10 +259,15 @@
 <!-- Content -->
 <h1 id="panduan-pengguna-web-builder-pengantar">Panduan Pengguna Web Builder — Pengantar</h1>
 <h2 id="tentang-web-builder">Tentang Web Builder</h2>
-<p>Web Builder adalah platform SaaS untuk membuat situs web tanpa perlu coding.
-Fitur utama:</p>
+<p>Web Builder adalah platform SaaS untuk UMKM membuat toko online sendiri di
+domain <code>.id</code> tanpa perlu coding. Fitur utama:</p>
 <ul>
-<li><strong>Editor drag-and-drop</strong> — susun halaman dari block siap pakai (hero, feature grid, produk, blog, form kontak, dsb.)</li>
+<li>
+<p><strong>Toko online siap pakai</strong> — template toko + blok UMKM (etalase produk, promo &amp; voucher, ulasan, info toko) dengan tombol pesan via WhatsApp</p>
+</li>
+<li>
+<p><strong>Editor drag-and-drop</strong> — susun halaman dari block siap pakai (hero, feature grid, produk, blog, form kontak, dsb.)</p>
+</li>
 <li><strong>Beli domain terintegrasi</strong> — daftar domain <code>.id</code>, <code>.co.id</code>, <code>.com</code>, dsb. langsung dari wizard</li>
 <li><strong>Auto-setup Cloudflare</strong> — domain baru otomatis attached ke Cloudflare, DNS + SSL siap pakai</li>
 <li><strong>Multi-tenant</strong> — 1 platform bisa host ribuan situs pelanggan di domain masing-masing</li>
@@ -377,7 +382,7 @@ antrian registrar).</p>
 <p>Semua role login lewat URL yang sama, di-routing otomatis ke dashboard yang
 tepat berdasarkan role akun.</p>
 <ol>
-<li>Buka <code>https://kubaca.id/login</code></li>
+<li>Buka <code>https://umkm.pandi.id/login</code></li>
 <li>Masukkan email + password</li>
 <li>Kalau lupa password: klik "Lupa Password" → email reset link</li>
 <li>Setelah login, dashboard yang muncul tergantung role:</li>
@@ -399,13 +404,12 @@ peran Anda:</p>
 <li><strong>Bab 2</strong>: Panduan Agent</li>
 <li><strong>Bab 3</strong>: Panduan Reseller</li>
 <li><strong>Bab 4</strong>: Panduan Admin</li>
-<li><strong>Bab 5</strong>: Panduan Guru — Rumah Digital Guru (khusus template guru-pandi-upi)</li>
 </ul>
 <hr />
 <p><em>Panduan ini di-generate dari Web Builder v1 — kalau ada fitur baru yang
 tidak tercantum, cek changelog atau hubungi admin.</em></p><h1 id="bab-1-panduan-client-pengguna-umum">Bab 1 — Panduan Client (Pengguna Umum)</h1>
-<p>Untuk user yang mau bikin situs pribadi/bisnis sendiri. Semua flow di sini
-bisa dilakukan sendiri tanpa bantuan Agent/Reseller.</p>
+<p>Untuk pemilik usaha (UMKM) yang mau punya toko online sendiri di domain <code>.id</code>.
+Semua flow di sini bisa dilakukan sendiri tanpa bantuan Agent/Reseller.</p>
 <h2 id="overview-flow">Overview Flow</h2>
 <pre><code>┌──────────────┐    ┌───────────────┐    ┌───────────────┐
 │  Registrasi  │───►│ Beli Domain   │───►│ Pilih Template│
@@ -422,7 +426,7 @@ bisa dilakukan sendiri tanpa bantuan Agent/Reseller.</p>
 <h2 id="11-registrasi-login">1.1 Registrasi &amp; Login</h2>
 <h3 id="registrasi">Registrasi</h3>
 <ol>
-<li>Buka <code>https://kubaca.id/register</code></li>
+<li>Buka <code>https://umkm.pandi.id/register</code></li>
 <li>Isi:</li>
 <li><strong>Nama lengkap</strong></li>
 <li><strong>Email</strong> — akan jadi username login</li>
@@ -435,8 +439,9 @@ bisa dilakukan sendiri tanpa bantuan Agent/Reseller.</p>
 - Klik "Kirim ulang" di halaman login
 - Kalau tetap tidak masuk, hubungi support</p>
 <h3 id="login">Login</h3>
+<p><img alt="Halaman login" src="screenshots/client-login.png" /></p>
 <ol>
-<li><code>https://kubaca.id/login</code></li>
+<li><code>https://umkm.pandi.id/login</code></li>
 <li>Email + password</li>
 <li>Kalau lupa password → klik "Lupa Password" → email reset</li>
 </ol>
@@ -486,6 +491,7 @@ Anda. Untuk client, ini adalah harga retail.</p>
 <li>Klik <strong>Beli &amp; Bayar</strong></li>
 </ol>
 <h3 id="langkah-3-bayar">Langkah 3 — Bayar</h3>
+<p><img alt="Status pembelian menunggu pembayaran" src="screenshots/client-pending-status.png" /></p>
 <p>Berdasarkan metode:</p>
 <p><strong>Gateway (Midtrans/Paylabs):</strong>
 - Redirect ke halaman gateway → bayar via VA/kartu/e-wallet
@@ -505,16 +511,93 @@ Anda. Untuk client, ini adalah harga retail.</p>
 - <strong>Domain aktif</strong> — sukses, siap pilih template
 - <strong>Gagal</strong> — cek pesan detail, tombol <strong>Coba Lagi</strong> tersedia (tidak charge ulang)</p>
 <h3 id="langkah-5-pilih-template">Langkah 5 — Pilih Template</h3>
-<p><img alt="Template Picker" src="screenshots/client-template-picker.png" /></p>
+<p><div class="screenshot-placeholder">Template Picker<br><small>(screenshot belum tersedia)</small></div></p>
 <p>Setelah status <strong>aktif</strong>:</p>
 <ol>
-<li>Muncul list template dikelompokkan per kategori (UMKM, Sekolah, Portfolio, Blog, Guru)</li>
-<li>Setiap template punya 3 variant: Modern, Clean, Professional</li>
+<li>Muncul list template toko UMKM, masing-masing dengan contoh usaha berbeda:</li>
+<li><strong>Modern</strong> — kedai kopi (contoh: Kopi Senja)</li>
+<li><strong>Clean</strong> — fashion/batik (contoh: Sekar Batik)</li>
+<li><strong>Professional</strong> — kerajinan (contoh: Anyam Lestari)</li>
+<li>Semua template sudah berisi blok UMKM Pro (hero toko, etalase produk, promo,
+   ulasan, info toko, tombol WhatsApp) — tinggal ganti isinya</li>
 <li>Klik <strong>Preview</strong> untuk lihat live di iframe modal</li>
 <li>Klik card template → panel bawah muncul:</li>
 <li><strong>Nama situs</strong> (default dari nama domain, bisa diedit)</li>
 <li>Klik <strong>Buat Situs</strong> → sistem create site + attach ke domain → redirect ke editor</li>
 </ol>
+<h3 id="dashboard-toko">Dashboard Toko</h3>
+<p><img alt="Ringkasan toko" src="screenshots/client-site-overview.png" /></p>
+<p>Setiap situs punya dashboard sendiri dengan menu di sidebar:</p>
+<table>
+<thead>
+<tr>
+<th>Grup</th>
+<th>Menu</th>
+<th>Fungsi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toko</td>
+<td><strong>Ringkasan</strong></td>
+<td>Statistik singkat + checklist persiapan toko</td>
+</tr>
+<tr>
+<td>Toko</td>
+<td><strong>Produk</strong></td>
+<td>Kelola katalog produk (§1.7)</td>
+</tr>
+<tr>
+<td>Toko</td>
+<td><strong>Pesan Masuk</strong></td>
+<td>Kiriman formulir dari pengunjung (§1.9)</td>
+</tr>
+<tr>
+<td>Toko</td>
+<td><strong>Statistik</strong></td>
+<td>Jumlah pengunjung per hari</td>
+</tr>
+<tr>
+<td>Konten</td>
+<td><strong>Editor</strong></td>
+<td>Susun blok halaman (§1.4)</td>
+</tr>
+<tr>
+<td>Konten</td>
+<td><strong>Halaman</strong></td>
+<td>Daftar halaman situs (§1.5)</td>
+</tr>
+<tr>
+<td>Konten</td>
+<td><strong>Artikel</strong></td>
+<td>Blog toko — kabar, promo, tips (§1.8)</td>
+</tr>
+<tr>
+<td>Konten</td>
+<td><strong>Aset</strong></td>
+<td>Gambar &amp; berkas (§1.10)</td>
+</tr>
+<tr>
+<td>Pengaturan</td>
+<td><strong>Tampilan</strong></td>
+<td>Warna, font, ganti template (§1.6)</td>
+</tr>
+<tr>
+<td>Pengaturan</td>
+<td><strong>Domain</strong></td>
+<td>Kelola domain (§1.13)</td>
+</tr>
+</tbody>
+</table>
+<p>Halaman <strong>Ringkasan</strong> menampilkan jumlah produk, pengunjung 7 hari terakhir,
+pesan masuk, dan artikel, plus <strong>checklist persiapan toko</strong>:</p>
+<ol>
+<li>Pasang nama toko di header (ganti nama contoh dari template)</li>
+<li>Tambah minimal 3 produk</li>
+<li>Tambah blok kontak / WhatsApp</li>
+<li>Publikasikan toko</li>
+</ol>
+<p>Setiap item checklist bisa diklik untuk langsung ke halaman terkait.</p>
 <h2 id="14-editor-susun-halaman">1.4 Editor — Susun Halaman</h2>
 <p><img alt="Editor Overview" src="screenshots/client-editor-overview.png" /></p>
 <h3 id="layout-editor">Layout Editor</h3>
@@ -541,6 +624,7 @@ Anda. Untuk client, ini adalah harga retail.</p>
 <ol>
 <li>Klik tombol <strong>+</strong> di canvas (muncul saat hover antar block)</li>
 <li>Pilih block dari galeri:</li>
+<li><strong>UMKM Pro</strong>: blok khusus toko (lihat di bawah)</li>
 <li><strong>Layout</strong>: Container, Columns, Divider, Spacer</li>
 <li><strong>Content</strong>: Heading, Text, Image, Button</li>
 <li><strong>Hero</strong>: AuroraHero, HighlightHero, LampHero, SpotlightHero</li>
@@ -548,6 +632,58 @@ Anda. Untuk client, ini adalah harga retail.</p>
 <li><strong>Data-driven</strong>: ProductGrid, BlogList, FormBlock</li>
 <li>Block baru ditambahkan ke posisi</li>
 </ol>
+<h3 id="blok-umkm-pro">Blok UMKM Pro</h3>
+<p><img alt="Galeri blok dengan kategori UMKM Pro" src="screenshots/client-editor-block-add.png" /></p>
+<p>Blok siap pakai untuk toko online. Semua otomatis mengikuti warna &amp; font tema.</p>
+<table>
+<thead>
+<tr>
+<th>Blok</th>
+<th>Kegunaan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hero Toko UMKM</strong></td>
+<td>Bagian pembuka: judul, jam buka, tombol "Pesan via WhatsApp", foto produk, rating</td>
+</tr>
+<tr>
+<td><strong>Etalase Produk</strong></td>
+<td>Produk unggulan dengan harga coret + diskon otomatis, badge Terlaris/Baru/Promo, tombol pesan per produk</td>
+</tr>
+<tr>
+<td><strong>Katalog Produk (DB)</strong></td>
+<td>Sama seperti Etalase, tapi produk diambil otomatis dari menu <strong>Produk</strong></td>
+</tr>
+<tr>
+<td><strong>Banner Promo &amp; Voucher</strong></td>
+<td>Promo dengan kode voucher (pengunjung bisa salin kode) + masa berlaku</td>
+</tr>
+<tr>
+<td><strong>Info Toko &amp; Lokasi</strong></td>
+<td>Alamat, jam buka per hari, kontak, area antar, peta Google Maps</td>
+</tr>
+<tr>
+<td><strong>Link Marketplace</strong></td>
+<td>Tombol ke toko Anda di Shopee, Tokopedia, TikTok Shop, GoFood, dsb.</td>
+</tr>
+<tr>
+<td><strong>Badge Kepercayaan</strong></td>
+<td>Halal, PIRT, BPOM, QRIS, COD, garansi, dsb.</td>
+</tr>
+<tr>
+<td><strong>Ulasan Pelanggan</strong></td>
+<td>Ulasan dengan bintang 1–5 + rata-rata rating</td>
+</tr>
+<tr>
+<td><strong>Tombol WhatsApp Melayang</strong></td>
+<td>Tombol WhatsApp yang selalu terlihat di pojok layar</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nomor WhatsApp</strong>: isi dengan format biasa (mis. <code>0812-3456-7890</code>) — sistem
+otomatis mengubahnya ke format <code>wa.me</code> internasional. Template memakai nomor
+contoh <code>081234567890</code>, <strong>ganti dengan nomor toko Anda</strong> sebelum publish.</p>
 <h3 id="edit-block-content">Edit Block Content</h3>
 <ol>
 <li>Klik block di canvas atau sidebar → panel kanan muncul</li>
@@ -604,7 +740,7 @@ Anda. Untuk client, ini adalah harga retail.</p>
 </ol>
 <h2 id="16-tema-theme">1.6 Tema (Theme)</h2>
 <p><img alt="Halaman Tema" src="screenshots/client-theme-page.png" /></p>
-<p>Menu tab <strong>Tema</strong> — atur warna + font global untuk seluruh situs.</p>
+<p>Menu <strong>Tampilan</strong> — atur warna + font global untuk seluruh situs, atau ganti template.</p>
 <h3 id="hierarki-warna">Hierarki Warna</h3>
 <pre><code>Global Theme Site (yang di-set di /tema)
     │
@@ -650,28 +786,51 @@ pakai warna theme site.</p>
 - <strong>Append</strong> — tambah page baru dari template ke situs existing
 - <strong>Replace all</strong> — ⚠️ hapus semua page lama, ganti dengan template baru</p>
 <h2 id="17-produk-e-commerce">1.7 Produk (E-commerce)</h2>
+<p><img alt="Daftar produk" src="screenshots/client-products.png" /></p>
 <p>Kalau situs Anda toko:</p>
 <ol>
-<li>Tab <strong>Produk</strong> → <strong>+ Produk Baru</strong></li>
+<li>Menu <strong>Produk</strong> → <strong>+ Produk Baru</strong></li>
 <li>Isi:</li>
 <li>Nama, slug, deskripsi (Rich Text)</li>
 <li>Harga (Rp)</li>
 <li>SKU, stok</li>
 <li>Kategori</li>
 <li>Gambar utama + gambar tambahan</li>
-<li>Simpan → produk otomatis muncul di block <strong>ProductGrid</strong> (kalau ada di page)</li>
+<li>Simpan → produk otomatis muncul di blok <strong>Katalog Produk (DB)</strong> atau
+   <strong>ProductGrid</strong> (kalau ada di halaman), lengkap dengan tombol pesan WhatsApp</li>
 </ol>
 <h3 id="kelola-produk">Kelola Produk</h3>
 <ul>
-<li><strong>List</strong> — tab Produk menampilkan semua</li>
+<li><strong>List</strong> — menu Produk menampilkan semua</li>
 <li><strong>Edit</strong> — klik row → panel edit</li>
 <li><strong>Publikasikan / Tarik</strong> — kontrol visibility di renderer</li>
 <li><strong>Hapus</strong> — permanent</li>
 </ul>
-<h2 id="18-blog">1.8 Blog</h2>
-<p>Fitur mirip produk tapi untuk artikel:</p>
+<h3 id="keranjang-belanja-pesanan">Keranjang Belanja &amp; Pesanan</h3>
+<p>Pembeli bisa memasukkan beberapa produk ke <strong>keranjang</strong> lalu memesan sekaligus:</p>
 <ol>
-<li>Tab <strong>Blog</strong> → <strong>+ Post Baru</strong></li>
+<li>Di situs toko, tombol <strong>Tambah ke Keranjang</strong> muncul di blok <strong>Katalog Produk (DB)</strong>,
+   <strong>ProductGrid</strong>, dan halaman detail produk (<code>/produk/&lt;slug&gt;</code>)</li>
+<li>Tombol <strong>Keranjang</strong> melayang di kiri bawah → pembeli atur jumlah, isi nama,
+   No. WhatsApp, alamat, dan catatan → <strong>Pesan via WhatsApp</strong></li>
+<li>Pesanan tercatat dengan harga terbaru dari menu Produk, stok langsung dikurangi,
+   lalu pembeli diarahkan ke WhatsApp toko dengan rincian pesanan</li>
+</ol>
+<p>Kelola di menu <strong>Pesanan</strong>:</p>
+<ul>
+<li><strong>Nomor WhatsApp untuk pesanan</strong> — isi dulu nomor toko. Kosong = pesanan tetap
+  tercatat, tapi pembeli tidak diarahkan ke WhatsApp</li>
+<li>Status: <strong>Baru → Diproses → Selesai</strong>, atau <strong>Batalkan</strong> (stok dikembalikan otomatis)</li>
+<li>Tombol <strong>Hubungi pembeli via WhatsApp</strong> di detail pesanan</li>
+<li>Pembayaran (transfer/QRIS/COD) diatur langsung antara toko dan pembeli</li>
+</ul>
+<p>Keranjang hanya aktif di situs yang sudah <strong>dipublikasikan</strong>. Situs hasil export
+statis tidak punya keranjang (tetap pakai tombol Pesan per produk).</p>
+<h2 id="18-artikel-blog">1.8 Artikel (Blog)</h2>
+<p><img alt="Editor artikel" src="screenshots/client-richeditor-toolbar.png" /></p>
+<p>Untuk kabar toko, promo, atau tips seputar produk Anda:</p>
+<ol>
+<li>Menu <strong>Artikel</strong> → <strong>+ Post Baru</strong></li>
 <li>Isi:</li>
 <li>Judul, slug, ringkasan</li>
 <li>Konten (Rich Text — heading, paragraph, image, list, dsb.)</li>
@@ -681,7 +840,7 @@ pakai warna theme site.</p>
 </ol>
 <h2 id="19-formulir-contact-form">1.9 Formulir (Contact Form)</h2>
 <ol>
-<li>Tab <strong>Formulir</strong> → <strong>+ Buat form</strong></li>
+<li>Menu <strong>Pesan Masuk</strong> → <strong>+ Buat form</strong></li>
 <li>Pilih jenis:</li>
 <li><strong>Kontak</strong> — nama + email + pesan (default)</li>
 <li><strong>Newsletter</strong> — email saja</li>
@@ -698,7 +857,7 @@ pakai warna theme site.</p>
 <h2 id="110-aset-assets">1.10 Aset (Assets)</h2>
 <p>Upload gambar + file untuk dipakai di block:</p>
 <ol>
-<li>Tab <strong>Aset</strong> → <strong>Upload</strong></li>
+<li>Menu <strong>Aset</strong> → <strong>Upload</strong></li>
 <li>Multi-file drag-drop atau click browse</li>
 <li>Format: JPG, PNG, WebP, PDF (max 25 MB per file)</li>
 <li>Aset yang di-upload muncul di <strong>Image Picker</strong> saat pilih gambar di block</li>
@@ -832,6 +991,16 @@ pilih dokumen dari library atau upload baru.</p>
 <p><strong>Domain expired tanpa peringatan</strong>
 - Sistem kirim email reminder 30 hari sebelum expire
 - Cek Spam folder atau update email di profil</p><h1 id="bab-2-panduan-agent">Bab 2 — Panduan Agent</h1>
+<!-- CATATAN EDITOR (hapus setelah beres):
+     Screenshot alur klien di 2.4 sudah di-capture ulang 31 Okt 2026 dan sesuai
+     UI terkini. Yang MASIH usang (19 Agustus 2026, sebelum UI dirombak):
+       - agent-clients-list.png  → tidak punya kolom Domain / tombol aksi,
+                                   bertentangan dengan tabel kolom di 2.3.
+                                   Rujukannya sementara dilepas dari dokumen.
+       - agent-dashboard.png     → perlu dicek ulang.
+     Capture ulang: cd docs/user-guide/capture-screenshots && npm run capture:agent
+     (butuh stack jalan + akun agent test berisi minimal 1 klien). -->
+
 <p>Agent adalah freelancer atau staff dari Reseller yang membantu klien setup
 situs. Semua transaksi Agent otomatis di-debit dari <strong>wallet Reseller induk</strong>,
 bukan wallet pribadi.</p>
@@ -883,15 +1052,160 @@ email</strong>:</p>
 <li><strong>Wallet activity</strong> — riwayat transaksi Anda (di-debit dari wallet Reseller)</li>
 </ul>
 <h2 id="23-kelola-klien">2.3 Kelola Klien</h2>
-<p><img alt="List Klien Agent" src="screenshots/agent-clients-list.png" /></p>
 <p>Menu <strong>Klien</strong> — <code>/agent/clients</code>:</p>
 <h3 id="list-klien">List Klien</h3>
-<p>Menampilkan semua klien yang di-assign ke Anda oleh Reseller induk. Perhatikan:
-- Anda cuma lihat klien yang <strong>assignment aktif</strong> ke Anda
-- Kalau Reseller cabut assignment (revoke), klien hilang dari list
-- Anda <strong>tidak bisa</strong> invite klien baru sendiri — itu tugas Reseller</p>
+<p>Menampilkan semua klien yang Anda daftarkan sendiri, ditambah klien yang
+di-assign ke Anda oleh Reseller induk. Perhatikan:</p>
+<ul>
+<li>Anda cuma lihat klien yang <strong>assignment aktif</strong> ke Anda</li>
+<li>Kalau Reseller cabut assignment, klien hilang dari list</li>
+<li>Reseller induk tetap bisa melihat semua klien yang Anda daftarkan</li>
+</ul>
+<p>Tiap baris menampilkan:</p>
+<table>
+<thead>
+<tr>
+<th>Kolom</th>
+<th>Arti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Status Akses</strong></td>
+<td><code>Setup</code> = baru didaftarkan · <code>Aktif</code> = sudah siap dikelola</td>
+</tr>
+<tr>
+<td><strong>Aktivasi</strong></td>
+<td><code>Belum accept</code> = undangan belum diterima, klien belum bisa login · <code>Email belum diverifikasi</code> = sudah bisa login, email saja yang belum dikonfirmasi · <code>Aktif</code> = beres</td>
+</tr>
+<tr>
+<td><strong>Domain</strong></td>
+<td>Jumlah domain aktif milik klien. Kosong (<code>—</code>) berarti belum punya</td>
+</tr>
+</tbody>
+</table>
+<h2 id="24-mendaftarkan-klien-baru">2.4 Mendaftarkan Klien Baru</h2>
+<p>Anda <strong>boleh mendaftarkan klien sendiri</strong> — tidak perlu menunggu Reseller.</p>
+<h3 id="langkah">Langkah</h3>
+<p><strong>1. Buka menu Klien, klik "Tambah Klien"</strong></p>
+<p>Tombolnya ada di kanan atas. Kalau Anda belum punya klien sama sekali, tombol
+yang sama juga muncul di tengah halaman.</p>
+<p><strong>2. Isi formulir</strong></p>
+<p><img alt="Formulir Tambah Klien" src="screenshots/agent-client-add.png" /></p>
+<p>Hanya <strong>Email</strong> dan <strong>Nama</strong> yang wajib. Sisanya boleh menyusul.</p>
+<table>
+<thead>
+<tr>
+<th>Bagian</th>
+<th>Isi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Email</strong></td>
+<td>Alamat email klien. Ke sinilah undangan dikirim</td>
+</tr>
+<tr>
+<td><strong>Nama</strong></td>
+<td>Nama klien (muncul di email undangan)</td>
+</tr>
+<tr>
+<td><strong>Nomor HP</strong></td>
+<td>Dipakai sebagai kontak domain</td>
+</tr>
+<tr>
+<td><strong>NIK (KTP)</strong></td>
+<td>16 digit. <strong>Wajib untuk domain <code>.id</code></strong> per regulasi Kemenkominfo. Untuk TLD lain boleh kosong</td>
+</tr>
+<tr>
+<td><strong>Alamat, Provinsi, Kota, Kode Pos</strong></td>
+<td>Alamat klien untuk data WHOIS</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Provinsi dan Kota berupa pilihan, bukan ketikan.</strong> Pilih Provinsi dulu,
+daftar Kota akan menyesuaikan. Ini mencegah salah ketik yang membuat
+pendaftaran domain ditolak registry.</p>
+<p><strong>Negara terkunci di Indonesia.</strong> Platform ini melayani domain <code>.id</code> yang
+mensyaratkan kontak Indonesia.</p>
+</blockquote>
+<p><strong>3. Klik "Tambah Klien"</strong></p>
+<p>Yang terjadi berikutnya <strong>tergantung apakah emailnya sudah terdaftar</strong>:</p>
+<h4 id="kalau-email-belum-pernah-terdaftar">Kalau email belum pernah terdaftar</h4>
+<ul>
+<li>Akun klien dibuat</li>
+<li>Klien menerima <strong>email undangan</strong> berisi tautan untuk mengatur password</li>
+<li>Di daftar, Aktivasi klien tertulis <strong>"Belum accept"</strong> sampai mereka mengklik
+  tautan itu</li>
+</ul>
+<h4 id="kalau-email-sudah-punya-akun">Kalau email sudah punya akun</h4>
+<p>Ini sering terjadi — misalnya klien pernah mendaftar sendiri sebelumnya.</p>
+<ul>
+<li>Akun lama <strong>dipakai</strong>, tidak dibuat akun baru</li>
+<li><strong>Password klien tidak berubah.</strong> Mereka login seperti biasa, dan tidak ada
+  undangan set-password yang dikirim</li>
+<li>Data yang Anda isi <strong>menimpa</strong> profil lama mereka; kolom yang Anda
+  <strong>kosongkan</strong> tidak mengubah apa pun</li>
+<li>Klien menerima email pemberitahuan bahwa akun mereka kini Anda kelola</li>
+<li>Situs dan domain yang sudah mereka miliki <strong>tetap utuh</strong></li>
+</ul>
+<h3 id="kirim-ulang-undangan">Kirim Ulang Undangan</h3>
+<p>Kalau klien bilang emailnya tidak masuk:</p>
+<p><img alt="Menu aksi per klien" src="screenshots/agent-client-retry-invitation.png" /></p>
+<ol>
+<li>Di daftar klien, klik tombol <strong>⋯</strong> di baris klien tersebut</li>
+<li>Pilih <strong>Kirim ulang undangan</strong></li>
+</ol>
+<p>Undangan lama otomatis digantikan yang baru, berlaku 7 hari.</p>
+<blockquote>
+<p>Menu ini <strong>hanya muncul</strong> untuk klien berstatus "Belum accept". Klien yang
+sudah bisa login tidak punya undangan untuk diterima — kalau mereka lupa
+password, arahkan ke <strong>Lupa password</strong> di halaman login.</p>
+</blockquote>
+<h3 id="melepas-klien">Melepas Klien</h3>
+<ol>
+<li>Klik <strong>⋯</strong> → <strong>Lepas dari daftar</strong></li>
+<li>Konfirmasi di kotak dialog</li>
+</ol>
+<p>Yang terjadi:</p>
+<ul>
+<li>Klien hilang dari daftar Anda, dan Anda berhenti bisa mengelola domain atau
+  situs atas nama mereka</li>
+<li><strong>Akun, situs, dan domain milik klien tidak dihapus</strong> — mereka tetap login
+  seperti biasa</li>
+<li>Anda bisa menambahkannya lagi nanti dengan email yang sama</li>
+</ul>
+<h3 id="kalau-gagal">Kalau Gagal</h3>
+<table>
+<thead>
+<tr>
+<th>Pesan</th>
+<th>Artinya</th>
+<th>Yang harus dilakukan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email sudah terdaftar sebagai reseller</code> (atau <code>agent</code>/<code>admin</code>)</td>
+<td>Email itu dipakai akun dengan peran lain</td>
+<td>Pakai email berbeda, atau minta orangnya memakai akun pribadi terpisah</td>
+</tr>
+<tr>
+<td><code>email sudah dikelola oleh manager lain</code></td>
+<td>Klien sudah jadi asuhan Agent/Reseller lain</td>
+<td>Satu klien hanya boleh punya satu pengelola. Koordinasi dengan Reseller induk</td>
+</tr>
+<tr>
+<td><code>client ini sudah di-assign ke Anda</code></td>
+<td>Klien tersebut sudah ada di daftar Anda</td>
+<td>Cek daftar, mungkin terhalang filter pencarian</td>
+</tr>
+</tbody>
+</table>
 <h3 id="detail-klien">Detail Klien</h3>
-<p>Klik row klien → halaman <code>/agent/clients/&lt;id&gt;</code>:</p>
+<p><img alt="Detail Klien" src="screenshots/agent-client-detail.png" /></p>
+<p>Klik nama klien (atau <strong>⋯ → Lihat detail</strong>) → halaman <code>/agent/clients/&lt;id&gt;</code>:</p>
 <ul>
 <li><strong>Info klien</strong>: nama, email, telepon, alamat</li>
 <li><strong>Domain</strong>: list domain yang klien punya (self + yang Anda belikan)</li>
@@ -910,10 +1224,10 @@ WHOIS:</p>
 <li>Simpan</li>
 </ol>
 <p>Klien tetap bisa update sendiri kapan pun via login mereka.</p>
-<h2 id="24-beli-domain-untuk-klien-on-behalf-of">2.4 Beli Domain untuk Klien (On-Behalf-Of)</h2>
+<h2 id="25-beli-domain-untuk-klien-on-behalf-of">2.5 Beli Domain untuk Klien (On-Behalf-Of)</h2>
 <p><img alt="Wizard Beli Domain OBO" src="screenshots/agent-buy-domain-obo.png" /></p>
 <p>Flow inti Agent: beli domain untuk klien pakai wallet Reseller induk.</p>
-<h3 id="langkah">Langkah</h3>
+<h3 id="langkah_1">Langkah</h3>
 <ol>
 <li>Halaman detail klien → klik <strong>Beli Domain</strong></li>
 <li>Redirect ke wizard <code>/sites/new-with-domain?for_client=&lt;uuid&gt;</code></li>
@@ -934,7 +1248,7 @@ WHOIS:</p>
 <li>Transaksi dicatat di ledger wallet Reseller dengan metadata <code>agent_id = Anda</code></li>
 <li>Reseller induk bisa lihat "berapa yang Anda pakai" di menu Wallet → Agents Breakdown</li>
 </ul>
-<h2 id="25-metode-bayar-wallet">2.5 Metode Bayar Wallet</h2>
+<h2 id="26-metode-bayar-wallet">2.6 Metode Bayar Wallet</h2>
 <p>Agent <strong>tidak punya wallet pribadi</strong>. Setiap "bayar" via Wallet =
 potong saldo wallet Reseller induk.</p>
 <h3 id="kalau-saldo-kurang">Kalau Saldo Kurang</h3>
@@ -948,7 +1262,7 @@ dari wallet Reseller induk. Include:
 - Domain register untuk klien X: <code>−Rp 250.000</code>
 - Domain renew untuk klien Y: <code>−Rp 200.000</code></p>
 <p>Anda <strong>tidak bisa</strong> top-up wallet — itu tugas Reseller.</p>
-<h2 id="26-manage-situs-klien">2.6 Manage Situs Klien</h2>
+<h2 id="27-manage-situs-klien">2.7 Manage Situs Klien</h2>
 <p>Setelah domain klien active + situs dibuat, Anda otomatis jadi editor:</p>
 <ol>
 <li>Menu <strong>Kolaborasi</strong> — list semua situs klien yang Anda edit</li>
@@ -956,7 +1270,7 @@ dari wallet Reseller induk. Include:
 <li>Edit blocks, tema, konten seperti owner (kecuali tidak bisa hapus situs)</li>
 </ol>
 <p>Klien juga bisa edit sendiri — kolaborasi real-time (dengan versi history).</p>
-<h2 id="27-statistik-pribadi">2.7 Statistik Pribadi</h2>
+<h2 id="28-statistik-pribadi">2.8 Statistik Pribadi</h2>
 <p>Menu <strong>Statistik</strong> — <code>/agent/stats</code>:</p>
 <ul>
 <li><strong>Total klien</strong> — yang di-assign ke Anda</li>
@@ -964,7 +1278,7 @@ dari wallet Reseller induk. Include:
 <li><strong>Total revenue</strong> — nilai transaksi yang Anda trigger (untuk komisi dari Reseller)</li>
 <li><strong>Breakdown per bulan</strong> — chart aktivitas</li>
 </ul>
-<h2 id="28-purchases-history">2.8 Purchases History</h2>
+<h2 id="29-purchases-history">2.9 Purchases History</h2>
 <p>Menu <strong>Purchases</strong> — <code>/agent/purchases</code>:</p>
 <p>Semua register + renew yang Anda trigger, dengan info:
 - Nama klien
@@ -978,7 +1292,7 @@ dari wallet Reseller induk. Include:
 - Kind: register / renew</p>
 <p>Klik row → link ke halaman detail domain (kalau active) atau pending page
 (kalau masih proses).</p>
-<h2 id="29-team-domains">2.9 Team Domains</h2>
+<h2 id="210-team-domains">2.10 Team Domains</h2>
 <p>Menu <strong>Domain Klien</strong> — <code>/agent/domains</code>:</p>
 <p>Berbeda dari Purchases (yang transaction log), ini list <strong>per FQDN unik</strong> —
 1 baris per domain, current state:
@@ -989,20 +1303,40 @@ dari wallet Reseller induk. Include:
 - Situs terkait (kalau ada)</p>
 <p>Cocok untuk monitor "domain klien mana yang mau expire" — filter
 <code>expires_at ≤ 30 hari</code>.</p>
-<h2 id="210-batasan-agent">2.10 Batasan Agent</h2>
-<p>Yang <strong>TIDAK BISA</strong> Agent lakukan (harus lewat Reseller):</p>
+<h2 id="211-batasan-agent">2.11 Batasan Agent</h2>
+<p>Yang <strong>BISA</strong> Agent lakukan sendiri:</p>
 <ul>
-<li>❌ Invite klien baru</li>
+<li>✅ Mendaftarkan klien baru (lihat 2.4)</li>
+<li>✅ Kirim ulang undangan ke klien yang belum menerima</li>
+<li>✅ Melepas klien dari daftar Anda</li>
+<li>✅ Edit profil klien asuhan Anda</li>
+<li>✅ Beli domain untuk klien memakai wallet Reseller induk</li>
+</ul>
+<p>Yang <strong>TIDAK BISA</strong> (harus lewat Reseller induk):</p>
+<ul>
 <li>❌ Assign klien ke agent lain</li>
 <li>❌ Top-up wallet</li>
 <li>❌ Set harga jual</li>
-<li>❌ Hapus klien</li>
+<li>❌ Menghapus akun klien — melepas klien hanya mencabut pengelolaan Anda,
+  akunnya tetap ada</li>
 <li>❌ Lihat aktivitas agent lain di tim Reseller</li>
 </ul>
 <p>Kalau butuh salah satu di atas, koordinasi dengan Reseller induk.</p>
-<h2 id="211-troubleshoot">2.11 Troubleshoot</h2>
+<h2 id="212-troubleshoot">2.12 Troubleshoot</h2>
 <p><strong>Klien saya hilang dari list</strong>
-- Reseller mungkin cabut assignment (revoke). Konfirmasi ke Reseller.</p>
+- Reseller mungkin cabut assignment (revoke). Konfirmasi ke Reseller.
+- Atau Anda sendiri sempat memilih <strong>Lepas dari daftar</strong>. Daftarkan ulang
+  dengan email yang sama — akun dan situs klien tidak hilang.</p>
+<p><strong>Klien bilang tidak menerima email undangan</strong>
+- Minta cek folder spam dulu
+- Di daftar klien, klik <strong>⋯</strong> → <strong>Kirim ulang undangan</strong>
+- Kalau menu itu tidak ada, berarti klien <strong>sudah punya akses login</strong> dan
+  memang tidak butuh undangan. Arahkan ke <strong>Lupa password</strong> di halaman login.</p>
+<p><strong>Saya sudah isi alamat dan NIK klien, tapi di halaman detail masih data lama</strong>
+- Ini terjadi kalau email klien sudah terdaftar sebelumnya dan Anda
+  <strong>mengosongkan</strong> kolom tersebut saat menambahkan. Kolom kosong sengaja tidak
+  menimpa data klien.
+- Perbaiki lewat halaman detail klien → <strong>Edit Profil</strong>.</p>
 <p><strong>Beli domain gagal — saldo kurang</strong>
 - Cek wallet Reseller di dashboard (menu Wallet — untuk Agent view balance saja, tidak bisa top-up)
 - Kalau kurang, minta Reseller top-up dulu</p>
@@ -1746,364 +2080,6 @@ kalau email otomatis tidak jalan.</p>
 - Reject applications yang tidak masuk akal
 - Kalau signup rate abnormal, tambah rate limit di <code>/api/v1/auth/reseller/apply</code>
   (config di code, butuh redeploy)</p>
-<h2 id="420-banner-guru-moderasi-cross-site">4.20 Banner Guru (Moderasi Cross-Site)</h2>
-<p><img alt="Moderasi Banner Guru" src="screenshots/admin-banners.png" /></p>
-<p>Menu <strong>Banner Guru</strong> — <code>/admin/banners</code>. Spec §27 (Rumah Digital Guru).</p>
-<p>List semua banner promosi milik guru lintas-site. Setiap banner ada 3
-lapis status:</p>
-<table>
-<thead>
-<tr>
-<th>Status</th>
-<th>Kontrol</th>
-<th>Efek</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>teacher_active</code></td>
-<td>Guru</td>
-<td>Toggle di dashboard guru sendiri</td>
-</tr>
-<tr>
-<td><code>admin_enabled</code></td>
-<td>Admin (Anda)</td>
-<td>Override platform</td>
-</tr>
-<tr>
-<td>Effective</td>
-<td>Kombinasi + periode</td>
-<td>Yang benar-benar tampil publik</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Aksi Admin</strong>:
-- <strong>Nonaktifkan</strong> — buka dialog konfirmasi + isi alasan (max 500 char).
-  Efek langsung: banner hilang dari beranda website guru DAN dari Ruang
-  Promosi Portal. Alasan tampil merah di dashboard guru pemilik.
-- <strong>Izinkan Kembali</strong> — set <code>admin_enabled=true</code>, alasan di-clear.</p>
-<p><strong>Filter</strong>:
-- <strong>Semua</strong> — default
-- <strong>Diizinkan Admin</strong> — banner yang admin approve
-- <strong>Dinonaktifkan Admin</strong> — banner yang admin block</p>
-<p><strong>Audit trail</strong> — setiap toggle admin di-log ke <code>audit_log</code> (event
-<code>admin.banner_enabled</code> / <code>admin.banner_disabled</code>) dengan actor + IP +
-alasan. Bisa dilihat di menu Audit Log (§4.17).</p><h1 id="panduan-guru-rumah-digital-guru">Panduan Guru — Rumah Digital Guru</h1>
-<p>Bab ini panduan lengkap untuk <strong>Guru</strong> yang menggunakan template <strong>Rumah
-Digital Guru</strong> (Guru PANDI × UPI). Fitur ini opsional — semua situs client
-bisa pakai fitur di sini, tapi tampilannya paling sesuai kalau situs
-dibangun dari template guru.</p>
-<h2 id="apa-itu-rumah-digital-guru">Apa itu Rumah Digital Guru?</h2>
-<p>Program kolaborasi PANDI × UPI untuk memberi guru Indonesia <strong>website
-pribadi</strong> yang menjadi rumah digital pribadi — bukan sekadar profil di
-platform milik orang lain. Konsep:</p>
-<ul>
-<li><strong>Website .id</strong> — alamat pribadi yang mewakili diri guru</li>
-<li><strong>Enam Ruang Utama</strong> untuk berbagi pengetahuan (Ceritaku, Bacaanku,
-  Inspirasiku, Bangsaku, Peradaban, Forum Diskusi)</li>
-<li><strong>Pembelajaran</strong> — materi ajar terpisah</li>
-<li><strong>Ruang Promosi</strong> — banner program pelatihan / literasi / komunitas</li>
-<li><strong>Direktori Portal</strong> — kartu guru tampil di portal publik <code>/guru</code></li>
-</ul>
-<p>Referensi lengkap spesifikasi produk: <a href="../../Spesifikasi-Developer-Portal-dan-Website-Guru-Final.md">Spesifikasi Developer Portal &amp;
-Website Guru Final</a>.</p>
-<h2 id="cara-memulai">Cara Memulai</h2>
-<h3 id="1-buat-website-dengan-template-guru">1. Buat Website dengan Template Guru</h3>
-<ol>
-<li>Login sebagai Client</li>
-<li>Klik <strong>"Beli Domain + Buat Situs"</strong> di dashboard</li>
-<li>Cari + beli domain (<code>.id</code> disarankan untuk guru Indonesia)</li>
-<li>Setelah domain aktif, pilih template <strong>Guru PANDI × UPI</strong></li>
-<li>Website otomatis ter-provisioning dengan:</li>
-<li>9 halaman (Beranda, Profil, 5 rubrik, Forum Diskusi, Pembelajaran)</li>
-<li><strong>8 sample tulisan</strong> — biar website tidak kosong sejak awal</li>
-<li><strong>4 sample materi pembelajaran</strong></li>
-<li><strong>3 sample banner promosi</strong></li>
-<li><strong>Default profil guru</strong> (subject: "Guru Bahasa Indonesia", hero statement,
-     quote, bio) — hanya diisi kalau profil Anda masih kosong (non-destruktif
-     kalau sudah edit sebelumnya)</li>
-</ol>
-<p>Sample data ini boleh Anda hapus / edit — anggap sebagai starter.</p>
-<h3 id="2-isi-profil-guru">2. Isi Profil Guru</h3>
-<p>Sebelum menulis, isi profil terlebih dahulu supaya kartu guru di direktori
-portal terlihat lengkap. Buka <strong>dashboard situs → menu Guru ▾ → Profil</strong>
-(URL: <code>/sites/[id]/profil</code>):</p>
-<ul>
-<li><strong>Mata Pelajaran / Bidang</strong> — muncul di bawah nama Anda di kartu</li>
-<li><strong>Foto Profil</strong> — URL gambar (upload dulu di menu Aset, salin URL)</li>
-<li><strong>Hero Statement</strong> — kalimat 1-2 baris di beranda website</li>
-<li><strong>Quote Pribadi</strong> — filosofi mengajar / motto</li>
-<li><strong>Bio Singkat</strong> — max 280 karakter, tampil di kartu preview</li>
-<li><strong>Bio Lengkap</strong> — max 4000 karakter, tampil di halaman Profil</li>
-<li><strong>Tautan Sosial</strong> — twitter, instagram, youtube, dll. (max 10)</li>
-</ul>
-<blockquote>
-<p>⚠️ Foto profil belum bisa upload dari halaman ini — upload dulu via menu
-<strong>Aset</strong> di dashboard situs, lalu salin URL-nya.</p>
-</blockquote>
-<p><img alt="Form Profil Guru — 4 section: Identitas, Hero &amp; Quote, Biografi, Tautan Sosial" src="screenshots/guru-profile-settings.png" /></p>
-<h2 id="menu-guru-di-dashboard-situs">Menu Guru di Dashboard Situs</h2>
-<p>Buka situs guru di dashboard, lalu perhatikan sidebar. Di grup <strong>Guru
-▾</strong> (dropdown ungu, dengan pill "GURU") ada 5 menu:</p>
-<table>
-<thead>
-<tr>
-<th>Menu</th>
-<th>Fungsi</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Tulisan</strong></td>
-<td>6 rubrik: Ceritaku, Bacaanku, Inspirasiku, Bangsaku, Peradaban, Forum Diskusi</td>
-</tr>
-<tr>
-<td><strong>Forum Diskusi</strong></td>
-<td>Sub-menu khusus untuk topik diskusi (tanggapan wajib aktif)</td>
-</tr>
-<tr>
-<td><strong>Tanggapan</strong></td>
-<td>Moderasi komentar pengunjung (approve/reject/hapus)</td>
-</tr>
-<tr>
-<td><strong>Pembelajaran</strong></td>
-<td>Materi belajar terpisah (tanpa tanggapan, tanpa views)</td>
-</tr>
-<tr>
-<td><strong>Ruang Promosi</strong></td>
-<td>Banner promo di beranda website + agregat portal</td>
-</tr>
-</tbody>
-</table>
-<p><img alt="Sidebar dashboard situs dengan dropdown Guru terbuka menampilkan 5 menu (pill ungu 'GURU')" src="screenshots/guru-sidebar-dropdown.png" /></p>
-<h2 id="kelola-tulisan-6-rubrik">Kelola Tulisan (6 Rubrik)</h2>
-<h3 id="rubrik-yang-tersedia">Rubrik yang tersedia</h3>
-<ol>
-<li><strong>Ceritaku</strong> — cerita pengalaman mengajar sehari-hari</li>
-<li><strong>Bacaanku</strong> — ulasan buku yang Anda baca</li>
-<li><strong>Inspirasiku</strong> — praktik baik, ide, orang yang menginspirasi</li>
-<li><strong>Bangsaku</strong> — kewargaan, keberagaman, bahasa Indonesia</li>
-<li><strong>Peradaban</strong> — sejarah, budaya, warisan Nusantara</li>
-<li><strong>Forum Diskusi</strong> — topik untuk diskusi terbuka</li>
-</ol>
-<h3 id="buat-tulisan-baru">Buat tulisan baru</h3>
-<ol>
-<li>Menu <strong>Guru → Tulisan</strong> → klik <strong>"Tulisan Baru"</strong></li>
-<li>Pilih <strong>rubrik</strong> (locked setelah simpan pertama — tidak bisa pindah rubrik)</li>
-<li>Isi:</li>
-<li><strong>Judul</strong> (wajib)</li>
-<li><strong>URL slug</strong> — auto-generate dari judul, boleh edit</li>
-<li><strong>Cover image</strong> (opsional)</li>
-<li><strong>Excerpt</strong> — ringkasan untuk kartu list</li>
-<li><strong>Isi tulisan</strong> — pakai rich editor (bold/italic/heading/list/link)</li>
-<li><strong>Tags</strong> — pisah dengan koma</li>
-<li><strong>Reading time</strong> — estimasi dalam menit (0 = disembunyikan)</li>
-<li><strong>Toggle "Aktifkan tanggapan"</strong> — spec §15</li>
-<li><strong>ON</strong>: pengunjung bisa kirim komentar (masuk moderasi)</li>
-<li><strong>OFF</strong>: form + jumlah tanggapan disembunyikan dari publik</li>
-<li><strong>Forum Diskusi</strong>: toggle di-force ON, tidak bisa di-nonaktifkan (spec §16)</li>
-<li>Klik <strong>"Simpan Draft"</strong> atau <strong>"Publikasikan"</strong></li>
-</ol>
-<p><img alt="Halaman list Tulisan — tabs 6 rubrik + tabel artikel + tombol Tulisan Baru" src="screenshots/guru-tulisan-list.png" /></p>
-<p><img alt="Form editor Tulisan — rubric selector, RichEditor, toggle Aktifkan Tanggapan di sidebar" src="screenshots/guru-tulisan-form.png" /></p>
-<h3 id="aturan-slug">Aturan slug</h3>
-<p>Slug harus unik dalam satu rubrik. Contoh:
-- <code>/ceritaku/hari-pertama-ngajar</code> ✅
-- <code>/bacaanku/hari-pertama-ngajar</code> ✅ (rubrik beda)
-- 2× <code>/ceritaku/hari-pertama-ngajar</code> ❌ (duplikat, ditolak backend)</p>
-<h2 id="forum-diskusi-menu-terpisah">Forum Diskusi (Menu Terpisah)</h2>
-<p>Sub-menu <strong>Forum Diskusi</strong> adalah alias untuk rubric <code>forum-diskusi</code> dengan
-UX berbeda dari tulisan biasa:</p>
-<ul>
-<li>CTA berbunyi <strong>"Topik Baru"</strong> (bukan "Tulisan Baru")</li>
-<li>Tanggapan <strong>wajib aktif</strong>, toggle disabled di form</li>
-<li>Info banner mengingatkan aturan spec §16</li>
-<li>Cocok untuk memulai percakapan dengan pembaca</li>
-</ul>
-<p>Topik forum akan tampil di halaman <code>/forum-diskusi</code> website Anda dan di
-block Forum di beranda template.</p>
-<p><img alt="Halaman Forum Diskusi — tabel topik + tombol Topik Baru + info banner 'tanggapan wajib aktif'" src="screenshots/guru-forum-list.png" /></p>
-<h2 id="moderasi-tanggapan">Moderasi Tanggapan</h2>
-<p>Semua tanggapan baru masuk sebagai <strong>Pending</strong> (spec §18). Hanya tanggapan
-yang <strong>Approved</strong> yang tampil publik dan dihitung ke total.</p>
-<h3 id="alur-moderasi">Alur moderasi</h3>
-<ol>
-<li>Menu <strong>Guru → Tanggapan</strong></li>
-<li>Tab filter: <strong>Semua / Pending / Approved / Rejected</strong></li>
-<li>Per tanggapan Anda bisa:</li>
-<li><strong>Setujui</strong> — status → approved, tampil publik</li>
-<li><strong>Tolak</strong> — status → rejected, tidak tampil (bisa di-approve lagi nanti)</li>
-<li><strong>Hapus</strong> — permanen (row dihapus dari DB)</li>
-</ol>
-<blockquote>
-<p>💡 <strong>Tip</strong>: cek dashboard ringkasan setiap hari — stat card "Menunggu
-Moderasi" akan warna kuning kalau ada backlog.</p>
-</blockquote>
-<p><img alt="Halaman Moderasi Tanggapan — tab filter Semua/Pending/Approved/Rejected + card feed dengan tombol Setujui/Tolak/Hapus" src="screenshots/guru-tanggapan-moderasi.png" /></p>
-<h3 id="form-pengunjung">Form pengunjung</h3>
-<p>Pengunjung mengisi 3 field:
-- <strong>Nama</strong> (wajib, max 60 char)
-- <strong>Peran</strong>: Guru / Siswa / Orang Tua / Pembaca
-- <strong>Isi tanggapan</strong> (wajib, max 2000 char)</p>
-<p>Email di-collect internal untuk anti-spam, tapi <strong>tidak</strong> ditampilkan di publik.</p>
-<h3 id="anti-spam">Anti-spam</h3>
-<p>Form dilengkapi honeypot — field tersembunyi yang bot cenderung isi.
-Kalau ke-fill, submit di-drop tanpa notice ke bot (spec §40). Rate limit
-per IP juga aktif untuk cegah flood.</p>
-<h2 id="ruang-promosi-banner">Ruang Promosi (Banner)</h2>
-<p>Banner promo tampil di <strong>beranda website Anda</strong> (langsung di bawah hero)
-dan bisa juga tampil di <strong>carousel portal publik</strong> kalau Admin platform
-mengizinkan.</p>
-<h3 id="buat-banner">Buat banner</h3>
-<ol>
-<li>Menu <strong>Guru → Ruang Promosi</strong> → klik <strong>"Banner Baru"</strong></li>
-<li>Isi:</li>
-<li><strong>Judul Internal</strong> — untuk memudahkan Anda kelola (tidak tampil publik)</li>
-<li><strong>Gambar</strong> — rasio <strong>2:1</strong> (contoh 1200×600 pixel)</li>
-<li><strong>URL Tujuan</strong> — http/https (external OK)</li>
-<li><strong>Alt Text</strong> — deskripsi gambar untuk aksesibilitas (wajib)</li>
-<li><strong>Urutan</strong> — angka kecil tampil dulu</li>
-<li><strong>Aktif</strong> — checkbox teacher_active</li>
-<li><strong>Periode</strong> — start_at / end_at opsional (kosong = selalu tampil)</li>
-<li>Simpan</li>
-</ol>
-<h3 id="status-banner">Status banner</h3>
-<p>Setiap banner punya 3 lapis status:</p>
-<table>
-<thead>
-<tr>
-<th>Status Efektif</th>
-<th>Arti</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Aktif</strong></td>
-<td>Tampil di beranda + portal</td>
-</tr>
-<tr>
-<td><strong>Nonaktif oleh Guru</strong></td>
-<td>Anda uncheck "Aktif"</td>
-</tr>
-<tr>
-<td><strong>Dinonaktifkan oleh Admin</strong></td>
-<td>Admin platform override — Anda tidak bisa force tampil</td>
-</tr>
-<tr>
-<td><strong>Belum Mulai</strong></td>
-<td><code>start_at</code> di masa depan</td>
-</tr>
-<tr>
-<td><strong>Berakhir</strong></td>
-<td><code>end_at</code> sudah lewat</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p>⚠️ Kalau banner Anda <strong>Dinonaktifkan oleh Admin</strong>, alasan akan tampil
-merah di kartu. Baca alasannya sebelum edit/upload ulang.</p>
-</blockquote>
-<p><img alt="Halaman Ruang Promosi — grid kartu banner 2:1 dengan status badge + toggle Aktif per banner" src="screenshots/guru-promosi-list.png" /></p>
-<h2 id="pembelajaran-materi">Pembelajaran (Materi)</h2>
-<p>Materi pembelajaran adalah tipe konten <strong>terpisah</strong> dari tulisan:</p>
-<ul>
-<li><strong>Tidak ada tanggapan</strong> — pengunjung tidak bisa komentar</li>
-<li><strong>Tidak ada views</strong> — tidak masuk statistik total views situs</li>
-<li>Fokus pada <strong>isi materi</strong> + <strong>ringkasan</strong></li>
-</ul>
-<h3 id="buat-materi">Buat materi</h3>
-<ol>
-<li>Menu <strong>Guru → Pembelajaran</strong> → <strong>"Materi Baru"</strong></li>
-<li>Isi:</li>
-<li>Judul, slug, cover image</li>
-<li><strong>Deskripsi Singkat</strong> — ringkasan untuk kartu list</li>
-<li><strong>Isi Materi</strong> — full content</li>
-<li><strong>Ringkasan Materi</strong> — box khusus di bawah body (opsional)</li>
-<li><strong>Kata Kunci</strong> — tags</li>
-<li>Publikasikan</li>
-</ol>
-<p>Materi tampil di halaman <code>/pembelajaran/{slug}</code> website Anda.</p>
-<p><img alt="Halaman list Pembelajaran — tabel materi (tanpa kolom views/tanggapan sesuai spec §19)" src="screenshots/guru-pembelajaran-list.png" /></p>
-<h2 id="dashboard-ringkasan">Dashboard Ringkasan</h2>
-<p>Halaman utama situs (klik nama situs di dashboard) menampilkan <strong>6 stat
-card</strong> (spec §21):</p>
-<ul>
-<li><strong>Total Views</strong> — semua artikel + forum</li>
-<li><strong>Tulisan Published</strong> — jumlah artikel yang published (semua rubrik)</li>
-<li><strong>Tanggapan Approved</strong> — yang tampil publik</li>
-<li><strong>Menunggu Moderasi</strong> — tanggapan pending (warna kuning kalau &gt; 0)</li>
-<li><strong>Materi Pembelajaran</strong> — jumlah materi published</li>
-<li><strong>Banner Aktif</strong> — banner yang effective_status = "active"</li>
-</ul>
-<p>Di bawahnya ada 2 list:
-- <strong>Tulisan Terbaru</strong> — 5 artikel published terakhir
-- <strong>Tanggapan Terbaru</strong> — 5 tanggapan terbaru (mix status)</p>
-<p>Klik card / row untuk drill-down ke menu yang relevan.</p>
-<p><img alt="Dashboard Ringkasan situs guru — 6 stat card + list Tulisan Terbaru + Tanggapan Terbaru" src="screenshots/guru-dashboard-ringkasan.png" /></p>
-<h2 id="portal-direktori-guru-guru">Portal Direktori Guru (<code>/guru</code>)</h2>
-<p>Website Anda otomatis muncul di <strong>direktori guru publik</strong> di URL
-<code>https://&lt;domain-platform&gt;/guru</code> (spec §5) — asal:</p>
-<ul>
-<li>Status situs Anda <code>published</code></li>
-<li>Situs punya minimal 1 domain aktif ter-attach</li>
-</ul>
-<p>Kartu Anda menampilkan:
-- Nama guru + mata pelajaran (dari Profil Guru)
-- Foto profil (kalau ada) atau initial
-- Domain website
-- Total views semua tulisan
-- Badge "Baru" kalau situs &lt; 14 hari
-- Tombol <strong>"Kunjungi Website"</strong></p>
-<p>Sort default: <strong>Terbaru</strong>. Pengunjung bisa switch ke <strong>Terpopuler</strong> (by
-total views).</p>
-<p><img alt="Portal Direktori Guru publik (/guru) — grid kartu 3-kolom + toolbar search &amp; sort" src="screenshots/guru-portal-directory.png" /></p>
-<h2 id="sitemap-otomatis">Sitemap Otomatis</h2>
-<p>Sitemap <code>sitemap.xml</code> di setiap website guru sudah otomatis include:
-- Halaman utama + sub-page
-- Semua artikel <code>/{rubric}/{slug}</code> (per 6 rubric, max 100/rubric)
-- Semua materi <code>/pembelajaran/{slug}</code> (max 200)
-- Blog post + produk (kalau ada)</p>
-<p>Ini penting untuk <strong>SEO</strong> — Google akan tahu semua konten Anda.</p>
-<h2 id="tips-best-practice">Tips &amp; Best Practice</h2>
-<h3 id="untuk-guru-baru">Untuk Guru Baru</h3>
-<ol>
-<li><strong>Isi Profil Guru dulu</strong> sebelum publish tulisan pertama — supaya
-   kartu direktori tidak kosong</li>
-<li><strong>Ganti sample data</strong> — 8 sample tulisan + 4 materi yang di-generate
-   template hanya starter. Edit atau hapus supaya website terasa milik Anda</li>
-<li><strong>Mulai dari Ceritaku</strong> — rubric paling ringan, cocok latihan menulis</li>
-<li><strong>Aktifkan tanggapan</strong> di 1-2 tulisan pertama — biar pembaca terlibat</li>
-</ol>
-<h3 id="untuk-guru-aktif">Untuk Guru Aktif</h3>
-<ol>
-<li><strong>Cek dashboard tiap pagi</strong> — moderasi backlog tanggapan</li>
-<li><strong>Update banner</strong> sesuai program yang sedang berjalan</li>
-<li><strong>Publikasi konsisten</strong> — algoritma sort "Terbaru" di direktori favor
-   situs yang aktif</li>
-<li><strong>Isi tag</strong> di setiap tulisan — bantu pembaca menjelajah topik</li>
-</ol>
-<h2 id="faq">FAQ</h2>
-<p><strong>Q: Apa bedanya Tulisan dan Blog?</strong>
-A: Tulisan (menu Guru) khusus 6 rubrik guru dengan moderasi tanggapan
-per-tulisan. Blog (menu Konten) generic untuk artikel biasa tanpa rubric.
-Untuk template guru, gunakan <strong>Tulisan</strong>.</p>
-<p><strong>Q: Bisa disable tanggapan di Forum Diskusi?</strong>
-A: Tidak. Spec §16 forum wajib punya tanggapan aktif — kalau tidak, itu
-bukan forum. Kalau tidak butuh diskusi, pakai rubric lain.</p>
-<p><strong>Q: Banner saya di-nonaktifkan Admin, apa yang harus dilakukan?</strong>
-A: Baca alasan yang tampil di kartu banner (merah). Perbaiki sesuai
-alasan (misal ganti gambar yang tidak sesuai pedoman), lalu kontak admin
-platform untuk re-review.</p>
-<p><strong>Q: Views tidak bertambah walau tulisan sudah publish?</strong>
-A: View counter naik saat pengunjung buka halaman detail. Ada dedupe
-per-IP 60 menit — refresh cepat dari IP yang sama hanya dihitung 1x.
-Views merefleksikan pembaca unik, bukan click count.</p>
-<p><strong>Q: Sample data template bisa di-restore setelah dihapus?</strong>
-A: Tidak otomatis. Data sample di-seed sekali saat site pertama dibuat.
-Anda perlu buat manual kalau ingin balik.</p>
-<p><strong>Q: Kolaborator bisa moderasi tanggapan saya?</strong>
-A: Ya. Semua site member (owner + editor) bisa akses menu Tanggapan.
-Owner-only checks hanya untuk hapus site + transfer domain.</p>
 <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e5e7eb; font-size: 0.85em; color: #9ca3af; text-align: center;">
   <p>Web Builder — Panduan Pengguna · Generated dari Markdown</p>
   <p>Untuk update terbaru, cek folder <code>docs/user-guide/</code> di repository</p>

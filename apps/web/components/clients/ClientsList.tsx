@@ -224,7 +224,16 @@ export function ClientsList({
                   return (
                     <TableRow key={c.assignment_id}>
                       <TableCell className="font-medium">
-                        {c.name || <span className="text-muted-foreground">—</span>}
+                        {/* A real link, not just a menu entry: rows should be
+                            clickable, and tooling scrapes this href. */}
+                        <Link
+                          href={`${basePath}/clients/${c.client_id}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {c.name || (
+                            <span className="text-muted-foreground">Tanpa nama</span>
+                          )}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-sm">
                         <span className="flex items-center gap-1 font-mono text-xs">

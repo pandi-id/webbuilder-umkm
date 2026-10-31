@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Panduan Pengguna Web Builder</title>
+<style>
+  /* ==== Print-friendly stylesheet ==== */
+  @page {
+    size: A4;
+    margin: 2cm 1.8cm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    color: #1f2937;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    font-size: 15px;
+  }
+
+  /* Cover */
+  .cover {
+    text-align: center;
+    padding: 4rem 0;
+    page-break-after: always;
+  }
+  .cover h1 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem;
+    color: #1e40af;
+    border: none;
+    padding: 0;
+  }
+  .cover p.subtitle { font-size: 1.15rem; color: #6b7280; margin: 0.5rem 0 2rem; }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .cover .meta {
+    margin-top: 3rem;
+    font-size: 0.85rem;
+    color: #9ca3af;
+  }
+
+  /* Headings — page break sebelum h1 (kecuali cover) */
+  h1 {
+    font-size: 1.8rem;
+    color: #1e40af;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 0.5rem;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    page-break-before: always;
+  }
+  h1:first-of-type { page-break-before: auto; }
+  .cover + * h1 { page-break-before: auto; }
+
+  h2 {
+    color: #2563eb;
+    font-size: 1.35rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  h3 {
+    color: #374151;
+    font-size: 1.1rem;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  h4 { color: #4b5563; font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+
+  p { margin: 0.75rem 0; }
+
+  /* Links */
+  a { color: #2563eb; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Inline code */
+  code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 0.88em;
+    color: #be185d;
+  }
+
+  /* Code block */
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    line-height: 1.5;
+    font-size: 0.85em;
+    page-break-inside: avoid;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  /* Table */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    font-size: 0.92em;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+  }
+  tbody tr:nth-child(even) { background: #fafafa; }
+
+  /* Blockquote */
+  blockquote {
+    border-left: 4px solid #2563eb;
+    background: #eff6ff;
+    padding: 0.75rem 1rem;
+    color: #1e3a8a;
+    margin: 1rem 0;
+    border-radius: 0 6px 6px 0;
+  }
+  blockquote p { margin: 0.25rem 0; }
+
+  /* Lists */
+  ul, ol { padding-left: 1.5rem; margin: 0.75rem 0; }
+  li { margin: 0.25rem 0; }
+
+  /* Callout-style paragraphs (starts dengan ⚠️ ✅ ❌ 💡) */
+  p:has(+ *) strong:first-child { color: #dc2626; }
+
+  /* Alert emoji styling via first-line pattern */
+  li strong:first-child { color: #1e40af; }
+
+  /* Placeholder buat screenshot user tambah sendiri */
+  .screenshot-placeholder {
+    border: 2px dashed #cbd5e1;
+    background: #f8fafc;
+    padding: 2rem;
+    text-align: center;
+    margin: 1rem 0;
+    color: #64748b;
+    font-style: italic;
+    border-radius: 8px;
+    page-break-inside: avoid;
+  }
+  .screenshot-placeholder::before {
+    content: "🖼️ ";
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ASCII diagrams — render dengan font monospace + preserved whitespace */
+  pre.ascii-diagram {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    font-size: 0.8em;
+    line-height: 1.3;
+  }
+
+  /* Images (kalau user tambahin nanti) */
+  img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin: 1rem 0;
+    display: block;
+  }
+
+  /* TOC (Table of Contents) */
+  .toc {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    page-break-after: always;
+    margin-bottom: 3rem;
+  }
+  .toc h2 { margin-top: 0; border: none; padding: 0; color: #1e40af; }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc > ul > li { font-weight: 600; margin-top: 0.5rem; }
+  .toc ul ul {
+    padding-left: 1.5rem;
+    font-weight: normal;
+    font-size: 0.95em;
+  }
+  .toc a { color: #374151; }
+
+  /* Section badge per bab */
+  h1[id^="bab-"]::before {
+    content: "";
+    display: block;
+    height: 4px;
+    width: 60px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    margin-bottom: 1rem;
+    border-radius: 2px;
+  }
+
+  /* Print-specific */
+  @media print {
+    body { max-width: none; padding: 0; }
+    a { color: #2563eb; text-decoration: none; }
+    /* Show URL after link kalau external */
+    a[href^="http"]::after {
+      content: " (" attr(href) ")";
+      font-size: 0.8em;
+      color: #9ca3af;
+      word-break: break-all;
+    }
+    /* Skip URL untuk anchor internal */
+    a[href^="#"]::after,
+    a[href^="/"]::after { content: ""; }
+
+    pre, table, blockquote { page-break-inside: avoid; }
+    h1, h2, h3 { page-break-after: avoid; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cover Page -->
+<div class="cover">
+  <div class="badge">DOKUMENTASI PENGGUNA</div>
+  <h1>Panduan Web Builder</h1>
+  <p class="subtitle">Untuk Agent</p>
+  <div class="meta">
+    Web Builder Platform · Versi 1.0
+  </div>
+</div>
+
+<!-- Content -->
+<h1 id="panduan-pengguna-web-builder-pengantar">Panduan Pengguna Web Builder — Pengantar</h1>
+<h2 id="tentang-web-builder">Tentang Web Builder</h2>
+<p>Web Builder adalah platform SaaS untuk UMKM membuat toko online sendiri di
+domain <code>.id</code> tanpa perlu coding. Fitur utama:</p>
+<ul>
+<li>
+<p><strong>Toko online siap pakai</strong> — template toko + blok UMKM (etalase produk, promo &amp; voucher, ulasan, info toko) dengan tombol pesan via WhatsApp</p>
+</li>
+<li>
+<p><strong>Editor drag-and-drop</strong> — susun halaman dari block siap pakai (hero, feature grid, produk, blog, form kontak, dsb.)</p>
+</li>
+<li><strong>Beli domain terintegrasi</strong> — daftar domain <code>.id</code>, <code>.co.id</code>, <code>.com</code>, dsb. langsung dari wizard</li>
+<li><strong>Auto-setup Cloudflare</strong> — domain baru otomatis attached ke Cloudflare, DNS + SSL siap pakai</li>
+<li><strong>Multi-tenant</strong> — 1 platform bisa host ribuan situs pelanggan di domain masing-masing</li>
+<li><strong>Role-based access</strong> — Admin, Reseller, Agent, Client dengan permission berbeda</li>
+</ul>
+<h2 id="peran-role-di-sistem">Peran (Role) di Sistem</h2>
+<p>Ada 4 peran user dengan akses berbeda:</p>
+<h3 id="1-client-pelanggan">1. Client (Pelanggan)</h3>
+<p>Pengguna akhir — orang yang punya toko/bisnis dan mau bikin situs sendiri.</p>
+<p><strong>Yang bisa dilakukan:</strong>
+- Beli domain + bikin situs dari template
+- Edit block, tema, konten via editor visual
+- Kelola produk, blog, formulir kontak
+- Setup DNS + WHOIS domain sendiri
+- Perpanjang domain</p>
+<h3 id="2-agent-freelancer-staff-reseller">2. Agent (Freelancer / Staff Reseller)</h3>
+<p>Pekerja lapangan yang dibawahi oleh Reseller. Membantu klien setup situs.</p>
+<p><strong>Yang bisa dilakukan:</strong>
+- Lihat klien yang di-assign
+- Beli domain untuk klien (<strong>on-behalf-of</strong> — pakai wallet Reseller induk)
+- Edit situs klien (jadi collaborator otomatis)
+- Lihat statistik pribadi</p>
+<h3 id="3-reseller-mitra-bisnis">3. Reseller (Mitra Bisnis)</h3>
+<p>Partner yang jualan produk Web Builder ke pelanggan mereka sendiri, dengan harga jual sendiri.</p>
+<p><strong>Yang bisa dilakukan:</strong>
+- Undang Agent ke tim
+- Buat &amp; manage klien
+- Set harga jual per TLD (untuk agent + untuk client)
+- Top-up wallet + lihat ledger transaksi
+- Beli domain on-behalf-of klien
+- Lihat statistik tim (all agents + revenue)</p>
+<h3 id="4-admin-platform-operator">4. Admin (Platform Operator)</h3>
+<p>Pengelola platform. Punya akses full ke semua data + config.</p>
+<p><strong>Yang bisa dilakukan:</strong>
+- CRUD user, situs, template, zone TLD
+- Approve reseller applications
+- Set harga platform (retail + wholesale)
+- Verify top-up wallet + mark invoice paid manual
+- Manage Cloudflare configs, promo, payment methods
+- Observability: audit log, email log, metrics</p>
+<h2 id="terminologi-penting">Terminologi Penting</h2>
+<table>
+<thead>
+<tr>
+<th>Istilah</th>
+<th>Arti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Situs / Site</strong></td>
+<td>Website milik user, punya domain sendiri + template + isi (halaman, produk, blog)</td>
+</tr>
+<tr>
+<td><strong>Domain</strong></td>
+<td>Alamat internet (mis. <code>tokosaya.id</code>) yang mengarah ke situs</td>
+</tr>
+<tr>
+<td><strong>Zone / TLD</strong></td>
+<td>Ekstensi domain (<code>.id</code>, <code>.co.id</code>, <code>.com</code>) yang di-support platform</td>
+</tr>
+<tr>
+<td><strong>Template</strong></td>
+<td>Blueprint desain siap pakai — kategori (UMKM, sekolah, portfolio, dsb.) × variant (modern, clean, professional)</td>
+</tr>
+<tr>
+<td><strong>Block</strong></td>
+<td>Komponen halaman (Hero, Feature Grid, Button, Text, Image, Product Grid, dsb.)</td>
+</tr>
+<tr>
+<td><strong>Theme</strong></td>
+<td>Setting global site: warna primary/secondary/bg/fg + font heading/body + radius sudut</td>
+</tr>
+<tr>
+<td><strong>Wallet</strong></td>
+<td>Saldo internal — dipakai Reseller/Agent untuk bayar domain instan (tanpa gateway)</td>
+</tr>
+<tr>
+<td><strong>Invoice</strong></td>
+<td>Tagihan atas transaksi (register domain, renew, top-up wallet)</td>
+</tr>
+<tr>
+<td><strong>On-behalf-of (OBO)</strong></td>
+<td>Reseller/Agent trigger transaksi untuk klien — domain jadi milik klien, tapi dibayar reseller</td>
+</tr>
+<tr>
+<td><strong>Assignment</strong></td>
+<td>Relasi Reseller ↔ Client atau Agent ↔ Client — kontrol siapa yang boleh manage siapa</td>
+</tr>
+</tbody>
+</table>
+<h2 id="alur-umum-pembelian-domain-buat-situs">Alur Umum Pembelian Domain + Buat Situs</h2>
+<p>Berlaku untuk semua role (client self-service, atau reseller/agent OBO):</p>
+<pre><code>1. Cari domain di wizard &quot;Beli Domain + Buat Situs&quot;
+   └─► Cek availability + harga per TLD (retail/wholesale sesuai role)
+
+2. Konfirmasi: pilih tahun registrasi, metode bayar, promo (opsional)
+   └─► Sistem buat invoice → charge via payment gateway atau wallet
+
+3. Setelah bayar (webhook / wallet debit sync):
+   ├─► Sistem daftarkan domain ke registrar (via EPP direct)
+   ├─► Auto-attach ke Cloudflare (create zone + DNS records)
+   └─► Push nameserver Cloudflare ke registry
+
+4. Pilih template → sistem create Situs baru attached ke domain
+
+5. Buka editor → edit konten → Publikasikan → domain live
+</code></pre>
+<p>Total waktu dari klik "Beli" sampai domain aktif: <strong>1-5 menit</strong> (tergantung
+antrian registrar).</p>
+<h2 id="cara-login">Cara Login</h2>
+<p>Semua role login lewat URL yang sama, di-routing otomatis ke dashboard yang
+tepat berdasarkan role akun.</p>
+<ol>
+<li>Buka <code>https://umkm.pandi.id/login</code></li>
+<li>Masukkan email + password</li>
+<li>Kalau lupa password: klik "Lupa Password" → email reset link</li>
+<li>Setelah login, dashboard yang muncul tergantung role:</li>
+<li>Admin → <code>/admin</code></li>
+<li>Reseller → <code>/reseller/dashboard</code></li>
+<li>Agent → <code>/agent/dashboard</code></li>
+<li>Client → <code>/dashboard</code></li>
+</ol>
+<h2 id="kontak-support">Kontak Support</h2>
+<p>Kalau ada masalah teknis yang tidak bisa diselesaikan sendiri, hubungi:</p>
+<ul>
+<li><strong>Email</strong>: (isi sesuai config admin di <code>/admin/settings</code>)</li>
+<li><strong>Telegram/WhatsApp</strong>: (isi sesuai policy operator)</li>
+</ul>
+<p>Panduan ini terdiri dari 5 bab per role/fitur — baca bab yang sesuai dengan
+peran Anda:</p>
+<ul>
+<li><strong>Bab 1</strong>: Panduan Client (regular user)</li>
+<li><strong>Bab 2</strong>: Panduan Agent</li>
+<li><strong>Bab 3</strong>: Panduan Reseller</li>
+<li><strong>Bab 4</strong>: Panduan Admin</li>
+</ul>
+<hr />
+<p><em>Panduan ini di-generate dari Web Builder v1 — kalau ada fitur baru yang
+tidak tercantum, cek changelog atau hubungi admin.</em></p><h1 id="bab-2-panduan-agent">Bab 2 — Panduan Agent</h1>
+<!-- CATATAN EDITOR (hapus setelah beres):
+     Screenshot alur klien di 2.4 sudah di-capture ulang 31 Okt 2026 dan sesuai
+     UI terkini. Yang MASIH usang (19 Agustus 2026, sebelum UI dirombak):
+       - agent-clients-list.png  → tidak punya kolom Domain / tombol aksi,
+                                   bertentangan dengan tabel kolom di 2.3.
+                                   Rujukannya sementara dilepas dari dokumen.
+       - agent-dashboard.png     → perlu dicek ulang.
+     Capture ulang: cd docs/user-guide/capture-screenshots && npm run capture:agent
+     (butuh stack jalan + akun agent test berisi minimal 1 klien). -->
+
+<p>Agent adalah freelancer atau staff dari Reseller yang membantu klien setup
+situs. Semua transaksi Agent otomatis di-debit dari <strong>wallet Reseller induk</strong>,
+bukan wallet pribadi.</p>
+<h2 id="21-cara-jadi-agent">2.1 Cara Jadi Agent</h2>
+<p>Anda tidak bisa daftar Agent sendiri. Reseller induk akan <strong>kirim invitation
+email</strong>:</p>
+<ol>
+<li>Buka email dari Reseller — subject "Undangan Agent di [Nama Reseller]"</li>
+<li>Klik link → halaman <code>Terima Undangan</code></li>
+<li>Set password Anda (email sudah pre-filled dari invitation)</li>
+<li>Auto-login ke <code>/agent/dashboard</code></li>
+</ol>
+<h2 id="22-dashboard-agent">2.2 Dashboard Agent</h2>
+<p><img alt="Dashboard Agent" src="screenshots/agent-dashboard.png" /></p>
+<h3 id="alur-kerja-agent">Alur Kerja Agent</h3>
+<pre><code>      ┌─────────┐
+      │ Reseller│
+      └────┬────┘
+           │ invite
+           ▼
+      ┌─────────┐
+      │  Anda   │  ◄── Login sebagai Agent
+      │  Agent  │
+      └────┬────┘
+           │ manage
+           ▼
+      ┌─────────┐        ┌─────────┐
+      │  Klien  │───────►│ Domain  │
+      │(assigned│        │ Situs   │
+      │ ke Anda)│        │(dibeli  │
+      └─────────┘        │ atas    │
+                         │ nama    │
+                         │ klien)  │
+                         └─────────┘
+                              ▲
+                              │ debit
+                              │
+                         ┌──────────┐
+                         │ Wallet   │
+                         │ Reseller │
+                         │  (induk) │
+                         └──────────┘
+</code></pre>
+<p><code>/agent/dashboard</code> — overview aktivitas Anda:</p>
+<ul>
+<li><strong>Klien saya</strong> — jumlah klien yang di-assign ke Anda (bisa &lt; total klien Reseller)</li>
+<li><strong>Domain aktif</strong> — total domain yang Anda register untuk klien</li>
+<li><strong>Pending jobs</strong> — domain yang lagi proses (belum active)</li>
+<li><strong>Wallet activity</strong> — riwayat transaksi Anda (di-debit dari wallet Reseller)</li>
+</ul>
+<h2 id="23-kelola-klien">2.3 Kelola Klien</h2>
+<p>Menu <strong>Klien</strong> — <code>/agent/clients</code>:</p>
+<h3 id="list-klien">List Klien</h3>
+<p>Menampilkan semua klien yang Anda daftarkan sendiri, ditambah klien yang
+di-assign ke Anda oleh Reseller induk. Perhatikan:</p>
+<ul>
+<li>Anda cuma lihat klien yang <strong>assignment aktif</strong> ke Anda</li>
+<li>Kalau Reseller cabut assignment, klien hilang dari list</li>
+<li>Reseller induk tetap bisa melihat semua klien yang Anda daftarkan</li>
+</ul>
+<p>Tiap baris menampilkan:</p>
+<table>
+<thead>
+<tr>
+<th>Kolom</th>
+<th>Arti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Status Akses</strong></td>
+<td><code>Setup</code> = baru didaftarkan · <code>Aktif</code> = sudah siap dikelola</td>
+</tr>
+<tr>
+<td><strong>Aktivasi</strong></td>
+<td><code>Belum accept</code> = undangan belum diterima, klien belum bisa login · <code>Email belum diverifikasi</code> = sudah bisa login, email saja yang belum dikonfirmasi · <code>Aktif</code> = beres</td>
+</tr>
+<tr>
+<td><strong>Domain</strong></td>
+<td>Jumlah domain aktif milik klien. Kosong (<code>—</code>) berarti belum punya</td>
+</tr>
+</tbody>
+</table>
+<h2 id="24-mendaftarkan-klien-baru">2.4 Mendaftarkan Klien Baru</h2>
+<p>Anda <strong>boleh mendaftarkan klien sendiri</strong> — tidak perlu menunggu Reseller.</p>
+<h3 id="langkah">Langkah</h3>
+<p><strong>1. Buka menu Klien, klik "Tambah Klien"</strong></p>
+<p>Tombolnya ada di kanan atas. Kalau Anda belum punya klien sama sekali, tombol
+yang sama juga muncul di tengah halaman.</p>
+<p><strong>2. Isi formulir</strong></p>
+<p><img alt="Formulir Tambah Klien" src="screenshots/agent-client-add.png" /></p>
+<p>Hanya <strong>Email</strong> dan <strong>Nama</strong> yang wajib. Sisanya boleh menyusul.</p>
+<table>
+<thead>
+<tr>
+<th>Bagian</th>
+<th>Isi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Email</strong></td>
+<td>Alamat email klien. Ke sinilah undangan dikirim</td>
+</tr>
+<tr>
+<td><strong>Nama</strong></td>
+<td>Nama klien (muncul di email undangan)</td>
+</tr>
+<tr>
+<td><strong>Nomor HP</strong></td>
+<td>Dipakai sebagai kontak domain</td>
+</tr>
+<tr>
+<td><strong>NIK (KTP)</strong></td>
+<td>16 digit. <strong>Wajib untuk domain <code>.id</code></strong> per regulasi Kemenkominfo. Untuk TLD lain boleh kosong</td>
+</tr>
+<tr>
+<td><strong>Alamat, Provinsi, Kota, Kode Pos</strong></td>
+<td>Alamat klien untuk data WHOIS</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Provinsi dan Kota berupa pilihan, bukan ketikan.</strong> Pilih Provinsi dulu,
+daftar Kota akan menyesuaikan. Ini mencegah salah ketik yang membuat
+pendaftaran domain ditolak registry.</p>
+<p><strong>Negara terkunci di Indonesia.</strong> Platform ini melayani domain <code>.id</code> yang
+mensyaratkan kontak Indonesia.</p>
+</blockquote>
+<p><strong>3. Klik "Tambah Klien"</strong></p>
+<p>Yang terjadi berikutnya <strong>tergantung apakah emailnya sudah terdaftar</strong>:</p>
+<h4 id="kalau-email-belum-pernah-terdaftar">Kalau email belum pernah terdaftar</h4>
+<ul>
+<li>Akun klien dibuat</li>
+<li>Klien menerima <strong>email undangan</strong> berisi tautan untuk mengatur password</li>
+<li>Di daftar, Aktivasi klien tertulis <strong>"Belum accept"</strong> sampai mereka mengklik
+  tautan itu</li>
+</ul>
+<h4 id="kalau-email-sudah-punya-akun">Kalau email sudah punya akun</h4>
+<p>Ini sering terjadi — misalnya klien pernah mendaftar sendiri sebelumnya.</p>
+<ul>
+<li>Akun lama <strong>dipakai</strong>, tidak dibuat akun baru</li>
+<li><strong>Password klien tidak berubah.</strong> Mereka login seperti biasa, dan tidak ada
+  undangan set-password yang dikirim</li>
+<li>Data yang Anda isi <strong>menimpa</strong> profil lama mereka; kolom yang Anda
+  <strong>kosongkan</strong> tidak mengubah apa pun</li>
+<li>Klien menerima email pemberitahuan bahwa akun mereka kini Anda kelola</li>
+<li>Situs dan domain yang sudah mereka miliki <strong>tetap utuh</strong></li>
+</ul>
+<h3 id="kirim-ulang-undangan">Kirim Ulang Undangan</h3>
+<p>Kalau klien bilang emailnya tidak masuk:</p>
+<p><img alt="Menu aksi per klien" src="screenshots/agent-client-retry-invitation.png" /></p>
+<ol>
+<li>Di daftar klien, klik tombol <strong>⋯</strong> di baris klien tersebut</li>
+<li>Pilih <strong>Kirim ulang undangan</strong></li>
+</ol>
+<p>Undangan lama otomatis digantikan yang baru, berlaku 7 hari.</p>
+<blockquote>
+<p>Menu ini <strong>hanya muncul</strong> untuk klien berstatus "Belum accept". Klien yang
+sudah bisa login tidak punya undangan untuk diterima — kalau mereka lupa
+password, arahkan ke <strong>Lupa password</strong> di halaman login.</p>
+</blockquote>
+<h3 id="melepas-klien">Melepas Klien</h3>
+<ol>
+<li>Klik <strong>⋯</strong> → <strong>Lepas dari daftar</strong></li>
+<li>Konfirmasi di kotak dialog</li>
+</ol>
+<p>Yang terjadi:</p>
+<ul>
+<li>Klien hilang dari daftar Anda, dan Anda berhenti bisa mengelola domain atau
+  situs atas nama mereka</li>
+<li><strong>Akun, situs, dan domain milik klien tidak dihapus</strong> — mereka tetap login
+  seperti biasa</li>
+<li>Anda bisa menambahkannya lagi nanti dengan email yang sama</li>
+</ul>
+<h3 id="kalau-gagal">Kalau Gagal</h3>
+<table>
+<thead>
+<tr>
+<th>Pesan</th>
+<th>Artinya</th>
+<th>Yang harus dilakukan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email sudah terdaftar sebagai reseller</code> (atau <code>agent</code>/<code>admin</code>)</td>
+<td>Email itu dipakai akun dengan peran lain</td>
+<td>Pakai email berbeda, atau minta orangnya memakai akun pribadi terpisah</td>
+</tr>
+<tr>
+<td><code>email sudah dikelola oleh manager lain</code></td>
+<td>Klien sudah jadi asuhan Agent/Reseller lain</td>
+<td>Satu klien hanya boleh punya satu pengelola. Koordinasi dengan Reseller induk</td>
+</tr>
+<tr>
+<td><code>client ini sudah di-assign ke Anda</code></td>
+<td>Klien tersebut sudah ada di daftar Anda</td>
+<td>Cek daftar, mungkin terhalang filter pencarian</td>
+</tr>
+</tbody>
+</table>
+<h3 id="detail-klien">Detail Klien</h3>
+<p><img alt="Detail Klien" src="screenshots/agent-client-detail.png" /></p>
+<p>Klik nama klien (atau <strong>⋯ → Lihat detail</strong>) → halaman <code>/agent/clients/&lt;id&gt;</code>:</p>
+<ul>
+<li><strong>Info klien</strong>: nama, email, telepon, alamat</li>
+<li><strong>Domain</strong>: list domain yang klien punya (self + yang Anda belikan)</li>
+<li><strong>Situs</strong>: list situs klien + link ke editor</li>
+<li><strong>Invoice</strong>: riwayat transaksi klien</li>
+<li><strong>Aksi</strong>:</li>
+<li><strong>Beli Domain untuk klien</strong> — trigger wizard OBO</li>
+<li><strong>Edit profil klien</strong> (nama, alamat, NIK)</li>
+</ul>
+<h3 id="edit-profil-klien">Edit Profil Klien</h3>
+<p>Karena Anda "care of" klien, Anda boleh update profil mereka untuk kelengkapan
+WHOIS:</p>
+<ol>
+<li>Klik <strong>Edit Profil</strong> di halaman detail klien</li>
+<li>Update field yang kurang (mis. NIK untuk domain <code>.id</code>)</li>
+<li>Simpan</li>
+</ol>
+<p>Klien tetap bisa update sendiri kapan pun via login mereka.</p>
+<h2 id="25-beli-domain-untuk-klien-on-behalf-of">2.5 Beli Domain untuk Klien (On-Behalf-Of)</h2>
+<p><img alt="Wizard Beli Domain OBO" src="screenshots/agent-buy-domain-obo.png" /></p>
+<p>Flow inti Agent: beli domain untuk klien pakai wallet Reseller induk.</p>
+<h3 id="langkah_1">Langkah</h3>
+<ol>
+<li>Halaman detail klien → klik <strong>Beli Domain</strong></li>
+<li>Redirect ke wizard <code>/sites/new-with-domain?for_client=&lt;uuid&gt;</code></li>
+<li>Header wizard menampilkan <strong>"Untuk klien: [nama klien]"</strong> — konfirmasi Anda benar</li>
+<li>Isi wizard seperti biasa:</li>
+<li>Cari domain</li>
+<li>Konfirmasi (pakai profil <strong>klien</strong>, bukan Anda)</li>
+<li>Upload dokumen klien (kalau perlu)</li>
+<li><strong>Metode bayar: pilih Wallet</strong> — otomatis debit wallet Reseller induk</li>
+<li>Klik <strong>Beli &amp; Bayar</strong> → langsung <code>pending_provisioning</code> (instant, no gateway)</li>
+<li>Setelah domain active → pilih template → situs dibuat, <strong>owner = klien</strong></li>
+</ol>
+<h3 id="yang-otomatis-terjadi">Yang Otomatis Terjadi</h3>
+<ul>
+<li>Domain di-register atas nama klien (WHOIS contact = klien)</li>
+<li>Situs otomatis attach ke domain</li>
+<li>Anda otomatis di-add sebagai <strong>editor</strong> di situs klien (bisa edit tapi tidak hapus)</li>
+<li>Transaksi dicatat di ledger wallet Reseller dengan metadata <code>agent_id = Anda</code></li>
+<li>Reseller induk bisa lihat "berapa yang Anda pakai" di menu Wallet → Agents Breakdown</li>
+</ul>
+<h2 id="26-metode-bayar-wallet">2.6 Metode Bayar Wallet</h2>
+<p>Agent <strong>tidak punya wallet pribadi</strong>. Setiap "bayar" via Wallet =
+potong saldo wallet Reseller induk.</p>
+<h3 id="kalau-saldo-kurang">Kalau Saldo Kurang</h3>
+<p>Kalau wizard tampilkan "Saldo kurang" saat pilih Wallet:
+- Metode Wallet di-disable
+- Alternatif: pilih gateway (Midtrans/Paylabs) — bayar sendiri, nanti coordination dengan Reseller
+- Atau minta Reseller top-up dulu</p>
+<h3 id="lihat-aktivitas-anda">Lihat Aktivitas Anda</h3>
+<p>Menu <strong>Wallet Activity</strong> — list transaksi yang Anda trigger yang di-debit
+dari wallet Reseller induk. Include:
+- Domain register untuk klien X: <code>−Rp 250.000</code>
+- Domain renew untuk klien Y: <code>−Rp 200.000</code></p>
+<p>Anda <strong>tidak bisa</strong> top-up wallet — itu tugas Reseller.</p>
+<h2 id="27-manage-situs-klien">2.7 Manage Situs Klien</h2>
+<p>Setelah domain klien active + situs dibuat, Anda otomatis jadi editor:</p>
+<ol>
+<li>Menu <strong>Kolaborasi</strong> — list semua situs klien yang Anda edit</li>
+<li>Klik row → buka editor situs</li>
+<li>Edit blocks, tema, konten seperti owner (kecuali tidak bisa hapus situs)</li>
+</ol>
+<p>Klien juga bisa edit sendiri — kolaborasi real-time (dengan versi history).</p>
+<h2 id="28-statistik-pribadi">2.8 Statistik Pribadi</h2>
+<p>Menu <strong>Statistik</strong> — <code>/agent/stats</code>:</p>
+<ul>
+<li><strong>Total klien</strong> — yang di-assign ke Anda</li>
+<li><strong>Total domain register</strong> — yang Anda trigger</li>
+<li><strong>Total revenue</strong> — nilai transaksi yang Anda trigger (untuk komisi dari Reseller)</li>
+<li><strong>Breakdown per bulan</strong> — chart aktivitas</li>
+</ul>
+<h2 id="29-purchases-history">2.9 Purchases History</h2>
+<p>Menu <strong>Purchases</strong> — <code>/agent/purchases</code>:</p>
+<p>Semua register + renew yang Anda trigger, dengan info:
+- Nama klien
+- Nama domain
+- Tahun
+- Total
+- Status (active / pending / failed)
+- Timestamp</p>
+<p>Filter:
+- Status: all / active / pending / failed
+- Kind: register / renew</p>
+<p>Klik row → link ke halaman detail domain (kalau active) atau pending page
+(kalau masih proses).</p>
+<h2 id="210-team-domains">2.10 Team Domains</h2>
+<p>Menu <strong>Domain Klien</strong> — <code>/agent/domains</code>:</p>
+<p>Berbeda dari Purchases (yang transaction log), ini list <strong>per FQDN unik</strong> —
+1 baris per domain, current state:
+- Nama domain
+- Klien pemilik
+- Status
+- Expire date
+- Situs terkait (kalau ada)</p>
+<p>Cocok untuk monitor "domain klien mana yang mau expire" — filter
+<code>expires_at ≤ 30 hari</code>.</p>
+<h2 id="211-batasan-agent">2.11 Batasan Agent</h2>
+<p>Yang <strong>BISA</strong> Agent lakukan sendiri:</p>
+<ul>
+<li>✅ Mendaftarkan klien baru (lihat 2.4)</li>
+<li>✅ Kirim ulang undangan ke klien yang belum menerima</li>
+<li>✅ Melepas klien dari daftar Anda</li>
+<li>✅ Edit profil klien asuhan Anda</li>
+<li>✅ Beli domain untuk klien memakai wallet Reseller induk</li>
+</ul>
+<p>Yang <strong>TIDAK BISA</strong> (harus lewat Reseller induk):</p>
+<ul>
+<li>❌ Assign klien ke agent lain</li>
+<li>❌ Top-up wallet</li>
+<li>❌ Set harga jual</li>
+<li>❌ Menghapus akun klien — melepas klien hanya mencabut pengelolaan Anda,
+  akunnya tetap ada</li>
+<li>❌ Lihat aktivitas agent lain di tim Reseller</li>
+</ul>
+<p>Kalau butuh salah satu di atas, koordinasi dengan Reseller induk.</p>
+<h2 id="212-troubleshoot">2.12 Troubleshoot</h2>
+<p><strong>Klien saya hilang dari list</strong>
+- Reseller mungkin cabut assignment (revoke). Konfirmasi ke Reseller.
+- Atau Anda sendiri sempat memilih <strong>Lepas dari daftar</strong>. Daftarkan ulang
+  dengan email yang sama — akun dan situs klien tidak hilang.</p>
+<p><strong>Klien bilang tidak menerima email undangan</strong>
+- Minta cek folder spam dulu
+- Di daftar klien, klik <strong>⋯</strong> → <strong>Kirim ulang undangan</strong>
+- Kalau menu itu tidak ada, berarti klien <strong>sudah punya akses login</strong> dan
+  memang tidak butuh undangan. Arahkan ke <strong>Lupa password</strong> di halaman login.</p>
+<p><strong>Saya sudah isi alamat dan NIK klien, tapi di halaman detail masih data lama</strong>
+- Ini terjadi kalau email klien sudah terdaftar sebelumnya dan Anda
+  <strong>mengosongkan</strong> kolom tersebut saat menambahkan. Kolom kosong sengaja tidak
+  menimpa data klien.
+- Perbaiki lewat halaman detail klien → <strong>Edit Profil</strong>.</p>
+<p><strong>Beli domain gagal — saldo kurang</strong>
+- Cek wallet Reseller di dashboard (menu Wallet — untuk Agent view balance saja, tidak bisa top-up)
+- Kalau kurang, minta Reseller top-up dulu</p>
+<p><strong>Klien butuh edit domain tapi saya tidak lihat opsi Edit Contact</strong>
+- Fitur ini di-lock ke owner domain (klien) via halaman <code>/settings/domains/&lt;domain&gt;</code>
+- Klien harus login sendiri untuk update. Anda cuma bisa edit <strong>situs</strong>, tidak <strong>domain settings</strong>.</p>
+<p><strong>Situs klien tidak bisa saya edit walau saya sudah beli untuk mereka</strong>
+- Cek <code>/collaborations</code> — semua situs di mana Anda editor
+- Kalau tidak muncul, kemungkinan collaborator entry gagal di-create. Hubungi admin.</p>
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e5e7eb; font-size: 0.85em; color: #9ca3af; text-align: center;">
+  <p>Web Builder — Panduan Pengguna · Generated dari Markdown</p>
+  <p>Untuk update terbaru, cek folder <code>docs/user-guide/</code> di repository</p>
+</footer>
+
+</body>
+</html>

@@ -329,6 +329,31 @@ export const captures = {
       waitFor: 'main, table',
     },
     {
+      // Full-page add-client form (replaced the old dialog).
+      name: "agent-client-add",
+      path: "/agent/clients/new",
+      waitFor: 'main, form',
+    },
+    {
+      // Row menu holding "Kirim ulang undangan" + "Lepas dari daftar".
+      name: "agent-client-retry-invitation",
+      path: "/agent/clients",
+      waitFor: 'main, table',
+      action: async (page) => {
+        const btn = page.locator('table button[aria-label^="Aksi untuk"]').first();
+        if ((await btn.count()) > 0) {
+          await btn.click();
+          await page.waitForTimeout(600);
+        }
+      },
+    },
+    {
+      name: "agent-client-detail",
+      path: (ids) => `/agent/clients/${ids.clientId}`,
+      requiresClientId: true,
+      waitFor: 'main, h1',
+    },
+    {
       name: "agent-buy-domain-obo",
       path: (ids) => `/sites/new-with-domain?for_client=${ids.clientId}`,
       requiresClientId: true,

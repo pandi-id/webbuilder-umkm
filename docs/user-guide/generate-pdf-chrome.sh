@@ -3,7 +3,8 @@
 # TIDAK butuh pandoc/LaTeX install. Cuma butuh Chrome (Windows/macOS/Linux).
 #
 # Usage:
-#   ./generate-pdf-chrome.sh
+#   ./generate-pdf-chrome.sh              # semua role (gabungan)
+#   ./generate-pdf-chrome.sh agent        # 1 role saja: client|agent|reseller|admin
 #
 # Auto-detect browser di:
 #   macOS: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
@@ -14,6 +15,15 @@
 
 set -euo pipefail
 cd "$(dirname "$0")"
+
+ROLE="${1:-all}"
+if [ "$ROLE" = "all" ]; then
+  HTML="web-builder-guide.html"
+  PDF="web-builder-guide.pdf"
+else
+  HTML="panduan-$ROLE.html"
+  PDF="panduan-$ROLE.pdf"
+fi
 
 # ---------- Detect browser ----------
 BROWSER=""
@@ -43,14 +53,18 @@ fi
 echo "→ Browser: $BROWSER"
 
 # ---------- Regenerate HTML dulu ----------
-if [ ! -f web-builder-guide.html ] || \
-   [ 00-pengantar.md -nt web-builder-guide.html ] || \
-   [ 10-panduan-client.md -nt web-builder-guide.html ] || \
-   [ 20-panduan-agent.md -nt web-builder-guide.html ] || \
-   [ 30-panduan-reseller.md -nt web-builder-guide.html ] || \
-   [ 40-panduan-admin.md -nt web-builder-guide.html ]; then
+NEEDS_REGEN=0
+if [ ! -f "$HTML" ]; then
+  NEEDS_REGEN=1
+else
+  for md in *.md; do
+    [ "$md" -nt "$HTML" ] && NEEDS_REGEN=1 && break
+  done
+fi
+if [ "$NEEDS_REGEN" = "1" ]; then
   echo "→ Regenerate HTML dari markdown..."
-  ./generate-html.sh 2>&1 | grep -v "WARNING" | head -10
+  # No head/tail here: it used to truncate the list of missing screenshots.
+  ./generate-html.sh "$ROLE" 2>&1 | grep -v "WARNING"
 fi
 
 # ---------- Generate PDF ----------
@@ -60,18 +74,18 @@ echo "→ Convert HTML → PDF via Chrome headless..."
   --headless \
   --disable-gpu \
   --no-sandbox \
-  --print-to-pdf=web-builder-guide.pdf \
+  --print-to-pdf="$PDF" \
   --print-to-pdf-no-header \
-  "file://$(pwd)/web-builder-guide.html" 2>&1 | grep -v "DevTools" | grep -v "^\[" || true
+  "file://$(pwd)/$HTML" 2>&1 | grep -v "DevTools" | grep -v "^\[" || true
 
-if [ -f web-builder-guide.pdf ]; then
+if [ -f "$PDF" ]; then
   echo ""
-  echo "✓ Generated: $(pwd)/web-builder-guide.pdf"
-  echo "  Size: $(ls -lh web-builder-guide.pdf | awk '{print $5}')"
+  echo "✓ Generated: $(pwd)/$PDF"
+  echo "  Size: $(ls -lh "$PDF" | awk '{print $5}')"
   echo ""
   echo "→ Buka PDF:"
-  echo "     open web-builder-guide.pdf         (macOS)"
-  echo "     xdg-open web-builder-guide.pdf     (Linux)"
+  echo "     open $PDF         (macOS)"
+  echo "     xdg-open $PDF     (Linux)"
 else
   echo "❌ PDF gagal di-generate"
   exit 1

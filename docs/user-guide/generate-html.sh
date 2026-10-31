@@ -16,14 +16,56 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# ---------- Pilih bab ----------
+# Tanpa argumen = panduan gabungan (semua role). Dengan argumen = 1 role saja,
+# selalu plus pengantar supaya PDF-nya tetap bisa dibaca berdiri sendiri.
+ROLE="${1:-all}"
+case "$ROLE" in
+  all)
+    OUT="web-builder-guide.html"
+    SUBTITLE="Untuk Admin · Reseller · Agent · Client"
+    FILES=(
+      "00-pengantar.md"
+      "10-panduan-client.md"
+      "20-panduan-agent.md"
+      "30-panduan-reseller.md"
+      "40-panduan-admin.md"
+    )
+    ;;
+  client)
+    OUT="panduan-client.html"
+    SUBTITLE="Untuk Pemilik Toko (Client)"
+    FILES=("00-pengantar.md" "10-panduan-client.md")
+    ;;
+  agent)
+    OUT="panduan-agent.html"
+    SUBTITLE="Untuk Agent"
+    FILES=("00-pengantar.md" "20-panduan-agent.md")
+    ;;
+  reseller)
+    OUT="panduan-reseller.html"
+    SUBTITLE="Untuk Reseller"
+    FILES=("00-pengantar.md" "30-panduan-reseller.md")
+    ;;
+  admin)
+    OUT="panduan-admin.html"
+    SUBTITLE="Untuk Administrator"
+    FILES=("00-pengantar.md" "40-panduan-admin.md")
+    ;;
+  *)
+    echo "❌ Role tidak dikenal: $ROLE"
+    echo "   Pilihan: all (default) | client | agent | reseller | admin"
+    exit 1
+    ;;
+esac
+
 # ---------- Ensure Python markdown ----------
 if ! python3 -c "import markdown" 2>/dev/null; then
   echo "→ Install python markdown..."
   pip3 install markdown pygments 2>&1 | tail -2
 fi
 
-OUT="web-builder-guide.html"
-echo "→ Generate $OUT..."
+echo "→ Generate $OUT ($ROLE)..."
 
 # ---------- HTML head + CSS ----------
 cat > "$OUT" <<'HEAD_EOF'
@@ -274,33 +316,75 @@ cat > "$OUT" <<'HEAD_EOF'
 </style>
 </head>
 <body>
+HEAD_EOF
+
+# Cover is its own heredoc (unquoted) so the subtitle can vary per role.
+# Keep it free of $ and backticks beyond the substitution below.
+cat >> "$OUT" <<COVER_EOF
 
 <!-- Cover Page -->
 <div class="cover">
   <div class="badge">DOKUMENTASI PENGGUNA</div>
   <h1>Panduan Web Builder</h1>
-  <p class="subtitle">Untuk Admin · Reseller · Agent · Client</p>
+  <p class="subtitle">${SUBTITLE}</p>
   <div class="meta">
     Web Builder Platform · Versi 1.0
   </div>
 </div>
 
 <!-- Content -->
-HEAD_EOF
+COVER_EOF
 
 # ---------- Convert setiap markdown file ke HTML ----------
-FILES=(
-  "00-pengantar.md"
-  "10-panduan-client.md"
-  "20-panduan-agent.md"
-  "30-panduan-reseller.md"
-  "40-panduan-admin.md"
-)
-
 for f in "${FILES[@]}"; do
   echo "  · $f"
   python3 -m markdown -x fenced_code -x tables -x toc "$f" >> "$OUT"
 done
+
+# ---------- Screenshot yang belum ada → placeholder ----------
+# Markdown merender <img> apa adanya, jadi file yang belum di-capture muncul
+# sebagai ikon rusak di HTML/PDF. Ganti dengan kotak placeholder (CSS-nya
+# sudah ada) supaya pembaca tahu gambarnya memang belum tersedia.
+python3 - "$OUT" <<'PY_EOF'
+import os
+import re
+import sys
+
+path = sys.argv[1]
+base = os.path.dirname(os.path.abspath(path))
+with open(path, encoding="utf-8") as fh:
+    html = fh.read()
+
+missing = set()
+
+# python-markdown emits <img alt="..." src="..." />, but accept either order.
+IMG = re.compile(r'<img\s+[^>]*?/?>')
+ATTR = re.compile(r'(\w+)="([^"]*)"')
+
+
+def swap(match):
+    attrs = dict(ATTR.findall(match.group(0)))
+    src = attrs.get("src", "")
+    if not src or os.path.exists(os.path.join(base, src)):
+        return match.group(0)
+    missing.add(src)
+    alt = attrs.get("alt") or "Screenshot"
+    return (
+        '<div class="screenshot-placeholder">'
+        f"{alt}<br><small>(screenshot belum tersedia)</small>"
+        "</div>"
+    )
+
+
+html = IMG.sub(swap, html)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(html)
+
+if missing:
+    print(f"  ! {len(missing)} screenshot belum ada, dipasang placeholder:")
+    for src in sorted(missing):
+        print(f"      {src}")
+PY_EOF
 
 # ---------- Footer ----------
 cat >> "$OUT" <<'FOOT_EOF'
