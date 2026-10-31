@@ -260,6 +260,9 @@ func MountUser(app *fiber.App, deps Deps) {
 
 		// Reseller-only (invite agent + list agent + stats + pricing write).
 		authed.Post("/reseller/agents/invite", roleReseller, mutateLimit, deps.Reseller.InviteAgent)
+		// Exact-email lookup behind the invite dialog. Rate-limited like a
+		// mutation so it cannot be used to probe addresses in bulk.
+		authed.Get("/reseller/agents/lookup", roleReseller, mutateLimit, deps.Reseller.LookupAgentCandidate)
 		authed.Get("/reseller/agents", roleReseller, deps.Reseller.ListAgents)
 		authed.Get("/reseller/agents/:agent_id", roleReseller, deps.Reseller.GetAgent)
 		authed.Get("/reseller/agents/:agent_id/clients", roleReseller, deps.Reseller.ListAgentClients)

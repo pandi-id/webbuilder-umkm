@@ -34,11 +34,29 @@ func (h *Handler) GetInvitation(c *fiber.Ctx) error {
 	if businessName == "" {
 		businessName = inviter.Name
 	}
+
+	// An invite aimed at an existing account renders a plain "accept" screen
+	// instead of a signup form: that person already has a login and a name,
+	// and we must not ask them to set a password again.
+	existingUser, needsPassword := false, true
+	invitedName := ""
+	if inv.TargetUserID != nil {
+		if target, err := h.repo.GetByID(c.Context(), *inv.TargetUserID); err == nil {
+			hasLogin := target.PasswordHash != "" || target.OAuthGoogleSub != nil
+			existingUser = hasLogin
+			needsPassword = !hasLogin
+			invitedName = target.Name
+		}
+	}
+
 	return httpx.OK(c, fiber.Map{
-		"email":         inv.Email,
-		"invited_role":  inv.InvitedRole,
-		"inviter_name":  businessName,
-		"expires_at":    inv.ExpiresAt.UTC(),
+		"email":          inv.Email,
+		"invited_role":   inv.InvitedRole,
+		"inviter_name":   businessName,
+		"expires_at":     inv.ExpiresAt.UTC(),
+		"existing_user":  existingUser,
+		"needs_password": needsPassword,
+		"invited_name":   invitedName,
 	})
 }
 
@@ -61,16 +79,20 @@ func (h *Handler) AcceptInvitation(c *fiber.Ctx) error {
 		return httpx.BadRequest(c, "invalid json")
 	}
 	req.Name = strings.TrimSpace(req.Name)
-	if len(req.Password) < 8 {
-		return httpx.BadRequest(c, "password minimal 8 karakter")
-	}
-	if req.Name == "" {
-		return httpx.BadRequest(c, "nama wajib diisi")
-	}
 
-	hash, err := HashPassword(req.Password)
-	if err != nil {
-		return httpx.Internal(c, "hash error")
+	// Password is optional: an existing account being promoted keeps its own.
+	// Whether one is actually needed is settled inside the transaction, so a
+	// blank password here is not an error on its own.
+	var hash *string
+	if req.Password != "" {
+		if len(req.Password) < 8 {
+			return httpx.BadRequest(c, "password minimal 8 karakter")
+		}
+		h, err := HashPassword(req.Password)
+		if err != nil {
+			return httpx.Internal(c, "hash error")
+		}
+		hash = &h
 	}
 
 	userID, _, err := h.repo.AcceptInvitationTx(c.Context(), token, hash, req.Name)
@@ -80,6 +102,12 @@ func (h *Handler) AcceptInvitation(c *fiber.Ctx) error {
 		}
 		if errors.Is(err, ErrEmailTaken) {
 			return httpx.Conflict(c, "email sudah terdaftar")
+		}
+		if errors.Is(err, ErrPasswordRequired) {
+			return httpx.BadRequest(c, "password minimal 8 karakter")
+		}
+		if errors.Is(err, ErrNameRequired) {
+			return httpx.BadRequest(c, "nama wajib diisi")
 		}
 		return httpx.BadRequest(c, err.Error())
 	}

@@ -31,6 +31,12 @@ type InviteMeta = {
   invited_role: "agent" | "client";
   inviter_name: string;
   expires_at: string;
+  // True when the invite points at an account that can already log in: an
+  // existing user being promoted. They keep their password, so the form turns
+  // into a plain confirmation instead of a signup.
+  existing_user?: boolean;
+  needs_password?: boolean;
+  invited_name?: string;
 };
 
 export default function AcceptInvitePage({
@@ -70,17 +76,21 @@ export default function AcceptInvitePage({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!name.trim()) {
-      setErr("Nama wajib diisi");
-      return;
-    }
-    if (password.length < 8) {
-      setErr("Password minimal 8 karakter");
-      return;
-    }
-    if (password !== confirm) {
-      setErr("Konfirmasi password tidak cocok");
-      return;
+    // An existing account supplies its own name and password; we send neither.
+    const needsPassword = meta?.needs_password !== false;
+    if (needsPassword) {
+      if (!name.trim()) {
+        setErr("Nama wajib diisi");
+        return;
+      }
+      if (password.length < 8) {
+        setErr("Password minimal 8 karakter");
+        return;
+      }
+      if (password !== confirm) {
+        setErr("Konfirmasi password tidak cocok");
+        return;
+      }
     }
     setSubmitting(true);
     try {
@@ -89,12 +99,16 @@ export default function AcceptInvitePage({
         {
           method: "POST",
           auth: false,
-          body: JSON.stringify({ name: name.trim(), password }),
+          body: needsPassword
+            ? JSON.stringify({ name: name.trim(), password })
+            : JSON.stringify({ name: "", password: "" }),
         },
       );
       setTokens(res.access_token, res.refresh_token);
-      // Redirect berdasarkan role invitation.
-      if (meta?.invited_role === "agent") {
+      // A brand-new agent has nothing in the client dashboard yet, so drop
+      // them straight into their portal. A promoted user already owns sites —
+      // send them home, where the portal button sits in the header.
+      if (meta?.invited_role === "agent" && !meta.existing_user) {
         router.replace("/agent/dashboard");
       } else {
         router.replace("/dashboard");
@@ -149,6 +163,7 @@ export default function AcceptInvitePage({
 
   const roleLabel = meta.invited_role === "agent" ? "Agent" : "Klien";
   const expiresLabel = formatExpiry(meta.expires_at);
+  const needsPassword = meta.needs_password !== false;
 
   return (
     <Shell>
@@ -168,6 +183,21 @@ export default function AcceptInvitePage({
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
+        {!needsPassword && (
+          <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+            <p className="font-medium">
+              Anda sudah punya akun{meta.invited_name ? ` sebagai ${meta.invited_name}` : ""}.
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Password Anda tidak berubah. Setelah menerima undangan ini, akun Anda menjadi{" "}
+              {roleLabel.toLowerCase()} dari {meta.inviter_name} — semua situs dan domain yang
+              sudah Anda miliki tetap bisa dikelola seperti biasa.
+            </p>
+          </div>
+        )}
+
+        {needsPassword && (
+          <>
         <div className="space-y-1.5">
           <Label htmlFor="name">Nama lengkap</Label>
           <Input
@@ -217,6 +247,8 @@ export default function AcceptInvitePage({
             required
           />
         </div>
+          </>
+        )}
 
         {err && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
@@ -229,12 +261,12 @@ export default function AcceptInvitePage({
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Mengaktifkan akun…
+              {needsPassword ? "Mengaktifkan akun…" : "Memproses…"}
             </>
           ) : (
             <>
               <UserPlus className="size-4" />
-              Aktifkan Akun
+              {needsPassword ? "Aktifkan Akun" : "Terima Undangan"}
               <ArrowRight className="size-4" />
             </>
           )}

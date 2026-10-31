@@ -158,6 +158,28 @@ type inviteAgentReq struct {
 }
 
 // InviteAgent — POST /api/v1/reseller/agents/invite (reseller only).
+// agentInviteBlocker returns why `u` cannot be invited as this reseller's
+// agent, or "" when they can. Only plain clients are eligible: promoting a
+// reseller or admin would be a demotion, and an agent already belongs to
+// someone. Messages are user-facing (shown in the invite dialog).
+func agentInviteBlocker(u *auth.User, resellerID uuid.UUID) string {
+	switch u.Role {
+	case auth.RoleClient:
+		return ""
+	case auth.RoleAgent:
+		if u.ParentResellerID != nil && *u.ParentResellerID == resellerID {
+			return "user ini sudah menjadi agent Anda"
+		}
+		return "user ini sudah menjadi agent reseller lain"
+	case auth.RoleReseller:
+		return "user ini seorang reseller, tidak bisa dijadikan agent"
+	case auth.RoleAdmin:
+		return "user ini administrator, tidak bisa dijadikan agent"
+	default:
+		return "role user ini tidak bisa dijadikan agent"
+	}
+}
+
 func (h *Handler) InviteAgent(c *fiber.Ctx) error {
 	caller, err := h.resolveCaller(c)
 	if err != nil {
@@ -175,13 +197,24 @@ func (h *Handler) InviteAgent(c *fiber.Ctx) error {
 	if !strings.Contains(req.Email, "@") {
 		return httpx.BadRequest(c, "email tidak valid")
 	}
-	// Guard: email sudah pernah jadi user? Reject supaya tidak konflik role.
-	if existing, _ := h.authRepo.GetByEmail(c.Context(), req.Email); existing != nil {
-		return httpx.Conflict(c, "email sudah terdaftar sebagai user")
+	// An existing account can be promoted to agent — that is the common case,
+	// since agents usually start out as ordinary users. Attaching them to a
+	// target_user_id keeps the sites and domains they already own.
+	existing, _ := h.authRepo.GetByEmail(c.Context(), req.Email)
+	var targetUserID *uuid.UUID
+	if existing != nil {
+		if reason := agentInviteBlocker(existing, caller.User.ID); reason != "" {
+			return httpx.Conflict(c, reason)
+		}
+		if assigned, _ := h.repo.FindActiveAssignmentByClient(c.Context(), existing.ID); assigned != nil &&
+			assigned.ManagerID != caller.User.ID {
+			return httpx.Conflict(c, "user ini sedang dikelola manager lain")
+		}
+		targetUserID = &existing.ID
 	}
 
 	raw, _, err := h.authRepo.CreateInvitation(
-		c.Context(), req.Email, auth.RoleAgent, caller.User.ID, nil, 7*24*time.Hour,
+		c.Context(), req.Email, auth.RoleAgent, caller.User.ID, targetUserID, 7*24*time.Hour,
 	)
 	if err != nil {
 		return httpx.Internal(c, "create invitation failed")
@@ -197,6 +230,46 @@ func (h *Handler) InviteAgent(c *fiber.Ctx) error {
 		"email":       req.Email,
 		"invite_sent": true,
 		"expires_in":  "7 hari",
+	})
+}
+
+// LookupAgentCandidate — GET /api/v1/reseller/agents/lookup?email= (reseller).
+//
+// Answers one question about one address the caller already typed in full:
+// can this person become my agent? Exact-match only and never a listing, so a
+// reseller cannot walk the platform's user base with it. The name is returned
+// so the dialog can confirm the right person before an email goes out.
+func (h *Handler) LookupAgentCandidate(c *fiber.Ctx) error {
+	caller, err := h.resolveCaller(c)
+	if err != nil {
+		return httpx.Forbidden(c, err.Error())
+	}
+	if !caller.IsReseller {
+		return httpx.Forbidden(c, "hanya reseller yang boleh invite agent")
+	}
+	email := strings.ToLower(strings.TrimSpace(c.Query("email")))
+	if !strings.Contains(email, "@") {
+		return httpx.BadRequest(c, "email tidak valid")
+	}
+
+	existing, _ := h.authRepo.GetByEmail(c.Context(), email)
+	if existing == nil {
+		// Not a user yet — the invite will create a fresh agent account.
+		return httpx.OK(c, fiber.Map{"found": false, "eligible": true})
+	}
+
+	reason := agentInviteBlocker(existing, caller.User.ID)
+	if reason == "" {
+		if assigned, _ := h.repo.FindActiveAssignmentByClient(c.Context(), existing.ID); assigned != nil &&
+			assigned.ManagerID != caller.User.ID {
+			reason = "user ini sedang dikelola manager lain"
+		}
+	}
+	return httpx.OK(c, fiber.Map{
+		"found":    true,
+		"name":     existing.Name,
+		"eligible": reason == "",
+		"reason":   reason,
 	})
 }
 

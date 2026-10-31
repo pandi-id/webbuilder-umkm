@@ -183,6 +183,25 @@ export async function openBlob(path: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Reseller — agent recruitment
+// ---------------------------------------------------------------------------
+
+// Answer to "can this exact address become my agent?". `found` false means the
+// invite will create a brand-new agent account instead of promoting one.
+export type AgentLookup = {
+  found: boolean;
+  name?: string;
+  eligible: boolean;
+  reason?: string;
+};
+
+export function lookupAgentCandidate(email: string): Promise<AgentLookup> {
+  return api<AgentLookup>(
+    `/api/v1/reseller/agents/lookup?email=${encodeURIComponent(email)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Product reviews — buyers rate a product on the storefront, the owner approves
 // ---------------------------------------------------------------------------
 

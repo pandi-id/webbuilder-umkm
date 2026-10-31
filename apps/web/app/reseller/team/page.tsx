@@ -8,7 +8,9 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  CheckCircle2,
   Clock,
+  Info,
   Loader2,
   Mail,
   MailPlus,
@@ -16,7 +18,8 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, lookupAgentCandidate, type AgentLookup } from "@/lib/api";
+import { useDebounced } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -194,6 +197,36 @@ export default function ResellerTeamPage() {
   );
 }
 
+// LookupHint turns the probe result into one line the reseller can act on.
+function LookupHint({ lookup }: { lookup: AgentLookup }) {
+  if (!lookup.eligible) {
+    return (
+      <p className="flex items-start gap-1.5 text-xs text-destructive">
+        <AlertCircle className="size-3.5 shrink-0 translate-y-px" />
+        <span>{lookup.reason || "Email ini tidak bisa dijadikan agent."}</span>
+      </p>
+    );
+  }
+  if (lookup.found) {
+    return (
+      <p className="flex items-start gap-1.5 text-xs text-emerald-700">
+        <CheckCircle2 className="size-3.5 shrink-0 translate-y-px" />
+        <span>
+          Akun ditemukan{lookup.name ? <strong> — {lookup.name}</strong> : null}. Setelah
+          undangan diterima, akun ini jadi agent Anda dan situs serta domain miliknya tetap
+          bisa dikelola seperti biasa.
+        </span>
+      </p>
+    );
+  }
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+      <Info className="size-3.5 shrink-0 translate-y-px" />
+      <span>Email ini belum terdaftar — akun agent baru akan dibuatkan.</span>
+    </p>
+  );
+}
+
 function InviteAgentDialog({
   open,
   onClose,
@@ -207,14 +240,41 @@ function InviteAgentDialog({
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [lookup, setLookup] = useState<AgentLookup | null>(null);
+  const [checking, setChecking] = useState(false);
+  const debouncedEmail = useDebounced(email, 400);
 
   useEffect(() => {
     if (!open) {
       setEmail("");
       setName("");
       setErr(null);
+      setLookup(null);
     }
   }, [open]);
+
+  // Exact-email probe so the reseller sees who they are about to invite — and
+  // why an address is refused — before an email goes out.
+  useEffect(() => {
+    const addr = debouncedEmail.toLowerCase().trim();
+    if (!open || !addr.includes("@")) {
+      setLookup(null);
+      return;
+    }
+    let cancelled = false;
+    setChecking(true);
+    lookupAgentCandidate(addr)
+      .then((r) => !cancelled && setLookup(r))
+      .catch(() => !cancelled && setLookup(null))
+      .finally(() => !cancelled && setChecking(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedEmail, open]);
+
+  // An existing account already has a name; only new accounts need one typed.
+  const isExisting = lookup?.found === true;
+  const nameRequired = !isExisting;
 
   async function submit() {
     setErr(null);
@@ -222,7 +282,7 @@ function InviteAgentDialog({
       setErr("Email tidak valid");
       return;
     }
-    if (!name.trim()) {
+    if (nameRequired && !name.trim()) {
       setErr("Nama wajib diisi");
       return;
     }
@@ -232,7 +292,11 @@ function InviteAgentDialog({
         method: "POST",
         body: JSON.stringify({ email: email.toLowerCase().trim(), name: name.trim() }),
       });
-      toast.success("Undangan terkirim");
+      toast.success(
+        isExisting
+          ? "Undangan terkirim — agent jadi aktif setelah menerimanya"
+          : "Undangan terkirim",
+      );
       onInvited();
     } catch (e) {
       setErr((e as Error).message);
@@ -247,8 +311,9 @@ function InviteAgentDialog({
         <DialogHeader>
           <DialogTitle>Undang Agent</DialogTitle>
           <DialogDescription>
-            Agent akan terima email invitation untuk set password + aktifkan
-            akun. Berlaku 7 hari.
+            Masukkan email calon agent. Kalau emailnya sudah punya akun, akun itu
+            yang dinaikkan jadi agent — situs dan domain miliknya tetap utuh.
+            Undangan berlaku 7 hari.
           </DialogDescription>
         </DialogHeader>
 
@@ -262,16 +327,29 @@ function InviteAgentDialog({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="freelancer@example.com"
             />
+            {checking && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" />
+                Memeriksa email…
+              </p>
+            )}
+            {!checking && lookup && <LookupHint lookup={lookup} />}
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="agent-name">Nama *</Label>
-            <Input
-              id="agent-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Budi Setiawan"
-            />
-          </div>
+
+          {nameRequired && (
+            <div className="space-y-1.5">
+              <Label htmlFor="agent-name">Nama *</Label>
+              <Input
+                id="agent-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Budi Setiawan"
+              />
+              <p className="text-xs text-muted-foreground">
+                Dipakai di email undangan. Agent bisa mengubahnya nanti.
+              </p>
+            </div>
+          )}
 
           {err && (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -284,7 +362,11 @@ function InviteAgentDialog({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Batal
           </Button>
-          <Button onClick={submit} disabled={saving} className="gap-1.5">
+          <Button
+            onClick={submit}
+            disabled={saving || checking || lookup?.eligible === false}
+            className="gap-1.5"
+          >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <MailPlus className="size-3.5" />}
             Kirim Undangan
           </Button>

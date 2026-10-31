@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -104,7 +105,20 @@ func (r *Repo) FindInvitationByToken(ctx context.Context, rawToken string) (*Inv
 // password + verify email + activate).
 //
 // Return user_id yang siap login.
-func (r *Repo) AcceptInvitationTx(ctx context.Context, rawToken, passwordHash, name string) (uuid.UUID, string, error) {
+// ErrPasswordRequired — the invite targets an account that has no way to log
+// in yet, so the accept request must carry a password.
+var ErrPasswordRequired = errors.New("password required")
+
+// ErrNameRequired — a brand-new account has no name to fall back on.
+var ErrNameRequired = errors.New("name required")
+
+// AcceptInvitationTx turns an invitation into a real account.
+//
+// `passwordHash` is optional: pass nil when the invitee already has a login
+// (an existing user being promoted to agent keeps their own password). The
+// decision is made inside the transaction, against the row, so a concurrent
+// password change cannot slip past the handler's earlier check.
+func (r *Repo) AcceptInvitationTx(ctx context.Context, rawToken string, passwordHash *string, name string) (uuid.UUID, string, error) {
 	hash := HashOpaqueToken(rawToken)
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -134,15 +148,47 @@ func (r *Repo) AcceptInvitationTx(ctx context.Context, rawToken, passwordHash, n
 	var userID uuid.UUID
 
 	if inv.TargetUserID != nil {
-		// Client invite path — user existing, set password + activate.
-		if _, err := tx.Exec(ctx, `
+		// Existing row. Either a client placeholder finishing signup, or a
+		// real account being promoted to agent.
+		var hasLogin bool
+		if err := tx.QueryRow(ctx,
+			`SELECT password_hash <> '' OR oauth_google_sub IS NOT NULL
+			   FROM users WHERE id = $1 FOR UPDATE`,
+			*inv.TargetUserID,
+		).Scan(&hasLogin); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return uuid.Nil, "", ErrNotFound
+			}
+			return uuid.Nil, "", err
+		}
+		// Only an account that cannot log in yet needs (and accepts) a
+		// password here — never overwrite a working one.
+		if !hasLogin && passwordHash == nil {
+			return uuid.Nil, "", ErrPasswordRequired
+		}
+		var newHash any
+		if !hasLogin {
+			newHash = *passwordHash
+		}
+
+		// Promotion to agent also moves the role and attaches the reseller.
+		roleExpr, parentExpr := "role", "parent_reseller_id"
+		args := []any{*inv.TargetUserID, newHash, strings.TrimSpace(name)}
+		if inv.InvitedRole == RoleAgent {
+			args = append(args, inv.InvitedBy)
+			roleExpr, parentExpr = "'agent'", fmt.Sprintf("$%d", len(args))
+		}
+
+		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 			UPDATE users
-			   SET password_hash    = $2,
-			       email_verified_at = COALESCE(email_verified_at, now()),
-			       name              = CASE WHEN name = '' THEN $3 ELSE name END,
-			       updated_at        = now()
+			   SET password_hash      = COALESCE($2, password_hash),
+			       role               = %s,
+			       parent_reseller_id = %s,
+			       email_verified_at  = COALESCE(email_verified_at, now()),
+			       name               = CASE WHEN name = '' THEN $3 ELSE name END,
+			       updated_at         = now()
 			 WHERE id = $1
-		`, *inv.TargetUserID, passwordHash, strings.TrimSpace(name)); err != nil {
+		`, roleExpr, parentExpr), args...); err != nil {
 			return uuid.Nil, "", err
 		}
 		userID = *inv.TargetUserID
@@ -151,11 +197,17 @@ func (r *Repo) AcceptInvitationTx(ctx context.Context, rawToken, passwordHash, n
 		if inv.InvitedRole != RoleAgent {
 			return uuid.Nil, "", errors.New("target_user_id kosong hanya boleh untuk agent invite")
 		}
+		if passwordHash == nil {
+			return uuid.Nil, "", ErrPasswordRequired
+		}
+		if strings.TrimSpace(name) == "" {
+			return uuid.Nil, "", ErrNameRequired
+		}
 		err = tx.QueryRow(ctx, `
 			INSERT INTO users (email, password_hash, name, role, parent_reseller_id, email_verified_at)
 			VALUES ($1, $2, $3, 'agent', $4, now())
 			RETURNING id
-		`, inv.Email, passwordHash, strings.TrimSpace(name), inv.InvitedBy).Scan(&userID)
+		`, inv.Email, *passwordHash, strings.TrimSpace(name), inv.InvitedBy).Scan(&userID)
 		if err != nil {
 			if pgErrCode(err) == "23505" {
 				return uuid.Nil, "", ErrEmailTaken

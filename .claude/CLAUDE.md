@@ -65,6 +65,16 @@ Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"
 Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
 agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
+**Promosi user lama jadi agent**: `POST /reseller/agents/invite` menerima email yang SUDAH terdaftar
+— invitation dibuat dengan `target_user_id` sehingga akun lamanya (beserta situs + domain) dinaikkan
+jadi agent, bukan bikin akun baru. Kelayakan dipusatkan di `reseller.agentInviteBlocker()`: hanya
+role `client` yang boleh; reseller/admin/agent-orang-lain ditolak, begitu juga klien yang sedang
+dikelola manager lain. Dialog undang memanggil `GET /reseller/agents/lookup?email=` (exact-match,
+rate-limited, bukan listing — jangan diubah jadi pencarian bebas, itu membocorkan basis user).
+Di `AcceptInvitationTx`, password **hanya** di-set kalau akun belum punya cara login sama sekali
+(`password_hash = '' AND oauth_google_sub IS NULL`) — hash kosong saja bukan penanda, user Google
+juga kosong. Password yang sudah ada tidak pernah ditimpa.
+
 **Next 16 `proxy.ts`**: `middleware.ts` sudah di-rename ke `proxy.ts` di kedua app Next. Isinya generate CSP nonce per request (tanpa `unsafe-inline`/`unsafe-eval` di `script-src`). Embed pihak ketiga baru (iframe/script) wajib ditambah ke CSP di sana. `Vary: Host` ditegakkan di Caddy, bukan di proxy.ts (Next 16 menimpanya).
 
 ## Konvensi API
