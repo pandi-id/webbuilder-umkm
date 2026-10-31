@@ -74,7 +74,12 @@ tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa ya
 gabungan owner + kolaborator (lewat `site_members`); dashboard memanggil `?role=owner` supaya
 reseller/agent dengan banyak klien tidak bingung mana toko sendiri. Situs klien tampil di
 `MyCollaborationsList` (`GET /collaborations`) yang membawa `site_status`, `hostname`
-(domain `verified` saja, via LATERAL) dan `updated_at`. `/settings/collaborators` memuat
+dan `updated_at`. **Hostname situs punya TIGA sumber** dengan presedensi yang
+dipakai `sites.GetByHost`: (1) `domain_purchases` `status='active' AND kind='register'` —
+ini yang terisi untuk domain yang dibeli lewat platform, (2) `domains` `status='verified'` —
+BYO legacy, praktis kosong, (3) `site_byo_domains` `status IN ('verified','drifting')`.
+Query baru yang cuma melihat `domains` akan melaporkan "belum ada domain" untuk SEMUA toko
+yang beli domain di sini — bug yang pernah terjadi. Pakai urutan yang sama, jangan satu tabel saja. `/settings/collaborators` memuat
 KEDUA arah — kolaborator di situs saya + situs yang saya kelola — karena client biasa yang
 diberi akses editor tidak punya portal sendiri. Catatan: `sites.GetOwned` sebenarnya mengecek
 keanggotaan `site_members` (bukan `sites.user_id`), jadi kolaborator memang boleh buka

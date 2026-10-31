@@ -246,12 +246,30 @@ func (r *Repo) ListCollaborationsForActors(ctx context.Context, actorIDs []uuid.
 		  FROM sites s
 		  JOIN site_members sm ON sm.site_id = s.id
 		  LEFT JOIN users ou ON ou.id = s.user_id
-		  -- Verified domain only; a pending one is not reachable yet. LATERAL
-		  -- keeps it to one row per site even with several hostnames.
+		  -- Resolve the live hostname the same way GetByHost resolves the
+		  -- reverse direction, and in the same order. Looking only at the
+		  -- legacy domains table reported "no domain" for every shop bought
+		  -- through the platform, because those land in domain_purchases.
 		  LEFT JOIN LATERAL (
-		       SELECT hostname FROM domains
-		        WHERE site_id = s.id AND status = 'verified'
-		        ORDER BY created_at ASC LIMIT 1
+		       SELECT hostname FROM (
+		           -- Priority 1: domain bought here and attached to this site.
+		           SELECT dp.domain AS hostname, 1 AS pri, dp.created_at
+		             FROM domain_purchases dp
+		            WHERE dp.site_id = s.id AND dp.status = 'active' AND dp.kind = 'register'
+		           UNION ALL
+		           -- Priority 2: legacy BYO domain verified by DNS A record.
+		           SELECT d2.hostname, 2, d2.created_at
+		             FROM domains d2
+		            WHERE d2.site_id = s.id AND d2.status = 'verified'
+		           UNION ALL
+		           -- Priority 3: BYO .id delegated to Cloudflare. Drifting still
+		           -- serves traffic until suspension, so it counts as live.
+		           SELECT b.hostname, 3, b.created_at
+		             FROM site_byo_domains b
+		            WHERE b.site_id = s.id AND b.status IN ('verified', 'drifting')
+		       ) x
+		       ORDER BY pri, created_at DESC
+		       LIMIT 1
 		  ) d ON true
 		 WHERE sm.user_id = ANY($1) AND sm.role <> 'owner'
 		 ORDER BY s.name ASC

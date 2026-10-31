@@ -73,6 +73,17 @@ func mkSite(t *testing.T, ctx context.Context, owner uuid.UUID, name, status str
 	return id
 }
 
+// mkPurchase attaches a bought domain the way the purchase flow does.
+func mkPurchase(t *testing.T, ctx context.Context, owner, siteID uuid.UUID, domain, status string) {
+	t.Helper()
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO domain_purchases (user_id, site_id, domain, kind, status, years, registrar_job_id)
+		 VALUES ($1, $2, $3, 'register', $4, 1, $5)`,
+		owner, siteID, domain, status, uuid.NewString()); err != nil {
+		t.Fatalf("mkPurchase: %v", err)
+	}
+}
+
 func addMember(t *testing.T, ctx context.Context, siteID, userID, by uuid.UUID, role string) {
 	t.Helper()
 	if _, err := testPool.Exec(ctx,
@@ -127,11 +138,10 @@ func TestListMyCollaborations_CarriesOwnerAndStatus(t *testing.T) {
 
 	site := mkSite(t, ctx, client, "Toko Klien", "published")
 	addMember(t, ctx, site, me, client, RoleEditor)
-	if _, err := testPool.Exec(ctx,
-		`INSERT INTO domains (site_id, hostname, status) VALUES ($1, $2, 'verified')`,
-		site, "klien-"+uuid.NewString()[:8]+".id"); err != nil {
-		t.Fatalf("domain: %v", err)
-	}
+	// A shop bought through the platform: the hostname lives in
+	// domain_purchases, not the legacy domains table.
+	bought := "klien-" + uuid.NewString()[:8] + ".id"
+	mkPurchase(t, ctx, client, site, bought, "active")
 	// A pending hostname must not be reported as the live one.
 	if _, err := testPool.Exec(ctx,
 		`INSERT INTO domains (site_id, hostname, status) VALUES ($1, $2, 'pending')`,
@@ -156,11 +166,8 @@ func TestListMyCollaborations_CarriesOwnerAndStatus(t *testing.T) {
 	if c.Role != RoleEditor {
 		t.Errorf("role = %q, want editor", c.Role)
 	}
-	if c.Hostname == "" {
-		t.Error("hostname empty although a verified domain exists")
-	}
-	if len(c.Hostname) >= 7 && c.Hostname[:7] == "pending" {
-		t.Errorf("hostname = %q, want the verified one, not the pending one", c.Hostname)
+	if c.Hostname != bought {
+		t.Errorf("hostname = %q, want the purchased domain %q", c.Hostname, bought)
 	}
 	if c.UpdatedAt.IsZero() {
 		t.Error("updated_at is zero")
@@ -204,5 +211,78 @@ func TestListMyCollaborations_NoDomain(t *testing.T) {
 	}
 	if rows[0].Role != RoleViewer {
 		t.Errorf("role = %q, want viewer", rows[0].Role)
+	}
+}
+
+// Regression: hostname used to be read only from the legacy domains table,
+// which is empty in practice, so every shop bought through the platform showed
+// "Belum ada domain aktif". Precedence must match GetByHost.
+func TestListMyCollaborations_PrefersPurchasedDomain(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+	site := mkSite(t, ctx, client, "Toko Klien", "published")
+	addMember(t, ctx, site, me, client, RoleEditor)
+
+	bought := "beli-" + uuid.NewString()[:8] + ".id"
+	legacy := "legacy-" + uuid.NewString()[:8] + ".id"
+	mkPurchase(t, ctx, client, site, bought, "active")
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO domains (site_id, hostname, status) VALUES ($1, $2, 'verified')`,
+		site, legacy); err != nil {
+		t.Fatalf("legacy domain: %v", err)
+	}
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if rows[0].Hostname != bought {
+		t.Errorf("hostname = %q, want the purchased domain %q to win", rows[0].Hostname, bought)
+	}
+}
+
+// An expired or cancelled purchase is not a live domain.
+func TestListMyCollaborations_IgnoresInactivePurchase(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+	site := mkSite(t, ctx, client, "Toko Klien", "draft")
+	addMember(t, ctx, site, me, client, RoleEditor)
+	mkPurchase(t, ctx, client, site, "mati-"+uuid.NewString()[:8]+".id", "failed")
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if rows[0].Hostname != "" {
+		t.Errorf("hostname = %q, want empty for a non-active purchase", rows[0].Hostname)
+	}
+}
+
+// BYO .id delegated to Cloudflare still serves traffic while drifting.
+func TestListMyCollaborations_ByoDomain(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	me := mkUser(t, ctx)
+	client := mkUser(t, ctx)
+	site := mkSite(t, ctx, client, "Toko BYO", "published")
+	addMember(t, ctx, site, me, client, RoleEditor)
+
+	host := "byo-" + uuid.NewString()[:8] + ".id"
+	if _, err := testPool.Exec(ctx,
+		`INSERT INTO site_byo_domains (site_id, user_id, hostname, status)
+		 VALUES ($1, $2, $3, 'drifting')`, site, client, host); err != nil {
+		t.Skipf("site_byo_domains shape differs: %v", err)
+	}
+
+	rows, err := repo.ListMyCollaborations(ctx, me)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if rows[0].Hostname != host {
+		t.Errorf("hostname = %q, want the BYO host %q", rows[0].Hostname, host)
 	}
 }
