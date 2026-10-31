@@ -75,6 +75,13 @@ Di `AcceptInvitationTx`, password **hanya** di-set kalau akun belum punya cara l
 (`password_hash = '' AND oauth_google_sub IS NULL`) — hash kosong saja bukan penanda, user Google
 juga kosong. Password yang sudah ada tidak pernah ditimpa.
 
+**Next 16 `params` di client component**: `params` adalah **Promise**, termasuk di komponen
+`"use client"`. Membacanya sebagai prop (`function Page({ params }: { params: { x: string } })`)
+menghasilkan `undefined` — dan `tsc` TIDAK menangkapnya karena validator Next memakai `& any`.
+Pakai `useParams<{ x: string }>()` di client, `await params` di server. Bug yang pernah terjadi:
+`/invite/[token]` fetch ke `/api/v1/invitations/undefined` → 404 → setiap undangan, sesegar apa pun,
+tampil "Undangan tidak berlaku".
+
 **Next 16 `proxy.ts`**: `middleware.ts` sudah di-rename ke `proxy.ts` di kedua app Next. Isinya generate CSP nonce per request (tanpa `unsafe-inline`/`unsafe-eval` di `script-src`). Embed pihak ketiga baru (iframe/script) wajib ditambah ke CSP di sana. `Vary: Host` ditegakkan di Caddy, bukan di proxy.ts (Next 16 menimpanya).
 
 ## Konvensi API

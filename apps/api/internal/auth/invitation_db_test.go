@@ -246,3 +246,40 @@ func TestAcceptInvitation_TokenIsSingleUse(t *testing.T) {
 		t.Error("second accept succeeded; the token must be single-use")
 	}
 }
+
+// The literal complaint behind the /invite page bug: a freshly sent invitation
+// must resolve immediately. This guards the backend half of that contract —
+// expiry window, hashing and the accepted/expired filters.
+func TestFindInvitationByToken_FreshInviteIsValid(t *testing.T) {
+	repo := invRepo(t)
+	ctx := context.Background()
+	reseller := makeReseller(t, ctx)
+	email := uniqEmail("segar")
+
+	raw, created, err := repo.CreateInvitation(ctx, email, RoleAgent, reseller, nil, 0)
+	if err != nil {
+		t.Fatalf("create invitation: %v", err)
+	}
+	// Default TTL must be in the future, not the past.
+	if !created.ExpiresAt.After(time.Now()) {
+		t.Fatalf("expires_at = %v is not in the future", created.ExpiresAt)
+	}
+
+	found, err := repo.FindInvitationByToken(ctx, raw)
+	if err != nil {
+		t.Fatalf("fresh invitation did not resolve: %v", err)
+	}
+	if found.ID != created.ID || found.Email != email {
+		t.Errorf("found %s/%s, want %s/%s", found.ID, found.Email, created.ID, email)
+	}
+
+	// A token that is not ours must stay a miss, not a lucky match.
+	if _, err := repo.FindInvitationByToken(ctx, "token-yang-salah"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("bogus token err = %v, want ErrNotFound", err)
+	}
+	// And the empty string must never resolve — that is what the broken page
+	// effectively sent ("undefined" in the URL).
+	if _, err := repo.FindInvitationByToken(ctx, ""); !errors.Is(err, ErrNotFound) {
+		t.Errorf("empty token err = %v, want ErrNotFound", err)
+	}
+}

@@ -8,7 +8,7 @@
 //   4. setTokens + redirect ke portal sesuai role
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -39,11 +39,11 @@ type InviteMeta = {
   invited_name?: string;
 };
 
-export default function AcceptInvitePage({
-  params,
-}: {
-  params: { token: string };
-}) {
+// `params` is a Promise in Next 16, so reading it as a prop yields undefined
+// and every invitation looks invalid. useParams() is the client-side reader,
+// and it is what the rest of the dashboard already uses.
+export default function AcceptInvitePage() {
+  const params = useParams<{ token: string }>();
   const router = useRouter();
   const [meta, setMeta] = useState<InviteMeta | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
