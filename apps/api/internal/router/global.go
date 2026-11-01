@@ -10,6 +10,7 @@ import (
 
 	"github.com/webbuilder/api/internal/assets"
 	"github.com/webbuilder/api/internal/metrics"
+	"github.com/webbuilder/api/internal/openapi"
 	"github.com/webbuilder/api/internal/public"
 )
 
@@ -21,6 +22,13 @@ import (
 func MountGlobal(app *fiber.App, deps Deps) {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"service": "web-builder-api"})
+	})
+
+	// OpenAPI spec — machine-readable contract for consumers + tooling.
+	// Covers the global and user tiers; admin routes are out of scope.
+	app.Get("/openapi.json", func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "application/json; charset=utf-8")
+		return c.Send(openapi.Spec)
 	})
 
 	// Health endpoints split for k8s-style probes:

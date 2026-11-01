@@ -128,6 +128,14 @@ tampil "Undangan tidak berlaku".
 
 ## Konvensi API
 
+**Spec OpenAPI**: [internal/openapi/spec.json](../apps/api/internal/openapi/spec.json) (3.1,
+`go:embed`, disajikan di `GET /openapi.json`). Mencakup tier **global + user**; `/api/v1/admin/*`
+sengaja di luar cakupan. Ditulis tangan — tapi `openapi_test.go` mem-parse `router/{global,user}.go`
+lalu membandingkannya dua arah: rute tanpa entri spec GAGAL, entri spec tanpa rute juga GAGAL.
+**Menambah endpoint = wajib menambah entri spec**, kalau tidak CI merah. Test juga menegakkan
+security per tier (JWT vs publik) dan header `Idempotency-Key` di endpoint yang memindahkan uang.
+
+
 - Endpoint hierarchy:
   - **Global** (tanpa auth): `/healthz`, `/public/*`, `/internal/caddy/ask`, `/uploads/*` (saat driver=local)
   - **User** (JWT): `/api/v1/*`
