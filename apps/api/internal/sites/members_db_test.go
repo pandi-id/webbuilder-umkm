@@ -5,11 +5,13 @@ package sites
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/webbuilder/api/internal/auth"
 	"github.com/webbuilder/api/internal/db"
 )
 
@@ -284,5 +286,126 @@ func TestListMyCollaborations_ByoDomain(t *testing.T) {
 	}
 	if rows[0].Hostname != host {
 		t.Errorf("hostname = %q, want the BYO host %q", rows[0].Hostname, host)
+	}
+}
+
+// ---- Invite collaborator ----
+
+// inviteBlocker decides who may be handed access to someone else's shop, and
+// both the lookup probe and the add endpoint read it — so it is tested on its
+// own rather than through two nearly identical HTTP paths.
+func TestInviteBlocker(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	owner := mkUser(t, ctx)
+	site := mkSite(t, ctx, owner, "Toko Saya", "draft")
+
+	stranger := mkUser(t, ctx)
+	editor := mkUser(t, ctx)
+	addMember(t, ctx, site, editor, owner, RoleEditor)
+
+	h := &Handler{repo: repo}
+
+	t.Run("unregistered email is refused", func(t *testing.T) {
+		if got := h.inviteBlocker(ctx, site, owner, nil); got == "" {
+			t.Error("nil user accepted; an unregistered address has no account to grant")
+		}
+	})
+	t.Run("stranger with an account is eligible", func(t *testing.T) {
+		if got := h.inviteBlocker(ctx, site, owner, &auth.User{ID: stranger}); got != "" {
+			t.Errorf("blocked with %q, want eligible", got)
+		}
+	})
+	t.Run("owner cannot invite themselves", func(t *testing.T) {
+		if got := h.inviteBlocker(ctx, site, owner, &auth.User{ID: owner}); got == "" {
+			t.Error("owner accepted as their own collaborator")
+		}
+	})
+	t.Run("existing member is refused", func(t *testing.T) {
+		got := h.inviteBlocker(ctx, site, owner, &auth.User{ID: editor})
+		if got == "" {
+			t.Error("already-a-member accepted again")
+		}
+		if !strings.Contains(got, RoleEditor) {
+			t.Errorf("reason %q should name the current role", got)
+		}
+	})
+}
+
+// owner is never a grantable role: handing it out would transfer the shop.
+func TestMemberRoleValid(t *testing.T) {
+	for role, want := range map[string]bool{
+		RoleEditor: true, RoleViewer: true,
+		RoleOwner: false, "": false, "admin": false,
+	} {
+		if got := memberRoleValid(role); got != want {
+			t.Errorf("memberRoleValid(%q) = %v, want %v", role, got, want)
+		}
+	}
+}
+
+// AddMember upserts, so an invite can also change an existing member's role —
+// but the handler blocks that path, and a role change must never silently
+// demote the owner.
+func TestAddMember_RejectsOwnerRoleAndUpserts(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	owner := mkUser(t, ctx)
+	site := mkSite(t, ctx, owner, "Toko", "draft")
+	collab := mkUser(t, ctx)
+
+	if err := repo.AddMember(ctx, site, collab, "bukan-role", &owner); err == nil {
+		t.Error("invalid role accepted")
+	}
+	if err := repo.AddMember(ctx, site, collab, RoleViewer, &owner); err != nil {
+		t.Fatalf("add viewer: %v", err)
+	}
+	if role, err := repo.HasAccess(ctx, site, collab); err != nil || role != RoleViewer {
+		t.Fatalf("role = %q, err = %v, want viewer", role, err)
+	}
+	// Re-adding upgrades in place rather than duplicating the row.
+	if err := repo.AddMember(ctx, site, collab, RoleEditor, &owner); err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	if role, _ := repo.HasAccess(ctx, site, collab); role != RoleEditor {
+		t.Errorf("role = %q after re-add, want editor", role)
+	}
+	members, err := repo.ListMembersForSite(ctx, site)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(members) != 2 { // owner + collaborator
+		t.Errorf("members = %d, want 2 (no duplicate row)", len(members))
+	}
+}
+
+// A granted collaborator must actually show up on the other side.
+func TestAddMember_AppearsInCollaborations(t *testing.T) {
+	repo := needsDB(t)
+	ctx := context.Background()
+	owner := mkUser(t, ctx)
+	collab := mkUser(t, ctx)
+	site := mkSite(t, ctx, owner, "Toko Kolab", "published")
+
+	if err := repo.AddMember(ctx, site, collab, RoleEditor, &owner); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	rows, err := repo.ListMyCollaborations(ctx, collab)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 || rows[0].SiteID != site {
+		t.Fatalf("collaborations = %+v, want the granted site", rows)
+	}
+	if rows[0].OwnerID != owner {
+		t.Errorf("owner_id = %s, want %s", rows[0].OwnerID, owner)
+	}
+	// And the owner sees them in the collaborator list.
+	owned, err := repo.ListCollaboratorsOwnedBy(ctx, owner)
+	if err != nil {
+		t.Fatalf("owned: %v", err)
+	}
+	if len(owned) == 0 {
+		t.Error("granted collaborator missing from the owner's list")
 	}
 }

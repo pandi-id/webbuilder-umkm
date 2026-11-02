@@ -6191,7 +6191,7 @@
         "tags": [
           "Sites"
         ],
-        "summary": "Tambah leave",
+        "summary": "Mundur dari situs orang lain",
         "operationId": "post_api_v1_sites_id_leave",
         "responses": {
           "200": {
@@ -6217,6 +6217,7 @@
             "$ref": "#/components/responses/NotFound"
           }
         },
+        "description": "Untuk kolaborator. Pemilik tidak bisa mundur dari situsnya sendiri.",
         "parameters": [
           {
             "name": "id",
@@ -6240,7 +6241,7 @@
         "tags": [
           "Sites"
         ],
-        "summary": "Daftar anggota situs",
+        "summary": "Daftar kolaborator situs",
         "operationId": "get_api_v1_sites_id_members",
         "responses": {
           "200": {
@@ -6248,7 +6249,43 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "user_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "editor",
+                              "viewer"
+                            ]
+                          },
+                          "added_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
                 }
               }
             }
@@ -6282,6 +6319,198 @@
             "bearerAuth": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Sites"
+        ],
+        "summary": "Beri akses kolaborator",
+        "operationId": "post_api_v1_sites_id_members",
+        "responses": {
+          "201": {
+            "description": "Akses diberikan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "editor",
+                            "viewer"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Hanya pemilik situs (bukan editor). Akun harus sudah terdaftar; akses langsung aktif tanpa perlu diterima, dan orangnya diberi tahu lewat email. Peran `owner` tidak bisa diberikan di sini — pemindahan kepemilikan operasi terpisah.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "editor",
+                      "viewer"
+                    ],
+                    "default": "editor"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sites/{id}/members/lookup": {
+      "get": {
+        "tags": [
+          "Sites"
+        ],
+        "summary": "Cek kelayakan calon kolaborator",
+        "operationId": "get_api_v1_sites_id_members_lookup",
+        "responses": {
+          "200": {
+            "description": "Sukses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "found": {
+                          "type": "boolean",
+                          "description": "Email punya akun."
+                        },
+                        "eligible": {
+                          "type": "boolean",
+                          "description": "Boleh ditambahkan."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Hanya kalau found."
+                        },
+                        "reason": {
+                          "type": "string",
+                          "description": "Hanya kalau tidak eligible."
+                        }
+                      },
+                      "required": [
+                        "found",
+                        "eligible"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Hanya pemilik situs. Cocok-persis satu alamat yang sudah diketik penuh — tidak pernah mengembalikan daftar, supaya pemilik situs tidak bisa menelusuri basis user.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/sites/{id}/members/{user_id}": {
@@ -6289,7 +6518,7 @@
         "tags": [
           "Sites"
         ],
-        "summary": "Hapus anggota situs",
+        "summary": "Cabut akses kolaborator",
         "operationId": "delete_api_v1_sites_id_members_user_id",
         "responses": {
           "200": {
@@ -6315,6 +6544,7 @@
             "$ref": "#/components/responses/NotFound"
           }
         },
+        "description": "Hanya pemilik. Owner tidak bisa dicabut lewat endpoint ini.",
         "parameters": [
           {
             "name": "id",

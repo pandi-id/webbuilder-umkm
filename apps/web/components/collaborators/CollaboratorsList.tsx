@@ -13,10 +13,12 @@ import {
   Mail,
   Trash2,
   Users,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { InviteMemberDialog } from "@/components/collaborators/InviteMemberDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -37,6 +39,7 @@ type SiteGroup = {
 
 export function CollaboratorsList() {
   const [groups, setGroups] = useState<SiteGroup[]>([]);
+  const [inviteFor, setInviteFor] = useState<SiteGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -104,8 +107,9 @@ export function CollaboratorsList() {
             <Users className="size-8 opacity-30" />
             <p className="text-sm font-medium">Belum ada kolaborator</p>
             <p className="max-w-md text-xs">
-              Kalau reseller / agent bantu Anda daftarkan domain + bikin situs,
-              mereka otomatis dapat akses editor sampai Anda cabut di sini.
+              Anda bisa mengundang rekan, staf, atau agen yang dipercaya lewat tab
+              <strong> Anggota</strong> di situs yang bersangkutan. Reseller / agent
+              yang membantu mendaftarkan domain juga otomatis mendapat akses editor.
             </p>
           </CardContent>
         </Card>
@@ -121,12 +125,23 @@ export function CollaboratorsList() {
                       <span className="font-mono">/{g.site_slug}</span>
                     </p>
                   </div>
-                  <Button size="sm" variant="ghost" asChild className="gap-1">
-                    <Link href={`/sites/${g.site_id}/members`}>
-                      Buka
-                      <ExternalLink className="size-3" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setInviteFor(g)}
+                      className="gap-1.5"
+                    >
+                      <UserPlus className="size-3.5" />
+                      Undang
+                    </Button>
+                    <Button size="sm" variant="ghost" asChild className="gap-1">
+                      <Link href={`/sites/${g.site_id}/members`}>
+                        Buka
+                        <ExternalLink className="size-3" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
                 <ul className="divide-y">
                   {g.members.map((m) => (
@@ -171,6 +186,18 @@ export function CollaboratorsList() {
             </Card>
           ))}
         </div>
+      )}
+
+      {inviteFor && (
+        <InviteMemberDialog
+          siteId={inviteFor.site_id}
+          open
+          onOpenChange={(o) => !o && setInviteFor(null)}
+          onAdded={() => {
+            setInviteFor(null);
+            refresh();
+          }}
+        />
       )}
     </div>
   );

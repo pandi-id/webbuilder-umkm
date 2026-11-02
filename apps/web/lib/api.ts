@@ -215,6 +215,33 @@ export function resendClientInvite(basePath: "/agent" | "/reseller", clientId: s
 }
 
 // ---------------------------------------------------------------------------
+// Site collaborators
+// ---------------------------------------------------------------------------
+
+export type SiteRole = "owner" | "editor" | "viewer";
+
+// Answer to "can this exact address be added to my site?".
+export type MemberLookup = {
+  found: boolean;
+  eligible: boolean;
+  name?: string;
+  reason?: string;
+};
+
+export function lookupMemberCandidate(siteId: string, email: string): Promise<MemberLookup> {
+  return api<MemberLookup>(
+    `/api/v1/sites/${siteId}/members/lookup?email=${encodeURIComponent(email)}`,
+  );
+}
+
+export function addSiteMember(siteId: string, email: string, role: "editor" | "viewer") {
+  return api<{ user_id: string; email: string; name: string; role: SiteRole }>(
+    `/api/v1/sites/${siteId}/members`,
+    { method: "POST", body: JSON.stringify({ email, role }) },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Reseller — agent recruitment
 // ---------------------------------------------------------------------------
 

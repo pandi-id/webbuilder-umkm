@@ -43,7 +43,28 @@ type Handler struct {
 	purger       CachePurger       // nil = purge no-op
 	assetCleaner AssetCleaner      // nil = skip storage cleanup (dev tanpa storage)
 	teamScope    TeamScopeResolver // nil = collaborations scoped ke caller saja
+	directory    UserDirectory     // nil = invite collaborator disabled
+	notifier     MemberNotifier    // nil = no email, invite still works
 }
+
+// UserDirectory resolves an invitee from an address the owner typed in full.
+// Exact match only: a search would let any site owner walk the user base.
+type UserDirectory interface {
+	GetByEmail(ctx context.Context, email string) (*auth.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*auth.User, error)
+}
+
+// MemberNotifier tells someone they were given access to a site. Best-effort —
+// a mail failure must not undo the grant.
+type MemberNotifier interface {
+	NotifySiteAccessGranted(ctx context.Context, to, toName, siteName, ownerName, role string)
+}
+
+// SetDirectory injects the user lookup used by the invite-collaborator flow.
+func (h *Handler) SetDirectory(d UserDirectory) { h.directory = d }
+
+// SetMemberNotifier injects the "you got access" mail sender.
+func (h *Handler) SetMemberNotifier(n MemberNotifier) { h.notifier = n }
 
 func NewHandler(r *Repo) *Handler { return &Handler{repo: r} }
 
@@ -367,6 +388,132 @@ func (h *Handler) ListMembers(c *fiber.Ctx) error {
 	return httpx.OK(c, out)
 }
 
+// memberRoleValid rejects "owner": ownership transfer is a different
+// operation with different consequences, not a role you hand out.
+func memberRoleValid(role string) bool {
+	return role == RoleEditor || role == RoleViewer
+}
+
+// inviteBlocker returns why this account cannot be added to the site, or ""
+// when it can. Shared by the lookup probe and the add endpoint so the dialog
+// and the submit path can never disagree.
+func (h *Handler) inviteBlocker(ctx context.Context, siteID, ownerID uuid.UUID, u *auth.User) string {
+	if u == nil {
+		return "email ini belum terdaftar — minta mereka daftar dulu, lalu undang kembali"
+	}
+	if u.ID == ownerID {
+		return "ini akun Anda sendiri — pemilik sudah punya akses penuh"
+	}
+	if role, err := h.repo.HasAccess(ctx, siteID, u.ID); err == nil {
+		if role == RoleOwner {
+			return "akun ini pemilik situs"
+		}
+		return "akun ini sudah menjadi " + role + " di situs ini"
+	}
+	return ""
+}
+
+// LookupMemberCandidate — GET /api/v1/sites/:id/members/lookup?email=
+// Answers one question about one address the owner already typed in full.
+func (h *Handler) LookupMemberCandidate(c *fiber.Ctx) error {
+	uid := auth.UserIDFrom(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid id")
+	}
+	if _, err := h.repo.GetStrictlyOwned(c.Context(), id, uid); err != nil {
+		return httpx.NotFound(c, "site not found")
+	}
+	if h.directory == nil {
+		return httpx.Err(c, fiber.StatusServiceUnavailable, "directory_unavailable",
+			"Fitur undang kolaborator belum aktif.")
+	}
+	email := strings.ToLower(strings.TrimSpace(c.Query("email")))
+	if !strings.Contains(email, "@") {
+		return httpx.BadRequest(c, "email tidak valid")
+	}
+
+	u, _ := h.directory.GetByEmail(c.Context(), email)
+	reason := h.inviteBlocker(c.Context(), id, uid, u)
+	out := fiber.Map{"found": u != nil, "eligible": reason == ""}
+	if reason != "" {
+		out["reason"] = reason
+	}
+	if u != nil {
+		out["name"] = u.Name
+	}
+	return httpx.OK(c, out)
+}
+
+type addMemberReq struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+// AddMember — POST /api/v1/sites/:id/members
+// Owner-only. Grants an existing account editor or viewer access to this site.
+func (h *Handler) AddMember(c *fiber.Ctx) error {
+	uid := auth.UserIDFrom(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid id")
+	}
+	// Strict owner: an editor must not be able to add more editors.
+	site, err := h.repo.GetStrictlyOwned(c.Context(), id, uid)
+	if err != nil {
+		return httpx.NotFound(c, "site not found")
+	}
+	if h.directory == nil {
+		return httpx.Err(c, fiber.StatusServiceUnavailable, "directory_unavailable",
+			"Fitur undang kolaborator belum aktif.")
+	}
+
+	var req addMemberReq
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.BadRequest(c, "invalid json")
+	}
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	if req.Role == "" {
+		req.Role = RoleEditor
+	}
+	if !strings.Contains(req.Email, "@") {
+		return httpx.BadRequest(c, "email tidak valid")
+	}
+	if !memberRoleValid(req.Role) {
+		return httpx.BadRequest(c, "role harus 'editor' atau 'viewer'")
+	}
+
+	u, _ := h.directory.GetByEmail(c.Context(), req.Email)
+	if reason := h.inviteBlocker(c.Context(), id, uid, u); reason != "" {
+		if u == nil {
+			return httpx.NotFound(c, reason)
+		}
+		return httpx.Conflict(c, reason)
+	}
+
+	if err := h.repo.AddMember(c.Context(), id, u.ID, req.Role, &uid); err != nil {
+		return httpx.Internal(c, "add member failed")
+	}
+
+	// Being handed access to someone else's shop is worth an email, but the
+	// grant already happened — never fail the request on a mail hiccup.
+	if h.notifier != nil {
+		ownerName := ""
+		if owner, err := h.directory.GetByID(c.Context(), uid); err == nil && owner != nil {
+			ownerName = owner.Name
+		}
+		go h.notifier.NotifySiteAccessGranted(
+			context.Background(), u.Email, u.Name, site.Name, ownerName, req.Role)
+	}
+
+	return httpx.Created(c, fiber.Map{
+		"user_id": u.ID.String(),
+		"email":   u.Email,
+		"name":    u.Name,
+		"role":    req.Role,
+	})
+}
+
 // RemoveMember — DELETE /api/v1/sites/:id/members/:user_id
 // Hanya owner (strict) yang boleh remove collaborator. Owner tidak bisa
 // di-remove via endpoint ini — perlu transfer ownership dulu.
@@ -434,10 +581,10 @@ func (h *Handler) ListMyCollaborators(c *fiber.Ctx) error {
 		AddedAt string `json:"added_at"`
 	}
 	type siteGroup struct {
-		SiteID     string      `json:"site_id"`
-		SiteName   string      `json:"site_name"`
-		SiteSlug   string      `json:"site_slug"`
-		Members    []collabRow `json:"members"`
+		SiteID   string      `json:"site_id"`
+		SiteName string      `json:"site_name"`
+		SiteSlug string      `json:"site_slug"`
+		Members  []collabRow `json:"members"`
 	}
 	groups := make(map[string]*siteGroup)
 	order := []string{}

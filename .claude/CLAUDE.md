@@ -451,6 +451,14 @@ Helper: `auth.IsAdminFrom(c)` baca `role` claim JWT. Dipakai di handler:
 `sites`, `pages`, `blog`, `products`,
 `forms`, `analytics`, `usage`, `assets`.
 
+**Undang kolaborator**: `POST /sites/:id/members` (owner-only, `GetStrictlyOwned` — editor
+TIDAK boleh menambah editor lain) + `GET /sites/:id/members/lookup?email=` untuk cek kelayakan.
+Hanya akun yang SUDAH terdaftar; exact-email, tidak pernah mengembalikan daftar (pemilik situs
+tidak boleh bisa menelusuri basis user). Role `owner` tidak bisa diberikan lewat endpoint ini —
+pemindahan kepemilikan operasi terpisah. Aturan kelayakan terpusat di `Handler.inviteBlocker`
+supaya probe dan submit tidak pernah berbeda jawaban. Penerima diberi tahu via email
+(`notifier.SiteMemberNotifier`), fire-and-forget — gagal kirim tidak membatalkan akses.
+
 **Kolaborator situs** (`site_members`, [sites/members.go](../apps/api/internal/sites/members.go)) —
 jalur akses ketiga di samping owner dan admin. Role: `owner` (= `sites.user_id`),
 `editor` (full edit + publish), `viewer` (read-only, untuk akses analytics saja).

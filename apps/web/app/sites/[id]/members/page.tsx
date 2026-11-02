@@ -12,10 +12,12 @@ import {
   LogOut,
   Mail,
   Trash2,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
+import { InviteMemberDialog } from "@/components/collaborators/InviteMemberDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +47,7 @@ export default function SiteMembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -106,10 +109,16 @@ export default function SiteMembersPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             {isOwner
-              ? "Reseller / agent yang bantu Anda kelola situs ini. Anda bisa hapus akses mereka kapan saja."
+              ? "Orang yang Anda beri akses ke situs ini — rekan, staf, agen, atau reseller. Anda bisa cabut aksesnya kapan saja."
               : "Anggota tim di situs ini. Anda bisa keluar kalau tidak lagi terlibat."}
           </p>
         </div>
+        {isOwner && (
+          <Button onClick={() => setInviteOpen(true)} className="gap-1.5">
+            <UserPlus className="size-4" />
+            Undang Kolaborator
+          </Button>
+        )}
         {!isOwner && myRole && (
           <Button variant="outline" onClick={leave} className="gap-1.5 text-destructive">
             <LogOut className="size-4" />
@@ -203,6 +212,15 @@ export default function SiteMembersPage() {
           </Table>
         </div>
       </Card>
+
+      {isOwner && (
+        <InviteMemberDialog
+          siteId={siteID}
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          onAdded={refresh}
+        />
+      )}
     </div>
   );
 }

@@ -296,6 +296,10 @@ func main() {
 
 	sitesHandler := sites.NewHandler(siteRepo)
 	sitesHandler.SetPurger(purger)
+	// Invite-collaborator needs to resolve an invitee by exact email, and to
+	// tell them they were granted access.
+	sitesHandler.SetDirectory(authRepo)
+	sitesHandler.SetMemberNotifier(notifier.NewSiteMemberNotifier(mailer, cfg.AppBaseURL))
 	// Storage-file cleanup untuk asset saat site di-delete. DB row cascade
 	// otomatis lewat FK, tapi file bytes butuh cleanup eksplisit supaya
 	// tidak numpuk orphan di S3/local disk. Nil-safe kalau storage disabled.
