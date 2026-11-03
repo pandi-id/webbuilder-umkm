@@ -29,7 +29,6 @@ import (
 	"github.com/webbuilder/api/internal/zones"
 )
 
-
 // AssignmentChecker — dependency untuk on-behalf-of verify. Interface, bukan
 // concrete import ke reseller package, untuk cegah import cycle (reseller
 // nanti mungkin butuh Purchase repo juga).
@@ -49,13 +48,14 @@ type AssignmentChecker interface {
 // Handler untuk domain purchase flow (2-phase self-sufficient).
 //
 // User-facing endpoints (JWT):
-//   POST /api/v1/domains/check                    — availability + harga
-//   POST /api/v1/domains/purchase                 — trigger register via api-registry
-//   POST /api/v1/domains/:name/renew              — trigger renew via api-registry
-//   GET  /api/v1/domains/purchases/:job_id        — poll job status
-//   GET  /api/v1/domains/purchases                — list milik user
-//   POST /api/v1/domains/purchases/:job_id/attach — link ke site_id existing
-//   POST /api/v1/domains/purchases/:job_id/retry  — re-run EPP CREATE untuk failed job
+//
+//	POST /api/v1/domains/check                    — availability + harga
+//	POST /api/v1/domains/purchase                 — trigger register via api-registry
+//	POST /api/v1/domains/:name/renew              — trigger renew via api-registry
+//	GET  /api/v1/domains/purchases/:job_id        — poll job status
+//	GET  /api/v1/domains/purchases                — list milik user
+//	POST /api/v1/domains/purchases/:job_id/attach — link ke site_id existing
+//	POST /api/v1/domains/purchases/:job_id/retry  — re-run EPP CREATE untuk failed job
 type Handler struct {
 	repo        *Repo
 	registrar   *registrar.Client
@@ -71,17 +71,17 @@ type Handler struct {
 	// (DNSCloudInfo) yang butuh api_token mentah, bukan via Provider
 	// interface. Nil = DNSCloud health panel disabled.
 	dnsProvidersRepo DNSProvidersReader
-	assignments     AssignmentChecker // nil = on-behalf-of disabled (Phase 3)
-	audit           *audit.Repo       // nil = audit disabled
-	zonesRepo       *zones.Repo       // nil = trust upstream AllowedZones (legacy)
+	assignments      AssignmentChecker // nil = on-behalf-of disabled (Phase 3)
+	audit            *audit.Repo       // nil = audit disabled
+	zonesRepo        *zones.Repo       // nil = trust upstream AllowedZones (legacy)
 
 	// --- 2-phase self-sufficient dependencies (Purchase flow) ---
 	// Semua nil-safe: kalau salah satu belum di-wire, Purchase endpoint
 	// return 503 dengan pesan jelas mana yang missing.
-	pricingRepo PricingLookup     // fetch retail price per TLD
-	invoicesSvc InvoiceCreator    // create invoice + apply PPN
-	gwRegistry  GatewayRegistry   // resolve payment gateway by code
-	promos      PromoValidator    // validate + redeem promo (nil = feature off)
+	pricingRepo PricingLookup   // fetch retail price per TLD
+	invoicesSvc InvoiceCreator  // create invoice + apply PPN
+	gwRegistry  GatewayRegistry // resolve payment gateway by code
+	promos      PromoValidator  // validate + redeem promo (nil = feature off)
 
 	// onTopupPaid — callback untuk invoice.kind=topup. Wired dari main.go
 	// pointing ke wallet_local.MarkTopupCredited. Nil = topup feature off
@@ -141,21 +141,21 @@ type GatewayRegistry interface {
 type PaymentGateway interface {
 	Code() string
 	Type() string // "gateway" | "manual" | "wallet" — dipakai handler untuk
-	              // dispatch flow (sync wallet vs async webhook).
+	// dispatch flow (sync wallet vs async webhook).
 	CreateCharge(ctx context.Context, req GatewayChargeRequest) (paymentURL string, providerRefID string, err error)
 }
 
 // GatewayChargeRequest — subset dari paymentgw.ChargeRequest. Include UserID
 // supaya WalletGateway tahu user mana yang di-debit.
 type GatewayChargeRequest struct {
-	OrderID     string
-	UserID      string
-	Amount      int64
-	Description string
+	OrderID                                    string
+	UserID                                     string
+	Amount                                     int64
+	Description                                string
 	CustomerName, CustomerEmail, CustomerPhone string
-	ReturnURL   string
-	NotifURL    string
-	ExpiresAt   time.Time
+	ReturnURL                                  string
+	NotifURL                                   string
+	ExpiresAt                                  time.Time
 
 	// WalletPayerID — override debit target untuk wallet gateway. Kalau
 	// agent trigger purchase, ini = parent_reseller_id (bukan agent.ID).
@@ -266,7 +266,7 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		repo: repo, registrar: r, users: users, sites: sitesRepo, cloudflare: cloudflareRepo,
-		platformIPs:   platformIPs,
+		platformIPs: platformIPs,
 	}
 }
 
@@ -283,9 +283,9 @@ type checkReq struct {
 // Frontend cukup baca `results` array; kalau length 1 tampilkan single card,
 // length >1 tampilkan grid. `allowed_zones` untuk hint UI.
 type checkResp struct {
-	Query        string        `json:"query"`
-	AllowedZones []string      `json:"allowed_zones"`
-	Results      []checkEntry  `json:"results"`
+	Query        string       `json:"query"`
+	AllowedZones []string     `json:"allowed_zones"`
+	Results      []checkEntry `json:"results"`
 }
 
 type checkEntry struct {
@@ -315,12 +315,12 @@ type zoneBlock struct {
 }
 
 type purchaseResp struct {
-	JobID         string  `json:"job_id"`
-	Domain        string  `json:"domain"`
-	Status        string  `json:"status"`
-	Kind          string  `json:"kind"` // "register" | "renew" — frontend adapt UI
-	Reason        string  `json:"reason,omitempty"`
-	PaymentURL    string  `json:"payment_url,omitempty"`
+	JobID      string `json:"job_id"`
+	Domain     string `json:"domain"`
+	Status     string `json:"status"`
+	Kind       string `json:"kind"` // "register" | "renew" — frontend adapt UI
+	Reason     string `json:"reason,omitempty"`
+	PaymentURL string `json:"payment_url,omitempty"`
 	// PaymentMethod — code payment method yang dipilih (mis. "midtrans",
 	// "manual_bank"). Frontend pakai untuk render UI yang tepat: gateway =
 	// tombol redirect, manual_bank = instruksi transfer + berita + bank list.
@@ -854,11 +854,11 @@ func (h *Handler) CloudflareInfo(c *fiber.Ctx) error {
 		"nameservers_at_registrar": nsAtRegistrar,
 		"platform_ips":             h.platformIPs,
 		"checks": fiber.Map{
-			"zone_active":              zone.Status == "active",
-			"ns_synced":                nsSynced,
-			"apex_present":             apex != nil,
-			"apex_points_to_platform":  pointsToPlatform,
-			"www_present":              www != nil,
+			"zone_active":             zone.Status == "active",
+			"ns_synced":               nsSynced,
+			"apex_present":            apex != nil,
+			"apex_points_to_platform": pointsToPlatform,
+			"www_present":             www != nil,
 		},
 	})
 }
@@ -1292,7 +1292,7 @@ type domainResp struct {
 	UserID         string  `json:"user_id"`
 	PurchasedBy    *string `json:"purchased_by,omitempty"`
 	ContactID      string  `json:"contact_id,omitempty"`
-	ExpiresAt      string  `json:"expires_at,omitempty"`     // RFC3339
+	ExpiresAt      string  `json:"expires_at,omitempty"` // RFC3339
 	RegisteredAt   string  `json:"registered_at"`
 	LastRenewedAt  string  `json:"last_renewed_at,omitempty"`
 	Status         string  `json:"status"`
@@ -1512,10 +1512,11 @@ func (h *Handler) Attach(c *fiber.Ctx) error {
 // + nama supaya admin bisa trace tanpa lookup manual.
 //
 // Query params:
-//   status: pending_payment | pending_document | pending_provisioning | active | failed | expired
-//   kind:   register | renew
-//   q:      LIKE match domain OR user email
-//   page, page_size, sort (default created_at DESC)
+//
+//	status: pending_payment | pending_document | pending_provisioning | active | failed | expired
+//	kind:   register | renew
+//	q:      LIKE match domain OR user email
+//	page, page_size, sort (default created_at DESC)
 func (h *Handler) AdminListPurchases(c *fiber.Ctx) error {
 	p := httpx.ParsePagination(c)
 	f := AdminListFilter{
@@ -1583,17 +1584,107 @@ func (h *Handler) AdminListPurchases(c *fiber.Ctx) error {
 //
 // Filter: q (name/email), status, expiring_days, without_site.
 // Pagination: page, page_size.
-func (h *Handler) AdminListDomains(c *fiber.Ctx) error {
-	p := httpx.ParsePagination(c)
+// parseDayStart reads a YYYY-MM-DD query param as midnight UTC. Invalid or
+// empty input yields nil, i.e. "no bound" — a typo must not silently turn into
+// an epoch-start filter that quietly changes the result set.
+func parseDayStart(v string) *time.Time {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	t, err := time.Parse("2006-01-02", v)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
+// adminDomainFilterFrom builds the filter from query params. Shared by the
+// list and the CSV export so the file can never describe a different set of
+// rows than the table the admin was looking at.
+func adminDomainFilterFrom(c *fiber.Ctx) AdminDomainFilter {
 	expiringDays, _ := strconv.Atoi(c.Query("expiring_days", "0"))
 	f := AdminDomainFilter{
 		Q:            strings.TrimSpace(c.Query("q")),
 		Status:       strings.TrimSpace(c.Query("status")),
 		ExpiringDays: expiringDays,
 		WithoutSite:  c.Query("without_site") == "true",
-		Page:         p.Page,
-		PageSize:     p.PageSize,
+		CreatedFrom:  parseDayStart(c.Query("created_from")),
 	}
+	// `created_to` is inclusive for the user, so push the bound to the start
+	// of the next day and compare with "<".
+	if to := parseDayStart(c.Query("created_to")); to != nil {
+		end := to.AddDate(0, 0, 1)
+		f.CreatedTo = &end
+	}
+	return f
+}
+
+// AdminExportDomainsCSV — GET /api/v1/admin/domains.csv
+//
+// Same filters as the table, so the file matches what the admin is looking at.
+// Not paginated: an export that only covered the current page would be a trap.
+// Capped so one request cannot stream the whole table into memory.
+func (h *Handler) AdminExportDomainsCSV(c *fiber.Ctx) error {
+	f := adminDomainFilterFrom(c)
+	f.Page = 1
+	f.Export = true
+	f.PageSize = AdminExportMaxRows
+
+	items, total, err := h.repo.AdminListDomains(c.Context(), f)
+	if err != nil {
+		slog.Error("admin export domains failed", "error", err)
+		return httpx.Internal(c, "export failed")
+	}
+
+	c.Set("Content-Type", "text/csv; charset=utf-8")
+	c.Set("Content-Disposition",
+		`attachment; filename="domains-`+time.Now().UTC().Format("2006-01-02")+`.csv"`)
+	// Tells the caller when the cap kicked in, so a truncated file is not
+	// mistaken for the full list.
+	c.Set("X-Total-Rows", strconv.Itoa(total))
+	if total > len(items) {
+		c.Set("X-Truncated", "true")
+	}
+
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	_ = w.Write([]string{
+		"domain", "status", "owner_email", "owner_name", "owner_id",
+		"site_id", "contact_id", "registered_at", "expires_at",
+		"last_renewed_at", "registrar_job_id",
+	})
+	for i := range items {
+		it := &items[i]
+		siteID, expires, renewed := "", "", ""
+		if it.SiteID != nil {
+			siteID = it.SiteID.String()
+		}
+		if it.ExpiresAt != nil {
+			expires = it.ExpiresAt.UTC().Format(time.RFC3339)
+		}
+		if it.LastRenewedAt != nil {
+			renewed = it.LastRenewedAt.UTC().Format(time.RFC3339)
+		}
+		_ = w.Write([]string{
+			it.Name, it.Status, it.OwnerEmail, it.OwnerName, it.UserID.String(),
+			siteID, it.ContactID,
+			it.RegisteredAt.UTC().Format(time.RFC3339), expires, renewed,
+			it.RegistrarJobID,
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return httpx.Internal(c, "csv write failed")
+	}
+	return c.Send(buf.Bytes())
+}
+
+func (h *Handler) AdminListDomains(c *fiber.Ctx) error {
+	p := httpx.ParsePagination(c)
+	f := adminDomainFilterFrom(c)
+	f.Page = p.Page
+	f.PageSize = p.PageSize
 	items, total, err := h.repo.AdminListDomains(c.Context(), f)
 	if err != nil {
 		slog.Error("admin list domains failed", "error", err)
@@ -1694,11 +1785,11 @@ func (h *Handler) AdminGetDomain(c *fiber.Ctx) error {
 		"status":           d.Status,
 		"registrar_job_id": d.RegistrarJobID,
 		// DNS attach: generic field names. Admin UI (Step 13) reads these.
-		"dns_attach_status":  d.DNSAttachStatus,
-		"dns_attach_error":   d.DNSAttachError,
-		"dns_attach_at":      formatOptTime(d.DNSAttachAt),
-		"dns_zone_id":        d.DNSZoneID,
-		"dns_provider":       d.DNSProvider,
+		"dns_attach_status":      d.DNSAttachStatus,
+		"dns_attach_error":       d.DNSAttachError,
+		"dns_attach_at":          formatOptTime(d.DNSAttachAt),
+		"dns_zone_id":            d.DNSZoneID,
+		"dns_provider":           d.DNSProvider,
 		"dns_provider_config_id": uuidPtrString(d.DNSProviderConfigID),
 	})
 }
@@ -1874,11 +1965,11 @@ func (h *Handler) AdminCloudflareInfo(c *fiber.Ctx) error {
 		"nameservers_at_registrar": nsAtRegistrar,
 		"platform_ips":             h.platformIPs,
 		"checks": fiber.Map{
-			"zone_active":              zone.Status == "active",
-			"ns_synced":                nsSynced,
-			"apex_present":             apex != nil,
-			"apex_points_to_platform":  pointsToPlatform,
-			"www_present":              www != nil,
+			"zone_active":             zone.Status == "active",
+			"ns_synced":               nsSynced,
+			"apex_present":            apex != nil,
+			"apex_points_to_platform": pointsToPlatform,
+			"www_present":             www != nil,
 		},
 	})
 }
@@ -1998,21 +2089,21 @@ func (h *Handler) DNSCloudInfo(c *fiber.Ctx) error {
 //
 // Admin tool untuk pindah zone ownership ke provider lain. Flow:
 //
-//   1. "cloudflare" / "dnscloud":
-//      - Resolve provider via factory (explicit kind, bukan priority)
-//      - FindZoneByDomain → kalau ada, reuse. Kalau tidak, CreateZone
-//      - Cleanup CNAME @ + CNAME www (hindari conflict RFC 1912)
-//      - Upsert A @ + A www → PLATFORM_IPS[0] (proxied)
-//      - EnableProxy @ + www (meaningful di DNSCloud, no-op di CF)
-//      - Push NS ke registrar via UpdateNameservers
-//      - Persist registered_domains.dns_* ke target baru
-//      - Best-effort delete zone lama di provider sebelumnya
+//  1. "cloudflare" / "dnscloud":
+//     - Resolve provider via factory (explicit kind, bukan priority)
+//     - FindZoneByDomain → kalau ada, reuse. Kalau tidak, CreateZone
+//     - Cleanup CNAME @ + CNAME www (hindari conflict RFC 1912)
+//     - Upsert A @ + A www → PLATFORM_IPS[0] (proxied)
+//     - EnableProxy @ + www (meaningful di DNSCloud, no-op di CF)
+//     - Push NS ke registrar via UpdateNameservers
+//     - Persist registered_domains.dns_* ke target baru
+//     - Best-effort delete zone lama di provider sebelumnya
 //
-//   2. "external":
-//      - Clear dns_zone_id + dns_provider_config_id
-//      - Set dns_provider='external', status='skipped' dengan note "Managed externally"
-//      - Best-effort delete zone lama
-//      - Platform STOP manage zone (health panel + reconciler skip)
+//  2. "external":
+//     - Clear dns_zone_id + dns_provider_config_id
+//     - Set dns_provider='external', status='skipped' dengan note "Managed externally"
+//     - Best-effort delete zone lama
+//     - Platform STOP manage zone (health panel + reconciler skip)
 //
 // Side effects + risk:
 //   - NS di registrar DI-UPDATE untuk CF/DNSCloud target. Visitor domain

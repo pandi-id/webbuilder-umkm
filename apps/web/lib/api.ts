@@ -215,6 +215,50 @@ export function resendClientInvite(basePath: "/agent" | "/reseller", clientId: s
 }
 
 // ---------------------------------------------------------------------------
+// File downloads
+// ---------------------------------------------------------------------------
+
+// downloadFile fetches an authenticated endpoint and saves the body as a file.
+// A plain <a href> cannot be used: it sends no Authorization header.
+// Returns the server's row count when it reports one, so the caller can warn
+// about a truncated export.
+export async function downloadFile(
+  path: string,
+  filename: string,
+): Promise<{ truncated: boolean; totalRows: number | null }> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+  });
+  if (!res.ok) {
+    // Error bodies are JSON envelopes even on a file endpoint.
+    let message = `Unduhan gagal (kode ${res.status})`;
+    try {
+      const body = await res.json();
+      message = body?.error?.message ?? message;
+    } catch {
+      // Non-JSON body — keep the status-based message.
+    }
+    throw new ApiError(res.status, "download_failed", message);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  const total = res.headers.get("X-Total-Rows");
+  return {
+    truncated: res.headers.get("X-Truncated") === "true",
+    totalRows: total ? Number(total) : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Site collaborators
 // ---------------------------------------------------------------------------
 

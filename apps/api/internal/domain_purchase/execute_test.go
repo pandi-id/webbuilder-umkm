@@ -75,12 +75,12 @@ func TestIntFromMeta(t *testing.T) {
 		val  any
 		want int
 	}{
-		{"float64", float64(3), 3},        // JSON number decode
+		{"float64", float64(3), 3}, // JSON number decode
 		{"float64_neg", float64(-5), -5},
 		{"int", int(42), 42},
 		{"int64", int64(100), 100},
 		{"string_wrong", "not a number", 0}, // wrong type
-		{"bool_wrong", true, 0},              // wrong type
+		{"bool_wrong", true, 0},             // wrong type
 	}
 	for _, tc := range cases {
 		m := map[string]any{tc.key: tc.val}

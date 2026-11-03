@@ -52,6 +52,8 @@ func MountAdmin(app *fiber.App, deps Deps) {
 	//   - /registrar/purchases → transaction log (register + renew per event)
 	if deps.DomainPurchase != nil {
 		g.Get("/domains", deps.DomainPurchase.AdminListDomains)
+		// Same filters as the list; must sit before /domains/:name.
+		g.Get("/domains.csv", deps.DomainPurchase.AdminExportDomainsCSV)
 		// Harus sebelum /domains/:name — kalau tidak, "stats" ke-tangkap
 		// sebagai nama domain.
 		g.Get("/domains/stats", deps.DomainPurchase.AdminDomainStats)

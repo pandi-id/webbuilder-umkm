@@ -62,15 +62,15 @@ type purchaseReq struct {
 
 // purchaseCreatedResp — response.
 type purchaseCreatedResp struct {
-	JobID       string `json:"job_id"`      // = invoice_id string (single source of truth)
-	InvoiceID   string `json:"invoice_id"`
-	Domain      string `json:"domain"`
-	Status      string `json:"status"`      // "pending_payment"
-	PaymentURL  string `json:"payment_url,omitempty"`   // gateway redirect (kosong untuk manual_bank)
+	JobID        string `json:"job_id"` // = invoice_id string (single source of truth)
+	InvoiceID    string `json:"invoice_id"`
+	Domain       string `json:"domain"`
+	Status       string `json:"status"`                 // "pending_payment"
+	PaymentURL   string `json:"payment_url,omitempty"`  // gateway redirect (kosong untuk manual_bank)
 	Instructions string `json:"instructions,omitempty"` // manual_bank markdown
-	Total       int64  `json:"total"`       // IDR minor unit — total setelah PPN
-	Currency    string `json:"currency"`
-	DueAt       string `json:"due_at"`      // RFC3339
+	Total        int64  `json:"total"`                  // IDR minor unit — total setelah PPN
+	Currency     string `json:"currency"`
+	DueAt        string `json:"due_at"` // RFC3339
 }
 
 // Purchase — Phase A checkout. Bikin invoice + payment charge lokal;

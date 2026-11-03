@@ -142,6 +142,13 @@ security per tier (JWT vs publik) dan header `Idempotency-Key` di endpoint yang 
   - **Admin** (JWT + role=admin): `/api/v1/admin/*`
 - Envelope: success `{ "data": ... }`, error `{ "error": { "code", "message" } }`. Gunakan helper `httpx.OK / Created / BadRequest / Unauthorized / Forbidden / NotFound / Conflict / Internal`.
 - **Pagination**: `?page=&page_size=&q=&sort=`. Response: `Paginated<T>` = `{ items, page, page_size, total, total_pages }`. Pakai `httpx.ParsePagination` + `httpx.MakePaginated`. Search via `LikePattern()` (kosong = `%`, jadi 1 query saja).
+- **Export CSV**: endpoint export WAJIB memakai parsing filter yang sama dengan endpoint list-nya
+  (lihat `adminDomainFilterFrom` di `domain_purchase`), supaya file tidak pernah berisi baris
+  berbeda dari tabel yang dilihat admin. Repo list biasanya meng-cap `PageSize` (mis. 200 → fallback
+  30) — export WAJIB pakai flag tersendiri (`AdminDomainFilter.Export`) untuk melewati cap itu,
+  dengan batas sendiri (`AdminExportMaxRows`). Tanpa itu, export diam-diam cuma mengembalikan
+  30 baris sambil mengaku lebih. Set header `X-Total-Rows` + `X-Truncated` supaya UI bisa
+  memperingatkan file terpotong.
 - **Sort presets**: whitelist di repo (`orderUsersSQL`, `orderSitesSQL`) — JANGAN pernah interpolasi raw user input ke `ORDER BY`.
 - JWT bearer di header `Authorization: Bearer <access>`. Access TTL 15m, refresh TTL 7d dengan **rotation** (revoke old, issue new).
 - **Ownership check wajib**: setiap query selalu `WHERE user_id = $current_user`. Jangan trust ID dari request.

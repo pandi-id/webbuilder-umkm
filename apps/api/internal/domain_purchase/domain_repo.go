@@ -184,7 +184,7 @@ func (r *Repo) SetDomainDNSAttach(ctx context.Context, name, status, errMsg, zon
 //
 // Pakai di flow:
 //   - Switch provider CF → DNSCloud: new zone_id, new config_id
-//   - Switch provider CF → external: zone_id='', config_id=nil
+//   - Switch provider CF → external: zone_id=”, config_id=nil
 //
 // Caller bertanggung jawab delete zone lama (best-effort, di handler).
 func (r *Repo) SetDomainProviderSwitch(ctx context.Context, name, provider, zoneID string, configID *uuid.UUID, status, errMsg string) error {
@@ -338,9 +338,22 @@ type AdminDomainFilter struct {
 	Status       string // "" = semua
 	ExpiringDays int    // > 0 → active + expires_at ≤ now + N days
 	WithoutSite  bool   // true → hanya domain yang belum ter-attach ke situs
-	Page         int
-	PageSize     int
+	// Rentang tanggal pendaftaran (kolom "Terdaftar" di UI). Half-open:
+	// CreatedTo di-set ke awal hari BERIKUTNYA oleh caller, supaya domain
+	// yang didaftarkan pada hari itu juga ikut terambil.
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Page        int
+	PageSize    int
+	// Export lifts the 200-row page cap for CSV download, which must return
+	// the whole filtered set rather than one screen of it. Still bounded by
+	// AdminExportMaxRows so a single request cannot pull the entire table.
+	Export bool
 }
+
+// AdminExportMaxRows caps a CSV export. Large enough for real admin work,
+// small enough that one request cannot exhaust memory.
+const AdminExportMaxRows = 10000
 
 // AdminListDomains — paginated + filter, join users. Dipakai halaman
 // /admin/domain untuk observability semua domain lintas user.
@@ -348,7 +361,14 @@ func (r *Repo) AdminListDomains(ctx context.Context, f AdminDomainFilter) ([]Adm
 	if f.Page < 1 {
 		f.Page = 1
 	}
-	if f.PageSize <= 0 || f.PageSize > 200 {
+	switch {
+	case f.Export:
+		// A silently-capped export is worse than a slow one: the admin would
+		// get a short file with no sign anything was missing.
+		if f.PageSize <= 0 || f.PageSize > AdminExportMaxRows {
+			f.PageSize = AdminExportMaxRows
+		}
+	case f.PageSize <= 0 || f.PageSize > 200:
 		f.PageSize = 30
 	}
 
@@ -370,6 +390,14 @@ func (r *Repo) AdminListDomains(ctx context.Context, f AdminDomainFilter) ([]Adm
 		args = append(args, "%"+f.Q+"%")
 		where += fmt.Sprintf(" AND (rd.name ILIKE $%d OR u.email ILIKE $%d OR u.name ILIKE $%d)",
 			len(args), len(args), len(args))
+	}
+	if f.CreatedFrom != nil {
+		args = append(args, *f.CreatedFrom)
+		where += fmt.Sprintf(" AND rd.registered_at >= $%d", len(args))
+	}
+	if f.CreatedTo != nil {
+		args = append(args, *f.CreatedTo)
+		where += fmt.Sprintf(" AND rd.registered_at < $%d", len(args))
 	}
 
 	var total int
