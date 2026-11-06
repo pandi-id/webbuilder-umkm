@@ -55,7 +55,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { hexToHslComponents, readableForeground } from "@/lib/color";
+import { hexToHslComponents, mixHex, readableForeground } from "@/lib/color";
 import { buildCatalogFontsUrl } from "@/lib/fonts";
 import { PropEditor, type BlockData } from "./PropEditor";
 import { LayoutPanel } from "./LayoutPanel";
@@ -190,6 +190,16 @@ function ensureFontCatalogLoaded() {
 // shop's real products. null = not loaded (or failed) → sample cards.
 const SiteProductsContext = createContext<CatalogProduct[] | null>(null);
 
+// Forms of the site being edited, keyed by id, so the "Form Terhubung (DB)"
+// block previews its real fields instead of falling into the "unsupported"
+// branch. null = not loaded (or failed).
+type EditorForm = {
+  id: string;
+  name: string;
+  fields: { name: string; label: string; type: string; required?: boolean; placeholder?: string }[];
+};
+const SiteFormsContext = createContext<Record<string, EditorForm> | null>(null);
+
 export default function EditorPage() {
   const params = useParams<{ id: string }>();
   const [siteProducts, setSiteProducts] = useState<CatalogProduct[] | null>(null);
@@ -198,6 +208,21 @@ export default function EditorPage() {
     api<{ items: CatalogProduct[] }>(`/api/v1/sites/${params.id}/products?status=active&page_size=100`)
       .then((r) => {
         if (!cancelled) setSiteProducts(r.items ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
+  const [siteForms, setSiteForms] = useState<Record<string, EditorForm> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api<EditorForm[]>(`/api/v1/sites/${params.id}/forms`)
+      .then((list) => {
+        if (cancelled) return;
+        const byId: Record<string, EditorForm> = {};
+        for (const f of list ?? []) byId[f.id] = f;
+        setSiteForms(byId);
       })
       .catch(() => {});
     return () => {
@@ -562,10 +587,14 @@ export default function EditorPage() {
       "--primary-foreground": readableForeground(primary),
       "--secondary": hexToHslComponents(secondary) ?? "199 89% 48%",
       "--secondary-foreground": readableForeground(secondary),
-      "--muted": hexToHslComponents(fg) ?? "215 16% 47%",
-      "--muted-foreground": hexToHslComponents(fg) ?? "215 16% 47%",
-      "--border": hexToHslComponents(fg) ?? "214 32% 91%",
-      "--input": hexToHslComponents(fg) ?? "214 32% 91%",
+      // Neutral tokens are TINTS of fg over bg, using the same ratios as
+      // umkm.css (--u-muted 64%, --u-line 11%, --u-surface ~3-6%). Setting
+      // them to fg at full strength made every `border` and `bg-muted` in the
+      // preview near-black while production renders them light grey.
+      "--muted": hexToHslComponents(mixHex(fg, bg, 0.06) ?? fg) ?? "210 40% 96%",
+      "--muted-foreground": hexToHslComponents(mixHex(fg, bg, 0.64) ?? fg) ?? "215 16% 47%",
+      "--border": hexToHslComponents(mixHex(fg, bg, 0.11) ?? fg) ?? "214 32% 91%",
+      "--input": hexToHslComponents(mixHex(fg, bg, 0.11) ?? fg) ?? "214 32% 91%",
       "--ring": hexToHslComponents(primary) ?? "221 83% 53%",
       "--radius": theme.radius ?? "0.75rem",
       // Renderer-style raw colour vars (used by future inline-style blocks).
@@ -1276,6 +1305,7 @@ export default function EditorPage() {
 
   return (
     <SiteProductsContext.Provider value={siteProducts}>
+    <SiteFormsContext.Provider value={siteForms}>
     <div
       className={cn(
         "flex h-[calc(100vh-140px)] flex-col gap-3",
@@ -1985,6 +2015,7 @@ export default function EditorPage() {
         onBeforeGenerate={savePreviewIfDirty}
       />
     </div>
+    </SiteFormsContext.Provider>
     </SiteProductsContext.Provider>
   );
 }
@@ -3037,6 +3068,7 @@ function BlockView({
 }) {
   const p = block.props ?? {};
   const siteProducts = useContext(SiteProductsContext);
+  const siteForms = useContext(SiteFormsContext);
   // setProp commits a single field back to the block tree. Only used by the
   // inline-edit branches — most block types still read-only in the canvas and
   // are edited via the side panel.
@@ -4091,6 +4123,47 @@ function BlockView({
           </div>
         </div>
       );
+
+    case "Form": {
+      // Mirrors renderer FormBlockAsync: same three states, same messages, so
+      // what the user sees here is what the site shows.
+      const formId = String(p.formId ?? "").trim();
+      const form = formId && siteForms ? siteForms[formId] : undefined;
+      const dashed = (msg: string) => (
+        <div className="px-6 py-6">
+          <div className="rounded-xl border border-dashed p-6 text-center text-xs opacity-70">{msg}</div>
+        </div>
+      );
+      if (!formId) return dashed("Form belum dipilih — tempel Form ID dari tab Form ke panel kanan.");
+      if (siteForms === null) return dashed("Memuat form…");
+      if (!form || form.fields.length === 0)
+        return dashed("Form tidak ditemukan atau belum ada field. Periksa Form ID.");
+      return (
+        <div className="px-6 py-6">
+          <div className="text-center">
+            <h3 className="text-base font-bold">{String(p.title ?? "")}</h3>
+            {p.subtitle ? <p className="mt-1 text-xs text-muted-foreground">{String(p.subtitle)}</p> : null}
+          </div>
+          <div className="mx-auto mt-3 max-w-xs space-y-1.5 rounded-lg border bg-card p-3">
+            {form.fields.map((f) => (
+              <div
+                key={f.name}
+                className={cn(
+                  "rounded-md border bg-muted/40 px-2 text-[10px] text-muted-foreground",
+                  f.type === "textarea" ? "py-3" : "py-1",
+                )}
+              >
+                {f.label}
+                {f.required ? " *" : ""}
+              </div>
+            ))}
+            <div className="rounded-md bg-primary py-1.5 text-center text-[10px] font-medium text-primary-foreground">
+              {String(p.submitLabel ?? "Kirim")}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     case "Tabs":
       return (

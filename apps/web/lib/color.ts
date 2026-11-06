@@ -43,6 +43,28 @@ export function hexToHslComponents(hex: string): string | null {
  * Pick a readable foreground (white or near-black) for a given hex background.
  * Uses simple WCAG-ish luminance threshold — good enough for primary buttons.
  */
+// mixHex blends `weight` (0..1) of `top` over `base` in sRGB — the same idea as
+// CSS color-mix(in srgb, top W%, base). Used to derive neutral tokens (muted,
+// border) from the theme's fg/bg instead of using fg at full strength, which
+// made every border and placeholder near-black in the editor canvas.
+export function mixHex(top: string, base: string, weight: number): string | null {
+  const t = parseHex(top);
+  const b = parseHex(base);
+  if (!t || !b) return null;
+  const w = Math.min(1, Math.max(0, weight));
+  const ch = (i: number) => Math.round(t[i] * w + b[i] * (1 - w));
+  return "#" + [ch(0), ch(1), ch(2)].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+function parseHex(hex: string): [number, number, number] | null {
+  if (typeof hex !== "string") return null;
+  let s = hex.trim();
+  if (s.startsWith("#")) s = s.slice(1);
+  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (s.length !== 6 || !/^[0-9a-f]+$/i.test(s)) return null;
+  return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
+}
+
 export function readableForeground(hex: string): string {
   let s = hex.trim().replace("#", "");
   if (s.length === 3) s = s.split("").map((c) => c + c).join("");

@@ -65,65 +65,6 @@ Tambah role berportal = cukup sentuh file itu, jangan hardcode `role === "admin"
 Reseller mengundang agent/client (`invitation_repo.go`, `parent_reseller_id`); penerimaan undangan
 agent sengaja mendarat di portal agen, bukan `/dashboard` (user baru belum punya toko).
 
-**Tambah klien yang sudah punya akun ikut memperbarui profilnya.** Field yang diisi caller
-menimpa data lama; field kosong jadi `nil` → `UpdateProfile` COALESCE mempertahankan nilai
-tersimpan (helper `profileUpdateFrom`). Dulu semua field dibuang diam-diam, jadi form terasa
-tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa yang berubah.
-
-**Dashboard `/dashboard` hanya situs milik sendiri.** `GET /sites` default mengembalikan
-gabungan owner + kolaborator (lewat `site_members`); dashboard memanggil `?role=owner` supaya
-reseller/agent dengan banyak klien tidak bingung mana toko sendiri. Situs klien tampil di
-`MyCollaborationsList` (`GET /collaborations`) yang membawa `site_status`, `hostname`
-dan `updated_at`. **Hostname situs punya TIGA sumber** dengan presedensi yang
-dipakai `sites.GetByHost`: (1) `domain_purchases` `status='active' AND kind='register'` —
-ini yang terisi untuk domain yang dibeli lewat platform, (2) `domains` `status='verified'` —
-BYO legacy, praktis kosong, (3) `site_byo_domains` `status IN ('verified','drifting')`.
-Query baru yang cuma melihat `domains` akan melaporkan "belum ada domain" untuk SEMUA toko
-yang beli domain di sini — bug yang pernah terjadi. Pakai urutan yang sama, jangan satu tabel saja. `/settings/collaborators` memuat
-KEDUA arah — kolaborator di situs saya + situs yang saya kelola — karena client biasa yang
-diberi akses editor tidak punya portal sendiri. Catatan: `sites.GetOwned` sebenarnya mengecek
-keanggotaan `site_members` (bukan `sites.user_id`), jadi kolaborator memang boleh buka
-`/sites/:id`; namanya saja yang menyesatkan.
-
-**Hapus klien = lepas penugasan, BUKAN hapus akun.** `DELETE /{reseller,agent}/clients/:id`
-set `access_status='revoked'` (`RevokeAssignment`, scoped by manager). Klien punya situs +
-domain sendiri dan banyak yang daftar sendiri sebelum dikelola — menghapus akunnya dari sini
-merusak data milik orang lain. `CreateAssignment` pakai `ON CONFLICT … DO UPDATE … WHERE
-access_status='revoked'` supaya pelepasan bisa dibatalkan; tanpa itu unique index
-`(manager_id, client_id)` bikin klien yang dilepas tidak pernah bisa ditambah lagi.
-Penugasan yang masih aktif tetap `ErrAlreadyAssigned` (DO UPDATE ter-filter → `pgx.ErrNoRows`).
-
-**`has_login` vs `email_verified`.** Tombol "Kirim ulang undangan" HANYA untuk akun yang belum
-punya cara login (`password_hash = '' AND oauth_google_sub IS NULL`). Jangan pakai
-`email_verified` sebagai penanda "belum accept" — user yang daftar sendiri bisa punya password
-tapi email belum terverifikasi, dan mengirim ulang undangan ke mereka berarti menyerahkan link
-set-password akun orang ke managernya. `ResendClientInvite` menolak dengan 409 kalau sudah ada login.
-
-**Tambah klien dengan email yang sudah terdaftar**: `POST /reseller/clients` TIDAK mengirim
-undangan set-password untuk user existing (mereka sudah punya password) — hanya email
-pemberitahuan `sendClientLinkedEmail` bahwa akunnya kini dikelola manager tsb. Response
-membedakan `invite_sent` (link set-password) dari `email_sent` (email apa pun terkirim);
-UI wajib membaca flag itu, jangan hardcode "email terkirim". Assignment dibuat tanpa
-persetujuan klien — hanya diberitahu. Kalau nanti butuh persetujuan, ikuti pola invitation
-agent di bawah.
-
-**Promosi user lama jadi agent**: `POST /reseller/agents/invite` menerima email yang SUDAH terdaftar
-— invitation dibuat dengan `target_user_id` sehingga akun lamanya (beserta situs + domain) dinaikkan
-jadi agent, bukan bikin akun baru. Kelayakan dipusatkan di `reseller.agentInviteBlocker()`: hanya
-role `client` yang boleh; reseller/admin/agent-orang-lain ditolak, begitu juga klien yang sedang
-dikelola manager lain. Dialog undang memanggil `GET /reseller/agents/lookup?email=` (exact-match,
-rate-limited, bukan listing — jangan diubah jadi pencarian bebas, itu membocorkan basis user).
-Di `AcceptInvitationTx`, password **hanya** di-set kalau akun belum punya cara login sama sekali
-(`password_hash = '' AND oauth_google_sub IS NULL`) — hash kosong saja bukan penanda, user Google
-juga kosong. Password yang sudah ada tidak pernah ditimpa.
-
-**Next 16 `params` di client component**: `params` adalah **Promise**, termasuk di komponen
-`"use client"`. Membacanya sebagai prop (`function Page({ params }: { params: { x: string } })`)
-menghasilkan `undefined` — dan `tsc` TIDAK menangkapnya karena validator Next memakai `& any`.
-Pakai `useParams<{ x: string }>()` di client, `await params` di server. Bug yang pernah terjadi:
-`/invite/[token]` fetch ke `/api/v1/invitations/undefined` → 404 → setiap undangan, sesegar apa pun,
-tampil "Undangan tidak berlaku".
-
 **Next 16 `proxy.ts`**: `middleware.ts` sudah di-rename ke `proxy.ts` di kedua app Next. Isinya generate CSP nonce per request (tanpa `unsafe-inline`/`unsafe-eval` di `script-src`). Embed pihak ketiga baru (iframe/script) wajib ditambah ke CSP di sana. `Vary: Host` ditegakkan di Caddy, bukan di proxy.ts (Next 16 menimpanya).
 
 ## Konvensi API
@@ -134,7 +75,6 @@ sengaja di luar cakupan. Ditulis tangan — tapi `openapi_test.go` mem-parse `ro
 lalu membandingkannya dua arah: rute tanpa entri spec GAGAL, entri spec tanpa rute juga GAGAL.
 **Menambah endpoint = wajib menambah entri spec**, kalau tidak CI merah. Test juga menegakkan
 security per tier (JWT vs publik) dan header `Idempotency-Key` di endpoint yang memindahkan uang.
-
 
 - Endpoint hierarchy:
   - **Global** (tanpa auth): `/healthz`, `/public/*`, `/internal/caddy/ask`, `/uploads/*` (saat driver=local)
@@ -178,6 +118,7 @@ security per tier (JWT vs publik) dan header `Idempotency-Key` di endpoint yang 
 - **Tabs nav (header level)**: pakai `<Link>` dengan `border-b-2` pattern di `apps/web/app/sites/[id]/layout.tsx` (bukan Radix Tabs — untuk navigasi route).
 - **Loading**: dim tabel `className={loading ? "opacity-60" : ""}` di `<TableBody>`. Skeleton: `animate-pulse rounded-md bg-muted/50`.
 - **Empty states**: copy berbeda untuk "belum ada data" vs "tidak ada hasil untuk \"X\"".
+- **Unduh berkas berautentikasi** (CSV, PDF): pakai `downloadFile(path, filename)` di `lib/api.ts` — `<a href>` biasa tidak mengirim header Authorization. Baca `truncated` dari hasilnya untuk memperingatkan export terpotong.
 - **Live search**: `useDebounced` dari `components/Pagination.tsx` (300ms default), reset `page=1` saat query atau sort berubah.
 - **Theme tokens** (untuk situs yang di-render, BUKAN dashboard) mengalir ke renderer via CSS variables (`--color-primary`, `--font-heading`, `--radius`). JANGAN hardcode `brand-*` di renderer atau exported CSS.
 
@@ -428,7 +369,7 @@ dibiarkan di DB (migration lama tidak diedit; `0069` hanya menghapus baris templ
   di situs yang sama, order non-`cancelled`) supaya pesanan yang dihapus belakangan tidak mengubah
   ulasan yang sudah tayang. `author_phone` tidak pernah keluar di API publik. Breakdown bintang dihitung
   di SQL (`COUNT(*) FILTER`) atas SELURUH ulasan published — jangan hitung dari item yang ter-`limit`.
-- **Blok UMKM** (`Umkm*`, kategori "UmkmPro") dipakai bersama editor + renderer + export. File berikut **harus byte-identik**: `components/umkm/{UmkmBlocks.tsx,UmkmCopyCode.tsx,umkm.css}` dan `lib/umkm.ts` di `apps/web` dan `apps/renderer`, plus `apps/api/internal/exports/umkm.css` (di-`go:embed`). Ubah satu → salin ke semua, cek dengan `diff`. Markup Go ada di `exports/render_umkm.go`; CSS hanya class `.wb-umkm-*` + theme vars (tanpa Tailwind) supaya port ke Go mekanis.
+- **Blok UMKM** (`Umkm*`, kategori "UmkmPro") dipakai bersama editor + renderer + export. File berikut **harus byte-identik**: `components/umkm/{UmkmBlocks.tsx,UmkmCopyCode.tsx,umkm.css}`, `lib/umkm.ts` dan `lib/color.ts` di `apps/web` dan `apps/renderer`, plus `apps/api/internal/exports/umkm.css` (di-`go:embed`). Ubah satu → salin ke semua, cek dengan `diff`. Markup Go ada di `exports/render_umkm.go`; CSS hanya class `.wb-umkm-*` + theme vars (tanpa Tailwind) supaya port ke Go mekanis.
 
 ## Platform Articles (migration 0053)
 
@@ -458,21 +399,6 @@ Helper: `auth.IsAdminFrom(c)` baca `role` claim JWT. Dipakai di handler:
 `sites`, `pages`, `blog`, `products`,
 `forms`, `analytics`, `usage`, `assets`.
 
-**Undang kolaborator**: `POST /sites/:id/members` (owner-only, `GetStrictlyOwned` — editor
-TIDAK boleh menambah editor lain) + `GET /sites/:id/members/lookup?email=` untuk cek kelayakan.
-Hanya akun yang SUDAH terdaftar; exact-email, tidak pernah mengembalikan daftar (pemilik situs
-tidak boleh bisa menelusuri basis user). Role `owner` tidak bisa diberikan lewat endpoint ini —
-pemindahan kepemilikan operasi terpisah. Aturan kelayakan terpusat di `Handler.inviteBlocker`
-supaya probe dan submit tidak pernah berbeda jawaban. Penerima diberi tahu via email
-(`notifier.SiteMemberNotifier`), fire-and-forget — gagal kirim tidak membatalkan akses.
-
-**Kolaborator situs** (`site_members`, [sites/members.go](../apps/api/internal/sites/members.go)) —
-jalur akses ketiga di samping owner dan admin. Role: `owner` (= `sites.user_id`),
-`editor` (full edit + publish), `viewer` (read-only, untuk akses analytics saja).
-Cek pakai `repo.HasAccess(ctx, siteID, userID, RoleOwner, RoleEditor)` → return role
-atau `ErrNotFound`; jangan tulis query `site_members` sendiri di handler. UI di
-tab **Anggota** situs (`apps/web/app/sites/[id]/members/`) + [settings/collaborators](../apps/web/app/settings/collaborators/).
-
 **Bug yang pernah terjadi**: admin klik "Buka Editor" → redirect ke login. Root
 cause: `sites.Get` masih pakai `GetOwned`. Ownership check di dashboard sudah ada,
 tapi fetch pertama di editor fail. Fix: ganti ke `GetOwnedOrAdmin` di semua endpoint
@@ -494,6 +420,79 @@ Selain email+password (argon2id), surface auth lain yang sudah live — semua di
 - **Reseller apply** — `POST /auth/reseller/apply`, approval di `/admin/resellers`.
 - **Invitation** — `/invitations/:token` + `/accept` ([invitation_repo.go](../apps/api/internal/auth/invitation_repo.go)),
   dipakai reseller untuk undang agent/client (`parent_reseller_id`).
+
+## Reseller, Agent & Klien
+
+Alur manajemen klien oleh reseller/agent. Semua endpoint di-scope by `manager_id`; lookup email selalu exact-match (bukan pencarian) supaya manager tidak bisa menelusuri basis user.
+
+**Promosi user lama jadi agent**: `POST /reseller/agents/invite` menerima email yang SUDAH terdaftar
+— invitation dibuat dengan `target_user_id` sehingga akun lamanya (beserta situs + domain) dinaikkan
+jadi agent, bukan bikin akun baru. Kelayakan dipusatkan di `reseller.agentInviteBlocker()`: hanya
+role `client` yang boleh; reseller/admin/agent-orang-lain ditolak, begitu juga klien yang sedang
+dikelola manager lain. Dialog undang memanggil `GET /reseller/agents/lookup?email=` (exact-match,
+rate-limited, bukan listing — jangan diubah jadi pencarian bebas, itu membocorkan basis user).
+Di `AcceptInvitationTx`, password **hanya** di-set kalau akun belum punya cara login sama sekali
+(`password_hash = '' AND oauth_google_sub IS NULL`) — hash kosong saja bukan penanda, user Google
+juga kosong. Password yang sudah ada tidak pernah ditimpa.
+
+**Tambah klien dengan email yang sudah terdaftar**: `POST /reseller/clients` TIDAK mengirim
+undangan set-password untuk user existing (mereka sudah punya password) — hanya email
+pemberitahuan `sendClientLinkedEmail` bahwa akunnya kini dikelola manager tsb. Response
+membedakan `invite_sent` (link set-password) dari `email_sent` (email apa pun terkirim);
+UI wajib membaca flag itu, jangan hardcode "email terkirim". Assignment dibuat tanpa
+persetujuan klien — hanya diberitahu. Kalau nanti butuh persetujuan, ikuti pola invitation
+agent di bawah.
+
+**Tambah klien yang sudah punya akun ikut memperbarui profilnya.** Field yang diisi caller
+menimpa data lama; field kosong jadi `nil` → `UpdateProfile` COALESCE mempertahankan nilai
+tersimpan (helper `profileUpdateFrom`). Dulu semua field dibuang diam-diam, jadi form terasa
+tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa yang berubah.
+
+**`has_login` vs `email_verified`.** Tombol "Kirim ulang undangan" HANYA untuk akun yang belum
+punya cara login (`password_hash = '' AND oauth_google_sub IS NULL`). Jangan pakai
+`email_verified` sebagai penanda "belum accept" — user yang daftar sendiri bisa punya password
+tapi email belum terverifikasi, dan mengirim ulang undangan ke mereka berarti menyerahkan link
+set-password akun orang ke managernya. `ResendClientInvite` menolak dengan 409 kalau sudah ada login.
+
+**Hapus klien = lepas penugasan, BUKAN hapus akun.** `DELETE /{reseller,agent}/clients/:id`
+set `access_status='revoked'` (`RevokeAssignment`, scoped by manager). Klien punya situs +
+domain sendiri dan banyak yang daftar sendiri sebelum dikelola — menghapus akunnya dari sini
+merusak data milik orang lain. `CreateAssignment` pakai `ON CONFLICT … DO UPDATE … WHERE
+access_status='revoked'` supaya pelepasan bisa dibatalkan; tanpa itu unique index
+`(manager_id, client_id)` bikin klien yang dilepas tidak pernah bisa ditambah lagi.
+Penugasan yang masih aktif tetap `ErrAlreadyAssigned` (DO UPDATE ter-filter → `pgx.ErrNoRows`).
+
+## Kolaborator Situs
+
+**Kolaborator situs** (`site_members`, [sites/members.go](../apps/api/internal/sites/members.go)) —
+jalur akses ketiga di samping owner dan admin. Role: `owner` (= `sites.user_id`),
+`editor` (full edit + publish), `viewer` (read-only, untuk akses analytics saja).
+Cek pakai `repo.HasAccess(ctx, siteID, userID, RoleOwner, RoleEditor)` → return role
+atau `ErrNotFound`; jangan tulis query `site_members` sendiri di handler. UI di
+tab **Anggota** situs (`apps/web/app/sites/[id]/members/`) + [settings/collaborators](../apps/web/app/settings/collaborators/).
+
+**Undang kolaborator**: `POST /sites/:id/members` (owner-only, `GetStrictlyOwned` — editor
+TIDAK boleh menambah editor lain) + `GET /sites/:id/members/lookup?email=` untuk cek kelayakan.
+Hanya akun yang SUDAH terdaftar; exact-email, tidak pernah mengembalikan daftar (pemilik situs
+tidak boleh bisa menelusuri basis user). Role `owner` tidak bisa diberikan lewat endpoint ini —
+pemindahan kepemilikan operasi terpisah. Aturan kelayakan terpusat di `Handler.inviteBlocker`
+supaya probe dan submit tidak pernah berbeda jawaban. Penerima diberi tahu via email
+(`notifier.SiteMemberNotifier`), fire-and-forget — gagal kirim tidak membatalkan akses.
+
+**Dashboard `/dashboard` hanya situs milik sendiri.** `GET /sites` default mengembalikan
+gabungan owner + kolaborator (lewat `site_members`); dashboard memanggil `?role=owner` supaya
+reseller/agent dengan banyak klien tidak bingung mana toko sendiri. Situs klien tampil di
+`MyCollaborationsList` (`GET /collaborations`) yang membawa `site_status`, `hostname`
+dan `updated_at`. **Hostname situs punya TIGA sumber** dengan presedensi yang
+dipakai `sites.GetByHost`: (1) `domain_purchases` `status='active' AND kind='register'` —
+ini yang terisi untuk domain yang dibeli lewat platform, (2) `domains` `status='verified'` —
+BYO legacy, praktis kosong, (3) `site_byo_domains` `status IN ('verified','drifting')`.
+Query baru yang cuma melihat `domains` akan melaporkan "belum ada domain" untuk SEMUA toko
+yang beli domain di sini — bug yang pernah terjadi. Pakai urutan yang sama, jangan satu tabel saja. `/settings/collaborators` memuat
+KEDUA arah — kolaborator di situs saya + situs yang saya kelola — karena client biasa yang
+diberi akses editor tidak punya portal sendiri. Catatan: `sites.GetOwned` sebenarnya mengecek
+keanggotaan `site_members` (bukan `sites.user_id`), jadi kolaborator memang boleh buka
+`/sites/:id`; namanya saja yang menyesatkan.
 
 ## Background Workers
 
@@ -531,6 +530,16 @@ Semua dijalankan sebagai goroutine dari [cmd/server/main.go](../apps/api/cmd/ser
   muncul sebagai tab tersendiri di palette dialog editor.
 
 ## Gotcha
+
+- **Token netral shadcn di editor vs renderer**: pratinjau blok memakai `bg-muted`/`border`/
+  `text-muted-foreground`. Kanvas editor meng-override token HSL shadcn ke warna situs — dan token
+  netral WAJIB berupa **tint** fg-atas-bg (`mixHex` di `lib/color.ts`, rasio sama dengan `umkm.css`:
+  muted 6%, muted-fg 64%, border/input 11%), bukan fg penuh; dulu fg penuh → semua border near-black
+  di editor. Renderer tidak punya token shadcn bawaan: `tailwind.config.ts`-nya memetakan nama yang
+  sama ke `hsl(var(--wb-*-hsl) / <alpha-value>)` yang diemisi `lib/theme.ts neutralHslVars` — tanpa
+  itu kelas tersebut **tidak menghasilkan CSS** di produksi (input form tanpa latar). Default-nya
+  juga ada di `globals.css :root` renderer untuk halaman tanpa tema.
+- **Next 16 `params` di client component**: `params` adalah **Promise**, termasuk di komponen `"use client"`. Membacanya sebagai prop (`function Page({ params }: { params: { x: string } })`) menghasilkan `undefined` — dan `tsc` TIDAK menangkapnya karena validator Next memakai `& any`. Pakai `useParams<{ x: string }>()` di client, `await params` di server. Bug yang pernah terjadi: `/invite/[token]` fetch ke `/api/v1/invitations/undefined` → 404 → setiap undangan, sesegar apa pun, tampil "Undangan tidak berlaku".
 
 - **Nama wilayah wajib ASCII** — [lib/wilayah.ts](../apps/web/lib/wilayah.ts) (38 provinsi + kota/kabupaten)
   sengaja tanpa aksen/em-dash supaya cocok langsung dengan EPP contact PostalInfo `type="int"`

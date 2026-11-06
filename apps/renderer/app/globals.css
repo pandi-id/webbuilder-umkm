@@ -10,6 +10,14 @@
   --radius: 0.75rem;
   --font-heading: "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
+  /* Defaults for the Tailwind neutral tokens (see lib/theme.ts neutralHslVars).
+     themeToCss overrides these per site; this keeps bg-card / bg-muted / border
+     resolving on pages that render without a site theme (404, error). */
+  --wb-bg-hsl: 0 0% 100%;
+  --wb-fg-hsl: 222 47% 11%;
+  --wb-muted-hsl: 240 4% 95%;
+  --wb-muted-fg-hsl: 220 8% 43%;
+  --wb-border-hsl: 240 6% 90%;
 }
 
 html, body { background: var(--color-bg); color: var(--color-fg); font-family: var(--font-body); }

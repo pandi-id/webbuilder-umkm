@@ -52,7 +52,9 @@ export const categoryLabels: Record<FontCategory, string> = {
 
 // One stylesheet URL that loads every font in the catalog.
 // Used by the picker so previews render in their real font.
-export function buildCatalogFontsUrl(weights: string[] = ["400", "600", "700"]): string {
+// 500 included: the renderer loads 400;500;600;700, so a `font-medium` CTA must
+// not be synthesised in the editor while rendering true in production.
+export function buildCatalogFontsUrl(weights: string[] = ["400", "500", "600", "700"]): string {
   const families = fonts.map(
     (f) => `family=${f.name.replace(/ /g, "+")}:wght@${weights.join(";")}`,
   );
