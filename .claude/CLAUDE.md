@@ -406,6 +406,26 @@ yang editor panggil (Get/Update/Publish/ListMembers).
 
 ## Auth & Akun
 
+**Gerbang sesi tunggal**: `AllowLoginForRole` (di `auth/reseller_handler.go`) dipanggil di dalam
+`MintTokensFor` — corong yang dilalui register, login password, terima undangan, dan Google — plus
+di `Refresh`, yang menerbitkan access token tanpa lewat corong itu. Mengembalikan
+`*LoginLockedError{Code}` (`account_suspended` | `role_locked`) → 403, bukan 500. Dulu cek hanya
+ada di login password: Google meloloskan reseller *pending*, dan Refresh memperpanjang sesi akun
+yang sudah dikunci selama 7 hari. **Jalur login baru wajib lewat `MintTokensFor`.** Di login,
+gerbang berjalan SETELAH cek password supaya status akun tidak bocor ke yang tidak tahu passwordnya.
+
+**Suspend akun** (`users.suspended_at`, migration 0072): `POST /admin/users/:id/{suspend,unsuspend}`.
+`SuspendUser` mengunci + mencabut SEMUA refresh token dalam satu transaksi. Access token yang
+sudah terbit tetap valid ≤15 menit — middleware `auth.Required` hanya memverifikasi JWT, tidak
+ke DB. Admin tidak bisa di-suspend (turunkan dulu); tidak bisa suspend diri sendiri.
+
+**Ubah role ke admin**: `PATCH /admin/users/:id/role` WAJIB `confirm_email` yang sama dengan email
+target — ditegakkan server, bukan cuma dialog UI. Hanya akun `client` aktif yang bisa dipromosikan
+(reseller/agent akan kehilangan peran bisnisnya saat diturunkan). Demote menulis `client` — dulu
+menulis `"user"`, peran yang tidak dikenal sistem. Tidak bisa ubah role diri sendiri (sekaligus
+menjamin minimal satu admin tersisa). Aturan di `admin.roleChangeBlocker`; UI di
+`components/admin/UserAccessDialogs.tsx`, dipakai halaman daftar + detail user.
+
 Selain email+password (argon2id), surface auth lain yang sudah live — semua di
 [internal/auth](../apps/api/internal/auth/), route di `MountUser`:
 

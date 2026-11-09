@@ -164,21 +164,40 @@ func (h *Handler) notifyResellerApplication(u *User) {
 // AllowLoginForRole — helper untuk block login kalau reseller status != active.
 // Return non-nil error message (fiber-friendly) kalau tidak boleh login.
 // Pisahkan dari Login handler supaya gampang test.
+// LoginLockedError — the credentials were fine but the account may not hold a
+// session (suspended by an admin, or a reseller not yet approved). Typed so
+// every entry point maps it to the same 403 code instead of a 500.
+type LoginLockedError struct {
+	Code string // "account_suspended" | "role_locked"
+	Msg  string
+}
+
+func (e *LoginLockedError) Error() string { return e.Msg }
+
+// AllowLoginForRole is the single gate for minting a session. It runs inside
+// MintTokensFor (register, password login, invitation accept, Google) and in
+// Refresh — a check placed only in the password login left the other doors open.
 func AllowLoginForRole(u *User) error {
 	if u == nil {
 		return nil // handler lain akan handle nil case
+	}
+	if u.SuspendedAt != nil {
+		return &LoginLockedError{Code: "account_suspended",
+			Msg: "Akun Anda dinonaktifkan oleh admin. Hubungi admin platform kalau menurut Anda ini keliru."}
 	}
 	if u.Role == RoleReseller {
 		switch u.ResellerStatus {
 		case ResellerStatusActive:
 			return nil
 		case ResellerStatusPending:
-			return errors.New("Akun reseller Anda masih menunggu approval admin. Kami akan email begitu approved.")
+			return roleLocked("Akun reseller Anda masih menunggu approval admin. Kami akan email begitu approved.")
 		case ResellerStatusSuspended:
-			return errors.New("Akun reseller Anda di-suspend. Contact admin platform untuk info lebih lanjut.")
+			return roleLocked("Akun reseller Anda di-suspend. Contact admin platform untuk info lebih lanjut.")
 		default:
-			return errors.New("Status akun reseller tidak valid. Contact admin.")
+			return roleLocked("Status akun reseller tidak valid. Contact admin.")
 		}
 	}
 	return nil
 }
+
+func roleLocked(msg string) error { return &LoginLockedError{Code: "role_locked", Msg: msg} }

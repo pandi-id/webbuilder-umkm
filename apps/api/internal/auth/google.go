@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -164,6 +165,12 @@ func (h *GoogleHandler) Callback(c *fiber.Ctx) error {
 
 	access, refresh, err := h.authH.MintTokensFor(ctx, u)
 	if err != nil {
+		// A locked account is an expected outcome, not a server fault: surface
+		// its own code so the login page can say why.
+		var locked *LoginLockedError
+		if errors.As(err, &locked) {
+			return h.redirectError(c, next, locked.Code)
+		}
 		slog.Error("google oauth: token mint failed", "error", err)
 		return h.redirectError(c, next, "token_failed")
 	}

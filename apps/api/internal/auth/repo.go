@@ -56,18 +56,21 @@ type User struct {
 	// domain). Sekali set, dipakai direct PATCH /reseller/contacts/:id (1
 	// call untuk semua domain user, tidak butuh domain aktif).
 	RegistrarContactID *int64
+
+	// SuspendedAt — set by an admin to lock the account out. Nil = active.
+	SuspendedAt *time.Time
 }
 
 // scanUserCols is the projection every SELECT below uses. Kept in sync with
 // the SELECT statements so a schema-column reorder only needs one edit.
-const scanUserCols = `id, email, COALESCE(password_hash, ''), name, role, created_at, email_verified_at, oauth_google_sub, phone_number, address, city, state, postal_code, nik, parent_reseller_id, reseller_display_name, reseller_status, reseller_tier, registrar_contact_id`
+const scanUserCols = `id, email, COALESCE(password_hash, ''), name, role, created_at, email_verified_at, oauth_google_sub, phone_number, address, city, state, postal_code, nik, parent_reseller_id, reseller_display_name, reseller_status, reseller_tier, registrar_contact_id, suspended_at`
 
 func scanUser(u *User) []any {
 	return []any{
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Role, &u.CreatedAt, &u.EmailVerifiedAt, &u.OAuthGoogleSub,
 		&u.PhoneNumber, &u.Address, &u.City, &u.State, &u.PostalCode, &u.Nik,
 		&u.ParentResellerID, &u.ResellerDisplayName, &u.ResellerStatus, &u.ResellerTier,
-		&u.RegistrarContactID,
+		&u.RegistrarContactID, &u.SuspendedAt,
 	}
 }
 

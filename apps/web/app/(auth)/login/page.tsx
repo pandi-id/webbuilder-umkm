@@ -34,6 +34,9 @@ const OAUTH_ERROR_COPY: Record<string, string> = {
   email_unverified: "Alamat email Google Anda belum diverifikasi.",
   user_upsert_failed: "Terjadi kesalahan saat menyimpan akun Anda.",
   token_failed: "Terjadi kesalahan saat membuat sesi login.",
+  // Returned by the API session gate when Google sign-in reaches a locked account.
+  account_suspended: "Akun Anda dinonaktifkan oleh admin. Hubungi admin platform kalau menurut Anda ini keliru.",
+  role_locked: "Akun reseller Anda belum aktif atau sedang ditangguhkan. Hubungi admin platform.",
   google_not_configured: "Login Google belum diaktifkan di server.",
 };
 

@@ -83,6 +83,10 @@ func (h *Handler) ListUsers(c *fiber.Ctx) error {
 
 type updateRoleReq struct {
 	Role string `json:"role"`
+	// ConfirmEmail must repeat the target's email when promoting. Granting
+	// admin is the most dangerous button in the panel; requiring it server-side
+	// means a stray click or a buggy client cannot do it, not just the UI.
+	ConfirmEmail string `json:"confirm_email"`
 }
 
 // GetUser — GET /api/v1/admin/users/:id
@@ -125,8 +129,29 @@ func (h *Handler) UpdateUserRole(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return httpx.BadRequest(c, "invalid json")
 	}
-	if req.Role != "user" && req.Role != "admin" {
-		return httpx.BadRequest(c, "role must be 'user' or 'admin'")
+	// "user" was never a real role: demoting wrote it into users.role, leaving
+	// an account that resellers could not add as a client nor promote to agent.
+	// Keep accepting it from older clients, but store the real one.
+	if req.Role == "user" {
+		req.Role = auth.RoleClient
+	}
+	if req.Role != auth.RoleClient && req.Role != auth.RoleAdmin {
+		return httpx.BadRequest(c, "role harus 'client' atau 'admin'")
+	}
+	// Never on yourself: this also guarantees at least one admin remains,
+	// because the caller stays admin whatever they do to others.
+	if cl := auth.ClaimsFrom(c); cl != nil && cl.UserID == id {
+		return httpx.BadRequest(c, "tidak bisa mengubah role akun sendiri")
+	}
+	target, err := h.repo.GetUserBrief(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.NotFound(c, "user not found")
+		}
+		return httpx.Internal(c, "lookup failed")
+	}
+	if reason := roleChangeBlocker(target, req.Role, req.ConfirmEmail); reason != "" {
+		return httpx.Conflict(c, reason)
 	}
 	if err := h.repo.UpdateUserRole(c.Context(), id, req.Role); err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -323,6 +348,97 @@ func (h *Handler) UpdateUserProfile(c *fiber.Ctx) error {
 	})
 
 	return httpx.OK(c, u)
+}
+
+// roleChangeBlocker returns why this role change is refused, or "" to allow.
+// Pure so the rules are testable without a database.
+func roleChangeBlocker(target *UserBrief, newRole, confirmEmail string) string {
+	switch newRole {
+	case auth.RoleAdmin:
+		if target.Role == auth.RoleAdmin {
+			return "akun ini sudah admin"
+		}
+		// A reseller/agent promoted and later demoted would come back as a
+		// plain client, silently dropping their business role and clients.
+		if target.Role != auth.RoleClient {
+			return "hanya akun klien yang bisa dijadikan admin — akun " + target.Role + " perlu diubah dulu"
+		}
+		if target.Suspended {
+			return "akun ini sedang ditangguhkan — aktifkan dulu sebelum dijadikan admin"
+		}
+		if !strings.EqualFold(strings.TrimSpace(confirmEmail), target.Email) {
+			return "konfirmasi email tidak cocok"
+		}
+	case auth.RoleClient:
+		if target.Role != auth.RoleAdmin {
+			return "akun ini bukan admin"
+		}
+	}
+	return ""
+}
+
+type suspendReq struct {
+	Reason string `json:"reason"`
+}
+
+// SuspendUser — POST /api/v1/admin/users/:id/suspend
+// Blocks every way in (password, Google, refresh, invitation) and revokes all
+// refresh tokens. An access token already issued stays valid until it expires
+// (≤15 minutes) — the JWT middleware does not consult the database.
+func (h *Handler) SuspendUser(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid id")
+	}
+	actor := auth.UserIDFrom(c)
+	if actor == id {
+		return httpx.BadRequest(c, "tidak bisa menangguhkan akun sendiri")
+	}
+	var req suspendReq
+	_ = c.BodyParser(&req) // reason is optional
+	req.Reason = strings.TrimSpace(req.Reason)
+	if len([]rune(req.Reason)) > 500 {
+		return httpx.BadRequest(c, "alasan terlalu panjang (maks. 500 karakter)")
+	}
+
+	target, err := h.repo.GetUserBrief(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.NotFound(c, "user not found")
+		}
+		return httpx.Internal(c, "lookup failed")
+	}
+	// Locking out an admin from here would let one admin silently disable
+	// another; demote first so the action is deliberate and audited twice.
+	if target.Role == auth.RoleAdmin {
+		return httpx.Conflict(c, "akun admin tidak bisa ditangguhkan — turunkan dulu dari admin")
+	}
+	if err := h.repo.SuspendUser(c.Context(), id, actor, req.Reason); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.NotFound(c, "user not found")
+		}
+		return httpx.Internal(c, "suspend failed")
+	}
+	h.logAudit(c.Context(), actor, audit.EventAdminUserSuspended, "user", id.String(), map[string]any{
+		"email": target.Email, "reason": req.Reason,
+	})
+	return httpx.OK(c, fiber.Map{"suspended": true})
+}
+
+// UnsuspendUser — POST /api/v1/admin/users/:id/unsuspend
+func (h *Handler) UnsuspendUser(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid id")
+	}
+	if err := h.repo.UnsuspendUser(c.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.NotFound(c, "user not found")
+		}
+		return httpx.Internal(c, "unsuspend failed")
+	}
+	h.logAudit(c.Context(), auth.UserIDFrom(c), audit.EventAdminUserUnsuspended, "user", id.String(), nil)
+	return httpx.OK(c, fiber.Map{"suspended": false})
 }
 
 func (h *Handler) DeleteUser(c *fiber.Ctx) error {

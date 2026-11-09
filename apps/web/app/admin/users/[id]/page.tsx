@@ -10,9 +10,11 @@ import { useParams, useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
+  Ban,
   Briefcase,
   Building2,
   CheckCircle2,
+  CircleCheck,
   Clock,
   ExternalLink,
   Globe2,
@@ -30,6 +32,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, openBlob } from "@/lib/api";
+import {
+  PromoteAdminDialog,
+  SuspendUserDialog,
+  demoteAdmin,
+  unsuspendUser,
+  type AccessTarget,
+} from "@/components/admin/UserAccessDialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +82,8 @@ type UserDetail = {
   reseller_tier?: string;
   has_password_login: boolean;
   has_google_login: boolean;
+  suspended_at?: string | null;
+  suspended_reason?: string;
   site_count: number;
   published_sites: number;
   domain_count: number;
@@ -140,24 +151,22 @@ export default function AdminUserDetailPage() {
     refresh();
   }, [refresh]);
 
-  async function toggleRole() {
+  // Same dialogs as the user list: promote needs the email retyped, suspend
+  // explains its effect. A bare confirm() was all that stood in front of admin.
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => {
+    api<{ id: string }>("/api/v1/auth/me")
+      .then((m) => setMeId(m.id))
+      .catch(() => {});
+  }, []);
+
+  async function runQuick(fn: (t: AccessTarget) => Promise<boolean>) {
     if (!user) return;
-    const next = user.role === "admin" ? "user" : "admin";
-    if (
-      next === "admin" &&
-      !confirm(`Jadikan ${user.email} sebagai admin? Mereka akan punya akses penuh ke platform.`)
-    )
-      return;
     setActing(true);
     try {
-      await api(`/api/v1/admin/users/${id}/role`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: next }),
-      });
-      toast.success(next === "admin" ? "User dijadikan admin" : "Role dikembalikan ke user");
-      refresh();
-    } catch (e) {
-      toast.error((e as Error).message);
+      if (await fn(user)) refresh();
     } finally {
       setActing(false);
     }
@@ -283,6 +292,18 @@ export default function AdminUserDetailPage() {
                       OAuth only
                     </span>
                   )}
+                  {user.suspended_at && (
+                    <Badge variant="destructive" className="gap-1 text-[10px]">
+                      <Ban className="size-3" />
+                      Ditangguhkan sejak{" "}
+                      {new Date(user.suspended_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                      {user.suspended_reason ? ` — ${user.suspended_reason}` : ""}
+                    </Badge>
+                  )}
                   {user.role === "reseller" && (
                     <Button size="sm" variant="ghost" asChild className="h-6 gap-1 text-xs">
                       <Link href={`/admin/resellers/${user.id}`}>
@@ -294,22 +315,55 @@ export default function AdminUserDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={user.role === "admin" ? "outline" : "default"}
-                onClick={toggleRole}
-                disabled={acting}
-                className="gap-1.5"
-              >
-                {acting ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : user.role === "admin" ? (
-                  <ShieldOff className="size-3.5" />
-                ) : (
-                  <ShieldCheck className="size-3.5" />
-                )}
-                {user.role === "admin" ? "Demote ke user" : "Jadikan Admin"}
-              </Button>
+            <div className="flex flex-wrap gap-2">
+              {user.id === meId ? null : user.role === "admin" ? (
+                <Button
+                  variant="outline"
+                  onClick={() => runQuick(demoteAdmin)}
+                  disabled={acting}
+                  className="gap-1.5"
+                >
+                  {acting ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldOff className="size-3.5" />}
+                  Turunkan dari admin
+                </Button>
+              ) : (
+                <>
+                  {/* Outline, not primary: granting admin must not be the
+                      page's most prominent call to action. */}
+                  {(user.role === "client" || user.role === "user") && !user.suspended_at && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setPromoteOpen(true)}
+                      disabled={acting}
+                      className="gap-1.5"
+                    >
+                      <ShieldCheck className="size-3.5" />
+                      Jadikan admin…
+                    </Button>
+                  )}
+                  {user.suspended_at ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => runQuick(unsuspendUser)}
+                      disabled={acting}
+                      className="gap-1.5"
+                    >
+                      {acting ? <Loader2 className="size-3.5 animate-spin" /> : <CircleCheck className="size-3.5" />}
+                      Aktifkan kembali
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSuspendOpen(true)}
+                      disabled={acting}
+                      className="gap-1.5"
+                    >
+                      <Ban className="size-3.5" />
+                      Tangguhkan
+                    </Button>
+                  )}
+                </>
+              )}
               <Button
                 variant="outline"
                 onClick={remove}
@@ -377,6 +431,16 @@ export default function AdminUserDetailPage() {
           {tab === "activity" && <ActivityTab id={id} />}
         </TabsContent>
       </Tabs>
+      <PromoteAdminDialog
+        target={promoteOpen ? user : null}
+        onClose={() => setPromoteOpen(false)}
+        onDone={refresh}
+      />
+      <SuspendUserDialog
+        target={suspendOpen ? user : null}
+        onClose={() => setSuspendOpen(false)}
+        onDone={refresh}
+      />
     </div>
   );
 }

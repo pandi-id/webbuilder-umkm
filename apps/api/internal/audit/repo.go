@@ -44,6 +44,13 @@ const (
 	EventAdminSiteDeleted    = "admin.site_deleted"
 )
 
+// Account lock events. Own block so their longer names do not re-align the
+// constants above.
+const (
+	EventAdminUserSuspended   = "admin.user_suspended"
+	EventAdminUserUnsuspended = "admin.user_unsuspended"
+)
+
 // Entry = 1 row audit_log — mirror shape SQL. IP + UserAgent optional.
 type Entry struct {
 	ID         uuid.UUID       `json:"id"`

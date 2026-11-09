@@ -26,6 +26,10 @@ type UserRow struct {
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	SiteCount int       `json:"site_count"`
+	// Nil = active. Shown in the list so a locked spam account is visible
+	// at a glance instead of only on its detail page.
+	SuspendedAt     *time.Time `json:"suspended_at,omitempty"`
+	SuspendedReason string     `json:"suspended_reason,omitempty"`
 }
 
 // orderUsersSQL whitelists sort presets to safe ORDER BY fragments.
@@ -58,7 +62,7 @@ func (r *Repo) ListUsersPage(ctx context.Context, like, sort string, limit, offs
 
 	q := fmt.Sprintf(`
 		SELECT u.id, u.email, u.name, u.role, u.created_at,
-		       COUNT(s.id) AS site_count
+		       COUNT(s.id) AS site_count, u.suspended_at, u.suspended_reason
 		FROM users u
 		LEFT JOIN sites s ON s.user_id = u.id
 		WHERE LOWER(u.email) LIKE $1 OR LOWER(u.name) LIKE $1
@@ -75,7 +79,8 @@ func (r *Repo) ListUsersPage(ctx context.Context, like, sort string, limit, offs
 	out := []UserRow{}
 	for rows.Next() {
 		var u UserRow
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.CreatedAt, &u.SiteCount); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.CreatedAt, &u.SiteCount,
+			&u.SuspendedAt, &u.SuspendedReason); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, u)
@@ -123,7 +128,8 @@ func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, er
 		       (u.oauth_google_sub IS NOT NULL AND u.oauth_google_sub <> '') AS has_google,
 		       COALESCE((SELECT COUNT(*) FROM sites s WHERE s.user_id = u.id), 0) AS site_count,
 		       COALESCE((SELECT COUNT(*) FROM sites s WHERE s.user_id = u.id AND s.status = 'published'), 0) AS published,
-		       COALESCE((SELECT COUNT(*) FROM domain_purchases dp WHERE dp.user_id = u.id AND dp.status = 'active'), 0) AS domain_count
+		       COALESCE((SELECT COUNT(*) FROM domain_purchases dp WHERE dp.user_id = u.id AND dp.status = 'active'), 0) AS domain_count,
+		       u.suspended_at, u.suspended_reason
 		  FROM users u
 		 WHERE u.id = $1
 	`, id).Scan(
@@ -138,6 +144,7 @@ func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, er
 		&d.SiteCount,
 		&d.PublishedSites,
 		&d.DomainCount,
+		&d.SuspendedAt, &d.SuspendedReason,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -185,6 +192,70 @@ func (r *Repo) ListUserSites(ctx context.Context, userID uuid.UUID) ([]UserSiteR
 
 func (r *Repo) UpdateUserRole(ctx context.Context, id uuid.UUID, role string) error {
 	ct, err := r.pool.Exec(ctx, `UPDATE users SET role = $1, updated_at = now() WHERE id = $2`, role, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// UserBrief is what the role/suspend guards need about the target account.
+type UserBrief struct {
+	Email     string
+	Role      string
+	Suspended bool
+}
+
+func (r *Repo) GetUserBrief(ctx context.Context, id uuid.UUID) (*UserBrief, error) {
+	var b UserBrief
+	err := r.pool.QueryRow(ctx,
+		`SELECT email, role, suspended_at IS NOT NULL FROM users WHERE id = $1`, id,
+	).Scan(&b.Email, &b.Role, &b.Suspended)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return &b, err
+}
+
+// SuspendUser locks the account and revokes every refresh token in the same
+// transaction, so the lock cannot land while a token survives to renew the
+// session. suspended_at keeps its first value on a repeat call; the reason
+// is updated.
+func (r *Repo) SuspendUser(ctx context.Context, id, by uuid.UUID, reason string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	ct, err := tx.Exec(ctx, `
+		UPDATE users
+		   SET suspended_at     = COALESCE(suspended_at, now()),
+		       suspended_reason = $2,
+		       suspended_by     = $3,
+		       updated_at       = now()
+		 WHERE id = $1`, id, reason, by)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, id,
+	); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (r *Repo) UnsuspendUser(ctx context.Context, id uuid.UUID) error {
+	ct, err := r.pool.Exec(ctx, `
+		UPDATE users
+		   SET suspended_at = NULL, suspended_reason = '', suspended_by = NULL, updated_at = now()
+		 WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}

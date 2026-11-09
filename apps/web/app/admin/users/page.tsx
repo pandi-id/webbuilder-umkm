@@ -13,9 +13,26 @@ import {
   CalendarDays,
   SortAsc,
   AlertCircle,
+  Ban,
+  CircleCheck,
   Loader2,
+  MoreHorizontal,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import {
+  PromoteAdminDialog,
+  SuspendUserDialog,
+  demoteAdmin,
+  unsuspendUser,
+  type AccessTarget,
+} from "@/components/admin/UserAccessDialogs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Pagination, useDebounced, type PaginatedResult } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,9 +58,20 @@ type AdminUser = {
   id: string;
   email: string;
   name: string;
-  role: "user" | "admin";
+  // "user" can still appear on accounts demoted before the role fix.
+  role: "client" | "reseller" | "agent" | "admin" | "user";
   site_count: number;
   created_at: string;
+  suspended_at?: string | null;
+  suspended_reason?: string;
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Admin",
+  reseller: "Reseller",
+  agent: "Agent",
+  client: "Klien",
+  user: "Klien",
 };
 
 const SORT_OPTIONS = [
@@ -127,17 +155,21 @@ export default function AdminUsersPage() {
 
   useEffect(() => { refresh(); }, [page, debouncedQ, sort]);
 
-  async function setRole(id: string, role: "user" | "admin") {
-    setActionLoading(id + role);
+  // Privilege changes live behind a menu + dialog: a one-click "Jadikan Admin"
+  // sitting next to every row was one mis-click away from a new superuser.
+  const [promoteTarget, setPromoteTarget] = useState<AccessTarget | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<AccessTarget | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => {
+    api<{ id: string }>("/api/v1/auth/me")
+      .then((m) => setMeId(m.id))
+      .catch(() => {});
+  }, []);
+
+  async function runQuick(u: AdminUser, fn: (t: AccessTarget) => Promise<boolean>) {
+    setActionLoading(u.id + "quick");
     try {
-      await api(`/api/v1/admin/users/${id}/role`, {
-        method: "PATCH",
-        body: JSON.stringify({ role }),
-      });
-      toast.success(role === "admin" ? "User dijadikan admin." : "Role dikembalikan ke user.");
-      refresh();
-    } catch (e) {
-      toast.error((e as Error).message);
+      if (await fn(u)) refresh();
     } finally {
       setActionLoading(null);
     }
@@ -281,19 +313,31 @@ export default function AdminUsersPage() {
                         </Link>
                       </TableCell>
 
-                      {/* Role */}
+                      {/* Role + status */}
                       <TableCell>
-                        {u.role === "admin" ? (
-                          <Badge className="gap-1 bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-400 hover:bg-amber-500/20">
-                            <ShieldCheck className="size-3" />
-                            Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="gap-1">
-                            <Users className="size-3" />
-                            User
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {u.role === "admin" ? (
+                            <Badge className="gap-1 bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-400 hover:bg-amber-500/20">
+                              <ShieldCheck className="size-3" />
+                              Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <Users className="size-3" />
+                              {ROLE_LABEL[u.role] ?? u.role}
+                            </Badge>
+                          )}
+                          {u.suspended_at && (
+                            <Badge
+                              variant="destructive"
+                              className="gap-1"
+                              title={u.suspended_reason || "Ditangguhkan admin"}
+                            >
+                              <Ban className="size-3" />
+                              Ditangguhkan
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* Sites */}
@@ -324,39 +368,65 @@ export default function AdminUsersPage() {
                           >
                             <Link href={`/admin/users/${u.id}`}>Detail</Link>
                           </Button>
-                          {isActing ? (
-                            <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                          ) : u.role === "admin" ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-                              onClick={() => setRole(u.id, "user")}
-                            >
-                              <ShieldOff className="size-3.5" />
-                              Demote
-                            </Button>
+                          {u.id === meId ? (
+                            <span className="px-2 text-xs text-muted-foreground">Anda</span>
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-500/10"
-                              onClick={() => setRole(u.id, "admin")}
-                            >
-                              <ShieldCheck className="size-3.5" />
-                              Jadikan Admin
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="size-8 p-0"
+                                  disabled={isActing}
+                                  aria-label={`Aksi untuk ${u.email}`}
+                                >
+                                  {isActing ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <MoreHorizontal className="size-4" />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                {u.role === "admin" ? (
+                                  <DropdownMenuItem onSelect={() => runQuick(u, demoteAdmin)}>
+                                    <ShieldOff className="size-4 text-muted-foreground" />
+                                    Turunkan dari admin
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <>
+                                    {/* Only plain, active clients can be promoted —
+                                        the API refuses the rest anyway. */}
+                                    {(u.role === "client" || u.role === "user") && !u.suspended_at && (
+                                      <DropdownMenuItem onSelect={() => setPromoteTarget(u)}>
+                                        <ShieldCheck className="size-4 text-amber-600" />
+                                        Jadikan admin…
+                                      </DropdownMenuItem>
+                                    )}
+                                    {u.suspended_at ? (
+                                      <DropdownMenuItem onSelect={() => runQuick(u, unsuspendUser)}>
+                                        <CircleCheck className="size-4 text-emerald-600" />
+                                        Aktifkan kembali
+                                      </DropdownMenuItem>
+                                    ) : (
+                                      <DropdownMenuItem onSelect={() => setSuspendTarget(u)}>
+                                        <Ban className="size-4 text-muted-foreground" />
+                                        Tangguhkan akun…
+                                      </DropdownMenuItem>
+                                    )}
+                                  </>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => remove(u.id, u.email)}
+                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                  Hapus akun
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => remove(u.id, u.email)}
-                            disabled={isActing}
-                          >
-                            <Trash2 className="size-3.5" />
-                            Hapus
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -399,6 +469,17 @@ export default function AdminUsersPage() {
           </div>
         )}
       </Card>
+
+      <PromoteAdminDialog
+        target={promoteTarget}
+        onClose={() => setPromoteTarget(null)}
+        onDone={refresh}
+      />
+      <SuspendUserDialog
+        target={suspendTarget}
+        onClose={() => setSuspendTarget(null)}
+        onDone={refresh}
+      />
     </div>
   );
 }

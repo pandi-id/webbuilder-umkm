@@ -216,11 +216,9 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	if err != nil || !ok {
 		return httpx.Unauthorized(c, "invalid credentials")
 	}
-	// Block login untuk reseller yang belum di-approve (pending) atau di-suspend.
-	// Message specific supaya user tahu harus tunggu / contact admin.
-	if lockErr := AllowLoginForRole(u); lockErr != nil {
-		return httpx.Err(c, fiber.StatusForbidden, "role_locked", lockErr.Error())
-	}
+	// Suspended accounts and unapproved resellers are refused inside
+	// issueTokens → MintTokensFor, after the password check above, so the
+	// response never reveals an account's state to someone without its password.
 	return h.issueTokens(c, u, fiber.StatusOK)
 }
 
@@ -243,6 +241,16 @@ func (h *Handler) Refresh(c *fiber.Ctx) error {
 	u, err := h.repo.GetByID(c.Context(), userID)
 	if err != nil {
 		return httpx.Internal(c, "user lookup failed")
+	}
+	// Without this a suspended user — or a reseller suspended long before this
+	// feature — keeps renewing access for the whole 7-day refresh TTL.
+	if err := AllowLoginForRole(u); err != nil {
+		_ = h.repo.RevokeRefreshToken(c.Context(), newHash)
+		var locked *LoginLockedError
+		if errors.As(err, &locked) {
+			return httpx.Err(c, fiber.StatusForbidden, locked.Code, locked.Msg)
+		}
+		return httpx.Forbidden(c, err.Error())
 	}
 	access, _, err := h.issuer.IssueAccess(u.ID, u.Email, u.Role)
 	if err != nil {
@@ -543,6 +551,10 @@ func (h *Handler) ConfirmEmailVerification(c *fiber.Ctx) error {
 func (h *Handler) issueTokens(c *fiber.Ctx, u *User, status int) error {
 	access, raw, err := h.MintTokensFor(c.Context(), u)
 	if err != nil {
+		var locked *LoginLockedError
+		if errors.As(err, &locked) {
+			return httpx.Err(c, fiber.StatusForbidden, locked.Code, locked.Msg)
+		}
 		return httpx.Internal(c, err.Error())
 	}
 	return c.Status(status).JSON(fiber.Map{"data": tokenResp{
@@ -554,6 +566,9 @@ func (h *Handler) issueTokens(c *fiber.Ctx, u *User, status int) error {
 // persists the refresh token. Exposed so other flows (OAuth callback) can
 // reuse the exact same JWT/refresh pipeline without duplicating logic.
 func (h *Handler) MintTokensFor(ctx context.Context, u *User) (access, refresh string, err error) {
+	if err := AllowLoginForRole(u); err != nil {
+		return "", "", err
+	}
 	access, _, err = h.issuer.IssueAccess(u.ID, u.Email, u.Role)
 	if err != nil {
 		return "", "", err
