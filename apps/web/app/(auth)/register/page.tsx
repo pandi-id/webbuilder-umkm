@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleButton } from "@/components/GoogleButton";
+import { EidButton } from "@/components/EidButton";
 
 // EMAIL_RE — mirror auth.ValidEmail di backend (RFC 5322 subset praktis).
 // Konsisten supaya browser tidak terima "foo@a" tapi backend tolak dengan
@@ -97,6 +98,7 @@ export default function RegisterPage() {
         {/* Card */}
         <div className="rounded-2xl border bg-card shadow-xl shadow-black/5 p-7">
           <GoogleButton label="Daftar dengan Google" />
+          <EidButton label="Daftar dengan e.id" className="mt-2.5" />
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />

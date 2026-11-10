@@ -101,6 +101,10 @@ services:
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       GOOGLE_OAUTH_REDIRECT_URL: ${GOOGLE_OAUTH_REDIRECT_URL:-http://api.localhost/api/v1/auth/google/callback}
+      # --- e.id OAuth SSO (client id + secret untuk enable) ---
+      EID_OAUTH_CLIENT_ID: ${EID_OAUTH_CLIENT_ID:-}
+      EID_OAUTH_CLIENT_SECRET: ${EID_OAUTH_CLIENT_SECRET:-}
+      EID_API_BASE: ${EID_API_BASE:-https://api-wallet.e.id}
       # --- api-registry backend (self-sufficient EPP service) ---
       # Default point ke api-registry service via internal network.
       # HMAC secret harus sama dengan api-registry INTERNAL_HMAC_SECRET.

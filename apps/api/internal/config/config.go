@@ -108,6 +108,12 @@ type Config struct {
 	GoogleOAuthClientSecret string
 	GoogleOAuthRedirectURL  string
 
+	// e.id SSO. Client id + secret from the e.id developer dashboard; empty =
+	// disabled. The callback URL is derived (EIDCallbackURL), not an env.
+	EIDOAuthClientID     string
+	EIDOAuthClientSecret string
+	EIDAPIBase           string
+
 	// --- api-registry (EPP service) ---
 	//
 	// APIRegistryURL wajib untuk enable domain flow (check/register/renew/
@@ -169,6 +175,10 @@ func Load() Config {
 		GoogleOAuthClientID:     env("GOOGLE_OAUTH_CLIENT_ID", ""),
 		GoogleOAuthClientSecret: env("GOOGLE_OAUTH_CLIENT_SECRET", ""),
 		GoogleOAuthRedirectURL:  env("GOOGLE_OAUTH_REDIRECT_URL", ""),
+
+		EIDOAuthClientID:     env("EID_OAUTH_CLIENT_ID", ""),
+		EIDOAuthClientSecret: env("EID_OAUTH_CLIENT_SECRET", ""),
+		EIDAPIBase:           env("EID_API_BASE", "https://api-wallet.e.id"),
 
 		APIRegistryURL:        env("API_REGISTRY_URL", ""),
 		APIRegistryHMACSecret: env("API_REGISTRY_HMAC_SECRET", ""),
@@ -284,6 +294,16 @@ func (c Config) Validate() error {
 		return fmt.Errorf("config validation failed:\n  - %s", strings.Join(errs, "\n  - "))
 	}
 	return nil
+}
+
+// EIDCallbackURL is the e.id OAuth callback — register exactly this URL in
+// the e.id developer dashboard. The scheme follows APP_BASE_URL (http in dev).
+func (c Config) EIDCallbackURL() string {
+	scheme := "https"
+	if strings.HasPrefix(c.AppBaseURL, "http://") {
+		scheme = "http"
+	}
+	return scheme + "://" + c.PublicAPIHost + "/api/v1/auth/eid/callback"
 }
 
 func env(k, def string) string {

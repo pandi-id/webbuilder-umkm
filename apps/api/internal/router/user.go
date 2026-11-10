@@ -54,6 +54,16 @@ func MountUser(app *fiber.App, deps Deps) {
 		v1.Get("/auth/google/callback", deps.AuthGoogle.Callback)
 	}
 
+	// e.id SSO — same shape as Google. Routes stay mounted when unconfigured;
+	// authorize then sends the browser back to /login with a message, and
+	// /auth/providers tells the web to hide the button.
+	if deps.AuthEID != nil {
+		v1.Get("/auth/eid/authorize",
+			RateLimitIP(loginPerWindow, loginWindow), deps.AuthEID.Authorize)
+		v1.Get("/auth/eid/callback", deps.AuthEID.Callback)
+	}
+	v1.Get("/auth/providers", auth.ProvidersHandler(deps.AuthGoogle, deps.AuthEID))
+
 	v1.Get("/templates", deps.Templates.List)
 	v1.Get("/template-meta", deps.Templates.Meta)
 	v1.Get("/templates/:slug", deps.Templates.Get)

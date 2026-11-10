@@ -107,6 +107,7 @@ type UserDetail struct {
 	// OAuth linking (kalau login via Google).
 	HasPasswordLogin bool `json:"has_password_login"`
 	HasGoogleLogin   bool `json:"has_google_login"`
+	HasEIDLogin      bool `json:"has_eid_login"`
 	// Counts agregat.
 	PublishedSites int `json:"published_sites"`
 	DomainCount    int `json:"domain_count"`
@@ -115,7 +116,7 @@ type UserDetail struct {
 // GetUserDetail — full profile + counts untuk admin detail page.
 func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, error) {
 	var d UserDetail
-	var hasPassword, hasGoogle bool
+	var hasPassword, hasGoogle, hasEID bool
 	err := r.pool.QueryRow(ctx, `
 		SELECT u.id, u.email, u.name, u.role, u.created_at,
 		       COALESCE(u.phone_number, ''), COALESCE(u.address, ''),
@@ -126,6 +127,7 @@ func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, er
 		       COALESCE(u.reseller_status, ''), COALESCE(u.reseller_tier, ''),
 		       (u.password_hash IS NOT NULL AND u.password_hash <> '') AS has_password,
 		       (u.oauth_google_sub IS NOT NULL AND u.oauth_google_sub <> '') AS has_google,
+		       EXISTS (SELECT 1 FROM user_identities ui WHERE ui.user_id = u.id AND ui.provider = 'eid') AS has_eid,
 		       COALESCE((SELECT COUNT(*) FROM sites s WHERE s.user_id = u.id), 0) AS site_count,
 		       COALESCE((SELECT COUNT(*) FROM sites s WHERE s.user_id = u.id AND s.status = 'published'), 0) AS published,
 		       COALESCE((SELECT COUNT(*) FROM domain_purchases dp WHERE dp.user_id = u.id AND dp.status = 'active'), 0) AS domain_count,
@@ -140,7 +142,7 @@ func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, er
 		&d.EmailVerifiedAt,
 		&d.ParentResellerID, &d.ResellerDisplayName,
 		&d.ResellerStatus, &d.ResellerTier,
-		&hasPassword, &hasGoogle,
+		&hasPassword, &hasGoogle, &hasEID,
 		&d.SiteCount,
 		&d.PublishedSites,
 		&d.DomainCount,
@@ -154,6 +156,7 @@ func (r *Repo) GetUserDetail(ctx context.Context, id uuid.UUID) (*UserDetail, er
 	}
 	d.HasPasswordLogin = hasPassword
 	d.HasGoogleLogin = hasGoogle
+	d.HasEIDLogin = hasEID
 	return &d, nil
 }
 

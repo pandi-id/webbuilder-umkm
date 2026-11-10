@@ -768,7 +768,11 @@ func (h *Handler) ResendClientInvite(c *fiber.Ctx) error {
 	if err != nil {
 		return httpx.NotFound(c, "klien tidak ditemukan")
 	}
-	if client.PasswordHash != "" || client.OAuthGoogleSub != nil {
+	hasLogin, err := h.authRepo.HasLogin(c.Context(), client.ID)
+	if err != nil {
+		return httpx.Internal(c, "cek akses login klien gagal")
+	}
+	if hasLogin {
 		return httpx.Conflict(c, "klien sudah punya akses login, undangan tidak perlu dikirim ulang")
 	}
 	if h.mailer == nil {

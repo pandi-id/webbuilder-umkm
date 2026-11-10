@@ -129,3 +129,17 @@ func TestValidate_RejectsLocalAppAndOAuthURLs(t *testing.T) {
 		t.Fatalf("prod config without Google OAuth rejected: %v", err)
 	}
 }
+
+// The e.id callback must match the URL registered at e.id byte for byte.
+func TestEIDCallbackURL(t *testing.T) {
+	cases := []struct{ app, host, want string }{
+		{"https://umkm.pandi.id", "api.umkm.pandi.id", "https://api.umkm.pandi.id/api/v1/auth/eid/callback"},
+		{"http://app.localhost", "api.localhost", "http://api.localhost/api/v1/auth/eid/callback"},
+	}
+	for _, tc := range cases {
+		c := Config{AppBaseURL: tc.app, PublicAPIHost: tc.host}
+		if got := c.EIDCallbackURL(); got != tc.want {
+			t.Errorf("EIDCallbackURL(%q, %q) = %q, want %q", tc.app, tc.host, got, tc.want)
+		}
+	}
+}

@@ -23,6 +23,7 @@ import {
 import { api, clearTokens, getAccessToken, setTokens } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
 import { GoogleButton } from "@/components/GoogleButton";
+import { EidButton } from "@/components/EidButton";
 
 const OAUTH_ERROR_COPY: Record<string, string> = {
   state_mismatch: "Sesi login Google kedaluwarsa. Silakan coba lagi.",
@@ -38,6 +39,19 @@ const OAUTH_ERROR_COPY: Record<string, string> = {
   account_suspended: "Akun Anda dinonaktifkan oleh admin. Hubungi admin platform kalau menurut Anda ini keliru.",
   role_locked: "Akun reseller Anda belum aktif atau sedang ditangguhkan. Hubungi admin platform.",
   google_not_configured: "Login Google belum diaktifkan di server.",
+  // e.id SSO (auth/eid.go).
+  eid_not_configured: "Login e.id belum diaktifkan di server.",
+  eid_state_mismatch: "Sesi login e.id kedaluwarsa. Silakan coba lagi.",
+  eid_cancelled: "Anda membatalkan proses login di halaman e.id.",
+  eid_code_expired: "Kode login e.id sudah kedaluwarsa. Silakan coba lagi.",
+  eid_exchange_failed: "Gagal memverifikasi login e.id. Coba beberapa saat lagi.",
+  eid_profile_failed: "Gagal membaca profil e.id. Coba lagi.",
+  eid_no_email:
+    "Akun e.id Anda tidak membagikan alamat email. Pastikan akun e.id punya email, lalu coba lagi.",
+  eid_email_unverified:
+    "Email akun e.id Anda belum terverifikasi, sementara email ini sudah dipakai untuk login di sini. Verifikasi email di aplikasi e.id dulu, atau masuk dengan password.",
+  eid_user_failed: "Terjadi kesalahan saat menyimpan akun Anda.",
+  eid_failed: "Terjadi kesalahan saat membuat sesi login.",
 };
 
 export default function LoginPage() {
@@ -54,7 +68,8 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const errCode = params.get("error");
     if (errCode) {
-      setErr(OAUTH_ERROR_COPY[errCode] ?? `Login Google gagal (${errCode}).`);
+      const provider = errCode.startsWith("eid_") ? "e.id" : "Google";
+      setErr(OAUTH_ERROR_COPY[errCode] ?? `Login ${provider} gagal (${errCode}).`);
     }
     const next = params.get("next");
     if (next) setNextPath(next);
@@ -179,6 +194,7 @@ export default function LoginPage() {
             </div>
 
             <GoogleButton next={nextPath} />
+            <EidButton next={nextPath} className="mt-2.5" />
 
             <div className="my-5 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
               <div className="h-px flex-1 bg-slate-200" />

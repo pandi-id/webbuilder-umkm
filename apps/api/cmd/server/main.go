@@ -289,6 +289,18 @@ func main() {
 		slog.Info("google oauth: disabled (set GOOGLE_OAUTH_CLIENT_ID/SECRET/REDIRECT_URL to enable)")
 	}
 
+	eidHandler := auth.NewEIDHandler(
+		authRepo, authHandler,
+		cfg.EIDOAuthClientID, cfg.EIDOAuthClientSecret, cfg.EIDAPIBase,
+		cfg.EIDCallbackURL(), cfg.AppBaseURL,
+	)
+	if eidHandler.Enabled() {
+		// Register this exact callback URL in the e.id developer dashboard.
+		slog.Info("eid oauth: enabled", "api_base", cfg.EIDAPIBase, "callback_url", cfg.EIDCallbackURL())
+	} else {
+		slog.Info("eid oauth: disabled (set EID_OAUTH_CLIENT_ID/SECRET to enable)")
+	}
+
 	// Cache purger — hubungkan domain lookup + Cloudflare purge. Nil-safe:
 	// kalau CF repo / purchases nil, purger jadi no-op. Publish handler tetap
 	// jalan tanpa error.
@@ -540,6 +552,7 @@ func main() {
 		Issuer:         issuer,
 		Auth:           authHandler,
 		AuthGoogle:     googleHandler,
+		AuthEID:        eidHandler,
 		Registrar:      registrarClient,
 		DomainPurchase: purchaseHandler,
 		Sites:          sitesHandler,

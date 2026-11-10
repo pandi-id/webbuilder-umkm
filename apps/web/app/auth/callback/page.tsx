@@ -1,7 +1,7 @@
 "use client";
 
 // OAuth callback landing — the API redirects here after a successful Google
-// login with tokens in the URL fragment:
+// or e.id login with tokens in the URL fragment:
 //
 //   /auth/callback#access_token=xxx&refresh_token=yyy&next=/dashboard
 //

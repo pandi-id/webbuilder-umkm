@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/webbuilder/api/internal/auth"
 )
 
 // ClientAssignment — 1 row client_assignments.
@@ -214,7 +216,7 @@ func (r *Repo) ListClientsByManager(ctx context.Context, managerID uuid.UUID) ([
 		SELECT ca.id, ca.manager_id, ca.client_id, ca.manager_role, ca.access_status,
 		       ca.created_at, ca.handed_off_at, ca.revoked_at,
 		       u.email, u.name, u.created_at, u.email_verified_at IS NOT NULL,
-		       u.password_hash <> '' OR u.oauth_google_sub IS NOT NULL,
+		       `+auth.HasLoginExpr("u")+`,
 		       COALESCE(dc.cnt, 0) AS domain_count
 		  FROM client_assignments ca
 		  JOIN users u ON u.id = ca.client_id
@@ -324,7 +326,7 @@ func (r *Repo) ListClientsForReseller(ctx context.Context, resellerID uuid.UUID)
 		SELECT ca.id, ca.manager_id, ca.client_id, ca.manager_role, ca.access_status,
 		       ca.created_at, ca.handed_off_at, ca.revoked_at,
 		       u.email, u.name, u.created_at, u.email_verified_at IS NOT NULL,
-		       u.password_hash <> '' OR u.oauth_google_sub IS NOT NULL,
+		       `+auth.HasLoginExpr("u")+`,
 		       COALESCE(dc.cnt, 0) AS domain_count
 		  FROM client_assignments ca
 		  JOIN users u ON u.id = ca.client_id

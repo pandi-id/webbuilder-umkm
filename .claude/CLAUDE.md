@@ -433,6 +433,17 @@ Selain email+password (argon2id), surface auth lain yang sudah live — semua di
   state cookie http-only (CSRF + payload `next`) → consent → `/auth/google/callback` verify state,
   upsert user (link-by-email ATAU create), redirect ke `${WEB_BASE_URL}/auth/callback#access_token=…`.
   Token di **fragment**, bukan query, supaya tidak masuk log hop manapun. Jangan pindahkan ke query.
+- **e.id SSO** ([eid.go](../apps/api/internal/auth/eid.go) + [eid_repo.go](../apps/api/internal/auth/eid_repo.go),
+  port dari repo `website`, kajian di [e-id.md](../e-id.md)) — pola sama dengan Google (cookie state,
+  fragment ke `/auth/callback`), tapi e.id bukan OIDC: tidak ada `state` balik maupun ID permanen,
+  jadi akun dicocokkan lewat **email** dan disimpan di tabel umum `user_identities` (provider, subject).
+  `UpsertEIDUser`: semua tier boleh login (keputusan produk), tier ≥ 1 menandai email terverifikasi.
+  Bedanya dengan repo `website`: tier 0 **tidak** boleh menaut ke akun lama berdasarkan email, dan
+  identitas tier 0 ditolak begitu akunnya punya password/Google (`eid_email_unverified`) — cegah
+  pengambilalihan akun lewat email yang belum diverifikasi e.id. Nama/HP/alamat hanya mengisi kolom
+  kosong dan dibuang kalau gagal aturan ASCII; NIK tidak pernah diisi. Callback URL diturunkan dari
+  skema `APP_BASE_URL` + `PUBLIC_API_HOST`. Tombol (`EidButton`) menyembunyikan diri lewat
+  `GET /auth/providers` kalau `EID_OAUTH_CLIENT_ID/SECRET` kosong.
 - **Verifikasi email** — `POST /auth/email/resend` + `/auth/email/verify`. Token opaque, disimpan
   sebagai hash (`HashOpaqueToken`), sekali pakai (`ConsumeEmailVerificationToken`). Kolom
   `users.email_verified_at`.
@@ -452,8 +463,8 @@ role `client` yang boleh; reseller/admin/agent-orang-lain ditolak, begitu juga k
 dikelola manager lain. Dialog undang memanggil `GET /reseller/agents/lookup?email=` (exact-match,
 rate-limited, bukan listing — jangan diubah jadi pencarian bebas, itu membocorkan basis user).
 Di `AcceptInvitationTx`, password **hanya** di-set kalau akun belum punya cara login sama sekali
-(`password_hash = '' AND oauth_google_sub IS NULL`) — hash kosong saja bukan penanda, user Google
-juga kosong. Password yang sudah ada tidak pernah ditimpa.
+(`auth.HasLoginExpr`) — hash kosong saja bukan penanda, user Google/e.id juga kosong. Password
+yang sudah ada tidak pernah ditimpa.
 
 **Tambah klien dengan email yang sudah terdaftar**: `POST /reseller/clients` TIDAK mengirim
 undangan set-password untuk user existing (mereka sudah punya password) — hanya email
@@ -469,7 +480,10 @@ tersimpan (helper `profileUpdateFrom`). Dulu semua field dibuang diam-diam, jadi
 tidak tersimpan. Response membawa `profile_updated` supaya UI bisa bilang apa yang berubah.
 
 **`has_login` vs `email_verified`.** Tombol "Kirim ulang undangan" HANYA untuk akun yang belum
-punya cara login (`password_hash = '' AND oauth_google_sub IS NULL`). Jangan pakai
+punya cara login. Cek "punya cara login" WAJIB lewat `auth.HasLoginExpr(alias)` (SQL) atau
+`Repo.HasLogin` — mencakup password, Google, **dan** `user_identities` (e.id); jangan tulis ulang
+`password_hash <> '' OR oauth_google_sub …` sendiri (dulu begitu, dan akun e.id-only terbaca
+"belum punya login" → manager bisa kirim link set-password ke akun orang). Jangan pakai
 `email_verified` sebagai penanda "belum accept" — user yang daftar sendiri bisa punya password
 tapi email belum terverifikasi, dan mengirim ulang undangan ke mereka berarti menyerahkan link
 set-password akun orang ke managernya. `ResendClientInvite` menolak dengan 409 kalau sudah ada login.

@@ -42,7 +42,10 @@ func (h *Handler) GetInvitation(c *fiber.Ctx) error {
 	invitedName := ""
 	if inv.TargetUserID != nil {
 		if target, err := h.repo.GetByID(c.Context(), *inv.TargetUserID); err == nil {
-			hasLogin := target.PasswordHash != "" || target.OAuthGoogleSub != nil
+			hasLogin, err := h.repo.HasLogin(c.Context(), target.ID)
+			if err != nil {
+				return httpx.Internal(c, "invitee lookup failed")
+			}
 			existingUser = hasLogin
 			needsPassword = !hasLogin
 			invitedName = target.Name

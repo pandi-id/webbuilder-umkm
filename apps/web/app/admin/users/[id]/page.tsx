@@ -82,6 +82,7 @@ type UserDetail = {
   reseller_tier?: string;
   has_password_login: boolean;
   has_google_login: boolean;
+  has_eid_login: boolean;
   suspended_at?: string | null;
   suspended_reason?: string;
   site_count: number;
@@ -287,6 +288,11 @@ export default function AdminUserDetailPage() {
                       Google linked
                     </span>
                   )}
+                  {user.has_eid_login && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-[10px] text-red-600">
+                      e.id linked
+                    </span>
+                  )}
                   {!user.has_password_login && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                       OAuth only
@@ -391,13 +397,13 @@ export default function AdminUserDetailPage() {
           icon={KeyRound}
           label="Metode Login"
           value={
-            user.has_password_login && user.has_google_login
-              ? "Password + Google"
-              : user.has_password_login
-                ? "Password"
-                : user.has_google_login
-                  ? "Google"
-                  : "—"
+            [
+              user.has_password_login && "Password",
+              user.has_google_login && "Google",
+              user.has_eid_login && "e.id",
+            ]
+              .filter(Boolean)
+              .join(" + ") || "—"
           }
         />
       </div>

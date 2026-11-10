@@ -206,11 +206,11 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return httpx.Internal(c, "lookup failed")
 	}
-	// Google-only account (never set a password). Steer them to Google login
-	// instead of the generic "invalid credentials" so UMKM users understand why.
+	// SSO-only account (Google / e.id, never set a password). Steer them to
+	// the SSO button instead of the generic "invalid credentials".
 	if u.PasswordHash == "" {
 		return httpx.Unauthorized(c,
-			"akun ini dibuat via Google. Silakan login pakai Google, lalu set password dari halaman Lupa Password kalau ingin login pakai email/password.")
+			"akun ini dibuat via Google atau e.id. Silakan login pakai tombol yang sama, lalu set password dari halaman Lupa Password kalau ingin login pakai email/password.")
 	}
 	ok, err := VerifyPassword(req.Password, u.PasswordHash)
 	if err != nil || !ok {

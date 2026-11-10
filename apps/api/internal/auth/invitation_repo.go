@@ -152,7 +152,7 @@ func (r *Repo) AcceptInvitationTx(ctx context.Context, rawToken string, password
 		// real account being promoted to agent.
 		var hasLogin bool
 		if err := tx.QueryRow(ctx,
-			`SELECT password_hash <> '' OR oauth_google_sub IS NOT NULL
+			`SELECT `+HasLoginExpr("users")+`
 			   FROM users WHERE id = $1 FOR UPDATE`,
 			*inv.TargetUserID,
 		).Scan(&hasLogin); err != nil {
