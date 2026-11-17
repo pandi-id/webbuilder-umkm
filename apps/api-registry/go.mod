@@ -3,15 +3,14 @@ module github.com/webbuilder/api-registry
 go 1.26
 
 require (
-	github.com/al0fayz/epp-pandi-client v1.1.2
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
+	github.com/teknispandi/epp-pandi-client/v2 v2.0.3-0.20261117013030-a2e1606a163e
 	go.uber.org/zap v1.27.1
 )
 
 require (
-	aqwari.net/xml v0.0.0-20210331023308-d9421b293817 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -24,8 +23,6 @@ require (
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )

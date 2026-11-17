@@ -1,5 +1,5 @@
 // Package epp — EPP direct client wrapper untuk PANDI registry via
-// al0fayz/epp-pandi-client. Fungsi utama:
+// teknispandi/epp-pandi-client. Fungsi utama:
 //
 //   1. Connection management — connect + login + auto-reconnect kalau session
 //      hilang. Session pool untuk reuse conn antar-request (EPP login mahal).
@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/al0fayz/epp-pandi-client/epp"
-	"github.com/al0fayz/epp-pandi-client/frames"
+	"github.com/teknispandi/epp-pandi-client/v2/epp"
+	"github.com/teknispandi/epp-pandi-client/v2/frames"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/al0fayz/epp-pandi-client/frames"
+	"github.com/teknispandi/epp-pandi-client/v2/frames"
 	"github.com/webbuilder/api-registry/internal/provider"
 )
 
@@ -42,15 +42,9 @@ func (p *EPPDirectProvider) RegisterDomain(ctx context.Context, req provider.Reg
 		return nil, mapEPPErr(err)
 	}
 
-	frame := &frames.DomainCreateType{}
-	frame.SetDomain(strings.ToLower(req.Domain))
-	frame.SetPeriod(frames.Period{Value: req.Years, Unit: frames.PeriodUnitYear})
-	frame.SetRegistrant(registrantHandle)
-	for _, role := range []string{"admin", "tech", "billing"} {
-		frame.AddContact(frames.Contact{Name: registrantHandle, Type: role})
-	}
-	for _, ns := range req.Nameservers {
-		frame.AddAddr(ns)
+	frame, err := buildDomainCreate(req, registrantHandle)
+	if err != nil {
+		return nil, err
 	}
 
 	p.c.DumpRequest("domain:create", frame, "domain", req.Domain, "years", req.Years)
@@ -69,6 +63,28 @@ func (p *EPPDirectProvider) RegisterDomain(ctx context.Context, req provider.Reg
 		JobID:  jobIDForRegister(data.Name, data.CreateDate.Format("20060102150405")),
 		Status: "active", // EPP register sync — langsung aktif di registry
 	}, nil
+}
+
+// buildDomainCreate — the domain:create frame. authInfo is mandatory in
+// epp-pandi-client v2 (domain-1.0.xsd createType); v1 omitted it. It guards
+// transfers, so it is random per domain and never derived from the name.
+func buildDomainCreate(req provider.RegisterRequest, registrantHandle string) (*frames.DomainCreateType, error) {
+	authInfo, err := newDomainAuthInfo()
+	if err != nil {
+		return nil, fmt.Errorf("epp: generate authInfo: %w", err)
+	}
+	frame := &frames.DomainCreateType{}
+	frame.SetDomain(strings.ToLower(req.Domain))
+	frame.SetPeriod(frames.Period{Value: req.Years, Unit: frames.PeriodUnitYear})
+	frame.SetRegistrant(registrantHandle)
+	frame.SetAuthInfo(authInfo)
+	for _, role := range []frames.ContactType{frames.ContactTypeAdmin, frames.ContactTypeTech, frames.ContactTypeBilling} {
+		frame.AddContact(frames.Contact{Name: registrantHandle, Type: role})
+	}
+	for _, ns := range req.Nameservers {
+		frame.AddHostObj(ns)
+	}
+	return frame, nil
 }
 
 // RenewDomain — EPP domain:renew. Butuh curExpDate untuk safety check

@@ -46,6 +46,8 @@ apps/api/        Go Fiber API
     audit/ email_log/ errortrack/  Observability (fire-and-forget, tidak block request)
 
 apps/api-registry/  Go service internal: EPP execution (check/register/renew/NS/WHOIS), port 5000, HMAC-auth dari api
+                    EPP lib: github.com/teknispandi/epp-pandi-client/v2 — memvalidasi tiap frame SEBELUM kirim
+                    (domain/contact create wajib authInfo, ns tidak boleh kosong); cek `frame.Validate()` di test
 apps/web/        Dashboard + visual editor (private, JWT) — portal per role
 apps/renderer/   Public multi-tenant SSR
 infra/caddy/     Caddyfile

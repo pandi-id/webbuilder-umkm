@@ -22,7 +22,7 @@ di atas registrar operations. Dua implementasi:
 | Mode | Status | Cara kerja |
 |---|---|---|
 | `pandi_wrapper` | ✅ Fase 1a | HTTP proxy ke registrar-api PANDI (reference implementation — scaffolding untuk arsitektur decoupling) |
-| `epp_direct` | ✅ Fase 1b | Native EPP client (TCP+TLS) langsung ke registry PANDI OT&E / production via [`al0fayz/epp-pandi-client`](https://github.com/al0fayz/epp-pandi-client). **Zero dependency ke registrar-api PANDI — inilah mode yang customer registrar install.** |
+| `epp_direct` | ✅ Fase 1b | Native EPP client (TCP+TLS) langsung ke registry PANDI OT&E / production via [`teknispandi/epp-pandi-client`](https://github.com/teknispandi/epp-pandi-client). **Zero dependency ke registrar-api PANDI — inilah mode yang customer registrar install.** |
 
 Swap via env `PROVIDER_MODE=pandi_wrapper` atau `epp_direct`. Consumer
 (web builder API) tidak berubah — kontrak API-registry tetap sama.
@@ -262,7 +262,7 @@ apps/api-registry/
 │   ├── hosts/handler.go            # HTTP handler: nameserver
 │   ├── contacts/handler.go         # HTTP handler: contact
 │   ├── whois/handler.go            # HTTP handler: WHOIS
-│   └── epp/                        # EPPDirectProvider (al0fayz/epp-pandi-client)
+│   └── epp/                        # EPPDirectProvider (teknispandi/epp-pandi-client)
 ├── go.mod / go.sum
 ├── Dockerfile                      # multi-stage build (Alpine, 5000)
 ├── docker-compose.snippet.yml      # ready-to-paste service definition
@@ -304,7 +304,7 @@ Coverage (55+ tests, all `-race` safe):
 - [x] Fase 1a: docker compose integration di infra/
 - [x] Fase 1a: resilience decorator (retry + circuit breaker)
 - [x] Fase 1a: Kubernetes manifests + runbook + provider integration guide
-- [x] **Fase 1b**: EPP direct client integration via [`al0fayz/epp-pandi-client`](https://github.com/al0fayz/epp-pandi-client)
+- [x] **Fase 1b**: EPP direct client integration via [`teknispandi/epp-pandi-client`](https://github.com/teknispandi/epp-pandi-client)
   - [x] Client wrapper + connection pool + auto-reconnect
   - [x] `EPPDirectProvider` — check/register/renew/info/whois flows
   - [x] EPP result code → sentinel error mapping

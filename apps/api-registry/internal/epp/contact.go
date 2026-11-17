@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/al0fayz/epp-pandi-client/frames"
+	"github.com/teknispandi/epp-pandi-client/v2/frames"
 	"github.com/webbuilder/api-registry/internal/provider"
 )
 

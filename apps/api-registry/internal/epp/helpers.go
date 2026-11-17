@@ -1,9 +1,58 @@
 package epp
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"strings"
 )
+
+// Domain authInfo alphabet. Symbols exclude XML-special and quote characters
+// so the value survives any template or log without escaping.
+const (
+	authInfoLower   = "abcdefghijkmnopqrstuvwxyz"
+	authInfoUpper   = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+	authInfoDigits  = "23456789"
+	authInfoSymbols = "@#%+=!"
+	authInfoLen     = 16
+)
+
+// newDomainAuthInfo — random 16-char transfer password with at least one
+// lower, upper, digit and symbol, which common registry policies demand.
+func newDomainAuthInfo() (string, error) {
+	pick := func(set string) (byte, error) {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(set))))
+		if err != nil {
+			return 0, err
+		}
+		return set[n.Int64()], nil
+	}
+	all := authInfoLower + authInfoUpper + authInfoDigits + authInfoSymbols
+	out := make([]byte, 0, authInfoLen)
+	for _, set := range []string{authInfoLower, authInfoUpper, authInfoDigits, authInfoSymbols} {
+		b, err := pick(set)
+		if err != nil {
+			return "", err
+		}
+		out = append(out, b)
+	}
+	for len(out) < authInfoLen {
+		b, err := pick(all)
+		if err != nil {
+			return "", err
+		}
+		out = append(out, b)
+	}
+	// Fisher–Yates so the guaranteed classes are not always up front.
+	for i := len(out) - 1; i > 0; i-- {
+		j, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			return "", err
+		}
+		out[i], out[j.Int64()] = out[j.Int64()], out[i]
+	}
+	return string(out), nil
+}
 
 // tldOf — extract TLD (label setelah dot pertama). "myshop.co.id" → "co.id".
 func tldOf(domain string) string {

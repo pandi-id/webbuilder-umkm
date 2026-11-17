@@ -3,7 +3,7 @@
 //
 // Provider mode dipilih via API_REGISTRY_PROVIDER_MODE:
 //   - `pandi_wrapper` : proxy ke registrar-api PANDI (Fase 1a — MVP).
-//   - `epp_direct`    : native EPP client ke registry via al0fayz/epp-pandi-client
+//   - `epp_direct`    : native EPP client ke registry via teknispandi/epp-pandi-client
 //                       (Fase 1b — customer registrars dengan EPP credentials sendiri).
 package main
 

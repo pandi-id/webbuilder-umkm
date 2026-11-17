@@ -20,7 +20,7 @@ type Config struct {
 
 	// Provider mode — decide implementation:
 	//   `pandi_wrapper` : proxy ke registrar-api PANDI (Fase 1a — MVP).
-	//   `epp_direct`    : native EPP client via al0fayz/epp-pandi-client (Fase 1b).
+	//   `epp_direct`    : native EPP client via teknispandi/epp-pandi-client (Fase 1b).
 	ProviderMode string // "pandi_wrapper" | "epp_direct"
 
 	// PANDI wrapper config (kalau ProviderMode=pandi_wrapper)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/al0fayz/epp-pandi-client/frames"
+	"github.com/teknispandi/epp-pandi-client/v2/frames"
 	"github.com/webbuilder/api-registry/internal/provider"
 )
 
@@ -79,12 +79,12 @@ func (p *EPPDirectProvider) UpdateNameservers(ctx context.Context, name string, 
 	frame.SetDomain(strings.ToLower(name))
 	if len(toAdd) > 0 {
 		frame.AddData(frames.DomainAddRemove{
-			NameServer: frames.NameServer{HostObject: toAdd},
+			NameServer: &frames.NameServer{HostObject: toAdd},
 		})
 	}
 	if len(toRem) > 0 {
 		frame.RemoveData(frames.DomainAddRemove{
-			NameServer: frames.NameServer{HostObject: toRem},
+			NameServer: &frames.NameServer{HostObject: toRem},
 		})
 	}
 
