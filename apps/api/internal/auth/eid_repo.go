@@ -29,7 +29,7 @@ type EIDProfile struct {
 // user with the same email (linked) → new password-less user. Name/phone/
 // address only fill empty columns, so contact data the user typed survives.
 //
-// Every tier may sign in (product decision, e-id.md), but tier 0 means e.id
+// Every tier may sign in (product decision), but tier 0 means e.id
 // has not verified the email, so a tier-0 identity is not trusted with an
 // account that has another way in:
 //   - it never links to an existing user by email (that user would be taken

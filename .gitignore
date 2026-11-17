@@ -28,3 +28,6 @@ infra/caddy/config/
 
 # Next.js generated agent rules (regenerated on build)
 apps/*/AGENTS.md
+
+# Internal notes for Claude Code — kept locally, not published.
+.claude/

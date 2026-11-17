@@ -1,4 +1,4 @@
-// 14-rbac-detailed.spec.mjs — Detailed RBAC + audit log write dari PLAN.md §4 A01/A09.
+// 14-rbac-detailed.spec.mjs — Detailed RBAC + audit log write (OWASP A01/A09).
 //
 // Baseline backend facts:
 //   - Reseller/agent /reseller/clients endpoints — ownership via reseller_id filter

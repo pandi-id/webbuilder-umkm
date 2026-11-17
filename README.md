@@ -1,6 +1,6 @@
 # Web Builder
 
-Multi-tenant web builder. Lihat [plan.md](plan.md) untuk arsitektur lengkap.
+Multi-tenant web builder untuk UMKM: toko online di domain `.id` sendiri, dengan editor blok, katalog produk, dan pesanan via WhatsApp.
 
 ## Struktur
 
@@ -244,3 +244,7 @@ cd apps/web       && npm ci && npm run build
 cd apps/renderer  && npm ci && npm run build
 
 ```
+
+## Lisensi
+
+Dirilis di bawah [MIT License](LICENSE) © 2026 PANDI (Pengelola Nama Domain Internet Indonesia) dan kontributor.

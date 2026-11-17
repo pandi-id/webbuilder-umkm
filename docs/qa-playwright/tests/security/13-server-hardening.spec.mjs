@@ -1,5 +1,5 @@
 // 13-server-hardening.spec.mjs — Server-level hardening.
-// Fill gap dari PLAN.md §4 A05.
+// OWASP A05 (security misconfiguration).
 //
 // Baseline backend facts (verified via curl):
 //   - /debug/pprof → 404 (dev pun tidak enabled — good)

@@ -1,5 +1,5 @@
 // 12-auth-hardening.spec.mjs — Session + CORS + register validation hardening.
-// Fill gap dari PLAN.md §3.1, A05, A07.
+// OWASP A05 (misconfiguration) + A07 (auth failures).
 //
 // Baseline backend facts (verified):
 //   - POST /auth/logout {refresh_token} → 200 + revoke di DB

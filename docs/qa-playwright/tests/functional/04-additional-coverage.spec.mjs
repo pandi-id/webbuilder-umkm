@@ -1,4 +1,4 @@
-// 04-additional-coverage.spec.mjs — coverage gap dari PLAN.md §3.2/§3.3/§3.4:
+// 04-additional-coverage.spec.mjs — coverage tambahan:
 //   - Refresh token rotation (revoke old)
 //   - Site create dari template (gate + happy path)
 //   - Wallet payment role gate (client → 403)

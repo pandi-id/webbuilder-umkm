@@ -19,7 +19,7 @@ import (
 )
 
 // EIDHandler — "Masuk / Daftar dengan e.id" (https://docs.e.id/en/oauth-sso,
-// API v1.1). Ported from the `website` repo; study notes in e-id.md. One flow
+// API v1.1). Ported from the `website` repo. One flow
 // covers login and sign-up, shaped like GoogleHandler:
 //
 //  1. Browser → GET /api/v1/auth/eid/authorize?next=/dashboard

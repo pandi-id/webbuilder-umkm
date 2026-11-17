@@ -1,3 +1,6 @@
+# Env yang wajib di-set di service Caddy (systemd override, lihat
+# docs/deploy-caddy-ubuntu.md): CADDY_ASK_SECRET (sama dengan .env API) dan
+# APP_UPSTREAM_HOST (host app/api/renderer; default 127.0.0.1).
 # Global options
 {
     # Email untuk ACME registration + notifikasi cert expiry.
@@ -23,7 +26,7 @@
 
 # Dashboard admin / reseller / agent / client
 kubaca.id {
-    reverse_proxy 10.1.12.46:4000
+    reverse_proxy {$APP_UPSTREAM_HOST:127.0.0.1}:4000
 
     header {
         X-Frame-Options "SAMEORIGIN"
@@ -44,7 +47,7 @@ kubaca.id {
 
 # Public API — CORS di-handle di API side (Fiber middleware).
 api.kubaca.id {
-    reverse_proxy 10.1.12.46:4011 {
+    reverse_proxy {$APP_UPSTREAM_HOST:127.0.0.1}:4011 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -83,7 +86,7 @@ api.kubaca.id {
 # (Caddy issue cert normal, tidak call ask endpoint), lebih cepat + zero
 # tergantung state API.
 preview.kubaca.id {
-    reverse_proxy 10.1.12.46:4001 {
+    reverse_proxy {$APP_UPSTREAM_HOST:127.0.0.1}:4001 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up Host {host}
@@ -110,7 +113,7 @@ preview.kubaca.id {
         on_demand
     }
 
-    reverse_proxy 10.1.12.46:4001 {
+    reverse_proxy {$APP_UPSTREAM_HOST:127.0.0.1}:4001 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up Host {host}
@@ -136,5 +139,5 @@ preview.kubaca.id {
 # passthrough ke renderer supaya user tetap dapet response
 # (misalnya "domain belum terhubung ke situs Anda").
 :80 {
-    reverse_proxy 10.1.12.46:4001
+    reverse_proxy {$APP_UPSTREAM_HOST:127.0.0.1}:4001
 }
