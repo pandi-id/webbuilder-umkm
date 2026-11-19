@@ -1,5 +1,5 @@
 // Package epp — EPP direct client wrapper untuk PANDI registry via
-// teknispandi/epp-pandi-client. Fungsi utama:
+// pandi-id/epp-pandi-client. Fungsi utama:
 //
 //   1. Connection management — connect + login + auto-reconnect kalau session
 //      hilang. Session pool untuk reuse conn antar-request (EPP login mahal).

@@ -14,7 +14,7 @@ data:
   PORT: "5000"
 
   # pandi_wrapper : proxy ke registrar-api PANDI (Fase 1a — MVP).
-  # epp_direct    : native EPP client via teknispandi/epp-pandi-client (Fase 1b).
+  # epp_direct    : native EPP client via pandi-id/epp-pandi-client (Fase 1b).
   PROVIDER_MODE: "pandi_wrapper"
 
   # Upstream registrar-api base URL (override kalau customer pakai instance

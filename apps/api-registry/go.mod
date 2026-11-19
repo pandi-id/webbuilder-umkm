@@ -6,7 +6,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/teknispandi/epp-pandi-client/v2 v2.0.3-0.20261117013030-a2e1606a163e
+	github.com/teknispandi/epp-pandi-client/v2 v2.0.3
 	go.uber.org/zap v1.27.1
 )
 
@@ -26,3 +26,8 @@ require (
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )
+
+// The library now lives at github.com/pandi-id/epp-pandi-client, but its go.mod
+// still declares the teknispandi path; drop this replace and switch the imports
+// once pandi-id tags a release that declares its own path.
+replace github.com/teknispandi/epp-pandi-client/v2 => github.com/pandi-id/epp-pandi-client/v2 v2.0.3
